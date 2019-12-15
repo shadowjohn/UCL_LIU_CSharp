@@ -120,7 +120,6 @@
   <ul>
     <li>1、Visual Studio 建議為 2019 (不過當初用 2015 也可以編)</li>
     <li>2、因為要使用 ILMerge、MSBuild.ILMerge.Task，所以 Framework 使用 4.5 ，如果不使用，Framework 2.0 似乎也可以</li>
-    <li>3、由於使用 ILMerge、MSBuild.ILMerge.Task，輸出平台只能選擇為 x86</li> 
   </ul>
 <br>
 <br>

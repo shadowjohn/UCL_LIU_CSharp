@@ -27,7 +27,7 @@ namespace uclliu
         //把 chardefs 的字碼，變成對照字根，可以加速 ,,,z、,,,x 反查的速度
         public Dictionary<string, string> uclcode_r = new Dictionary<string, string>();
         public JsonValue uclcode = null;
-        public bool is_DEBUG_mode = true; //除錯模式
+        public bool is_DEBUG_mode = false; //除錯模式
         public string INI_CONFIG_FILE = "C:\\temp\\UCLLIU.ini"; //預設在 此，實際使用的位置同在 uclliu.exe
         string DEFAULT_OUTPUT_TYPE = "DEFAULT";
         //硬派出字方式選擇
@@ -39,6 +39,7 @@ namespace uclliu
         public List<string> sendkey_paste_big5_apps = new List<string>(); //使用 big5 複製文字貼上出字的 app
         public List<string> sendkey_not_use_ucl_apps = new List<string>(); //無法使用肥米的 app
         public IniData config = new IniData();
+        public string last_key = ""; //用來紀錄最字的字碼，處理 ,,, 使用的
         public bool is_send_ucl = false;
         public bool flag_is_ucl = true;
         public bool flag_is_hf = true;
@@ -74,7 +75,7 @@ namespace uclliu
             //使用複製文字貼上出字的 app (ctrl+v)
             apps = "oxygennotincluded.exe,iedit_.exe";
             var m = my.explode(",", apps.ToLower());
-            for(int i=0,max_i=m.Length;i<max_i;i++)
+            for (int i = 0, max_i = m.Length; i < max_i; i++)
             {
                 m[i] = my.mainname(m[i]);
             }
@@ -109,6 +110,141 @@ namespace uclliu
 
             //f.Enabled = true;
             //f.btn_UCL.Text = "GG";
+        }
+        public bool run_extra() //跑額外的功能，如 ,,,version
+        {
+            string code = "";
+            Console.WriteLine("last_key:" + last_key);
+            code = ",,,version";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
+            {
+                // https://stackoverflow.com/questions/16105097/why-isnt-messagebox-topmost
+                // messagebox top most 的問題
+                MessageBox.Show(new Form { TopMost = true },
+                    about_uclliu(),
+                    "羽山の說明",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return true;
+            }
+            code = ",,,lock";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
+            {
+                last_key = "";
+                if (!flag_is_gamemode)
+                {
+                    toggle_gamemode();
+                }
+                return true;
+            }
+            code = ",,,unlock";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
+            {
+                last_key = "";
+                if (flag_is_gamemode)
+                {
+                    toggle_gamemode();
+                }
+                return true;
+            }
+            code = ",,,s";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
+            {
+                play_ucl_label = "";
+                ucl_find_data = new List<string>();
+                type_label_set_text();                
+                run_short();
+                toAlphaOrNonAlpha();
+                return true;
+            }
+            code = ",,,l";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
+            {
+                play_ucl_label = "";
+                ucl_find_data = new List<string>();
+                type_label_set_text();                
+                run_long();
+                toAlphaOrNonAlpha();
+                return true;
+            }
+            code = ",,,-";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
+            {
+                //# run small
+                play_ucl_label = "";
+                ucl_find_data = new List<string>();
+                type_label_set_text();
+                toAlphaOrNonAlpha();
+                run_big_small(-0.2);
+                return true;
+            }
+            code = ",,,+";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
+            {
+                //# run big
+                play_ucl_label = "";
+                ucl_find_data = new List<string>();
+                type_label_set_text();
+                toAlphaOrNonAlpha();
+                run_big_small(0.2);
+                return true;
+            }            
+            return false;
+        }
+        public void run_big_small(double kind)
+        {
+            double z = Convert.ToDouble(config["DEFAULT"]["ZOOM"]);
+            if (kind > 0)
+            {
+                if (z < 3)
+                {
+                    config["DEFAULT"]["ZOOM"] = (z + kind).ToString();
+                }
+            }
+            else
+            {
+                if (z > 0.3)
+                {
+                    config["DEFAULT"]["ZOOM"] = (z + kind).ToString();
+                }
+            }
+            update_UI();
+            saveConfig();
+        }
+        public void run_short()
+        {
+            //f.word_label.Visible = false;
+            //f.type_label.Vset_visible(False)
+            f.btn_gamemode.Visible = false;
+            config["DEFAULT"]["SHORT_MODE"] = "1";
+            update_UI();
+            saveConfig();
+        }
+        public void run_long()
+        {
+            //f.word_label.Visible = false;
+            //f.type_label.Vset_visible(False)
+            f.btn_gamemode.Visible = true;
+            config["DEFAULT"]["SHORT_MODE"] = "0";
+            update_UI();
+            saveConfig();
+        }
+        public string about_uclliu()
+        {
+            string _msg_text = string.Format("肥米輸入法 C# 版\n\n作者：羽山秋人 (http://3wa.tw)\n版本：{0}", VERSION);
+            _msg_text += "\n\n熱鍵提示：\n\n";
+            _msg_text += "「,,,VERSION」目前版本\n";
+            _msg_text += "「,,,UNLOCK」回到正常模式\n";
+            _msg_text += "「,,,LOCK」進入遊戲模式\n";
+            _msg_text += "「,,,C」簡體模式\n";
+            _msg_text += "「,,,T」繁體模式\n";
+            _msg_text += "「,,,S」UI變窄\n";
+            _msg_text += "「,,,L」UI變寬\n";
+            _msg_text += "「,,,+」UI變大\n";
+            _msg_text += "「,,,-」UI變小\n";
+            _msg_text += "「,,,X」框字的字根轉回文字\n";
+            _msg_text += "「,,,Z」框字的文字變成字根\n";
+            return _msg_text;
         }
         ///字串轉全形
         /// From : https://dotblogs.com.tw/shunnien/2013/07/21/111737
@@ -293,33 +429,52 @@ namespace uclliu
             f.LP.AutoSize = true;
             f.LP.Width = 10;
             f.LP.Height = 10;
-            f.LP.RowStyles[0] = new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 40 * (int)Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
+            f.LP.RowStyles[0] = new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
             //btn_UCL
-            f.LP.ColumnStyles[0] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 40 * (int)Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
+            f.LP.ColumnStyles[0] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
             //btn_HALF
-            f.LP.ColumnStyles[1] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 40 * (int)Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
-            //tape_label
-            f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 150 * (int)Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
-            //word_label
-            f.LP.ColumnStyles[3] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 350 * (int)Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
+            f.LP.ColumnStyles[1] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+
+            //btn_gamemode
+            if (config["DEFAULT"]["SHORT_MODE"] == "1")
+            {
+                //短
+                //tape_label
+                f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0);
+                //word_label
+                f.LP.ColumnStyles[3] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0);
+                //btn_gamemode
+                f.LP.ColumnStyles[5] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0);
+
+            }
+            else
+            {
+                //tape_label
+                f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(150 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+                //word_label
+                f.LP.ColumnStyles[3] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(350 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+                //btn_gamemode
+                f.LP.ColumnStyles[5] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(120 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+            }
+
             //簡繁
             if (is_simple())
             {
                 //簡模式
-                f.LP.ColumnStyles[4] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 40 * (int)Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
+                f.LP.ColumnStyles[4] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
             }
             else
             {
                 //繁模式
                 f.LP.ColumnStyles[4] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0);
             }
-            //btn_gamemode
-            f.LP.ColumnStyles[5] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 100 * (int)Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
+
+
             //btn_X
-            f.LP.ColumnStyles[6] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 40 * (int)Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
+            f.LP.ColumnStyles[6] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
 
             // 肥
-            f.btn_UCL.Font = GUI_FONT_18;
+            f.btn_UCL.Font = GUI_FONT_16;
             f.btn_UCL.FlatAppearance.BorderSize = 0;
             f.btn_UCL.Margin = new System.Windows.Forms.Padding(0);
             f.btn_UCL.Padding = new System.Windows.Forms.Padding(0);
@@ -327,7 +482,7 @@ namespace uclliu
             f.btn_UCL.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
             // 半全
-            f.btn_HALF.Font = GUI_FONT_18;
+            f.btn_HALF.Font = GUI_FONT_16;
             f.btn_HALF.FlatAppearance.BorderSize = 0;
             f.btn_HALF.Margin = new System.Windows.Forms.Padding(0);
             f.btn_HALF.Padding = new System.Windows.Forms.Padding(0);
@@ -366,7 +521,7 @@ namespace uclliu
             f.btn_gamemode.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
             // X
-            f.btn_X.Font = GUI_FONT_18;
+            f.btn_X.Font = GUI_FONT_16;
             f.btn_X.Margin = new System.Windows.Forms.Padding(0);
             f.btn_X.Padding = new System.Windows.Forms.Padding(0);
             f.btn_X.FlatAppearance.BorderSize = 0;
@@ -384,6 +539,7 @@ namespace uclliu
             f.btn_X.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             f.type_label.AutoSize = true;
             f.word_label.AutoSize = true;
+            f.Refresh();
         }
         public void show_sp_to_label(string data)
         {
@@ -436,6 +592,7 @@ namespace uclliu
                     f.btn_gamemode.Text = "正常模式";
                     break;
             }
+            toAlphaOrNonAlpha();
         }
         public void toggle_hf()
         {
@@ -567,12 +724,12 @@ namespace uclliu
                 //# 一字30
                 if (_len_tape_label == 0)
                 {
-                    f.type_label.Visible = false;
+                    //f.type_label.Visible = false;
                     f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0 * (int)Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
                 }
                 else
                 {
-                    f.type_label.Visible = true;
+                    //f.type_label.Visible = true;
                 }
                 //f.type_label.set_size_request(int(float(config['DEFAULT']['zoom']) * 18 * _len_tape_label), int(float(config['DEFAULT']['zoom']) * 40))                
                 f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute,
@@ -710,7 +867,7 @@ namespace uclliu
             //todo
             return data;
         }
-        public Dictionary<string,string> getForegroundWindowProcessInfo()
+        public Dictionary<string, string> getForegroundWindowProcessInfo()
         {
             //取得當前使用環境APP細節
             //回傳 
@@ -726,7 +883,7 @@ namespace uclliu
             //Encoding encoding = System.Text.Encoding.GetEncoding(MY_CODE_PAGE);
             IntPtr handle = Form1.GetForegroundWindow();
             var intLength = Form1.GetWindowTextLength(handle) + 1;
-            StringBuilder Buff = new StringBuilder(intLength);            
+            StringBuilder Buff = new StringBuilder(intLength);
             if (Form1.GetWindowText(handle, Buff, intLength) > 0)
             {
                 // return Buff.ToString();
@@ -740,11 +897,12 @@ namespace uclliu
             try
             {
                 //某些 app 會當，如 skype
-                Proc_NAME = my.mainname(my.basename(p.MainModule.FileName.ToLower()));
+                Proc_NAME = my.mainname(p.MainModule.FileName.ToLower());
             }
             catch (Exception ex)
             {
 
+                debug_print("Get ProcName failure:" + ex.Message);
             }
             Dictionary<string, string> output = new Dictionary<string, string>();
             //PROCESS_TITLE 標題
@@ -811,7 +969,7 @@ namespace uclliu
             debug_print("Sendkeys:" + data);
 
             var p_info = getForegroundWindowProcessInfo();
-            if(my.in_array(p_info["PROCESS_NAME"],sendkey_paste_shift_ins_apps))
+            if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_shift_ins_apps))
             {
                 //使用 shift+insert 出字
                 string orin_Clip = Clipboard.GetText();
@@ -822,7 +980,7 @@ namespace uclliu
                 is_send_ucl = false;
                 Clipboard.SetText(orin_Clip);
             }
-            else if(my.in_array(p_info["PROCESS_NAME"], sendkey_paste_ctrl_v_apps))
+            else if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_ctrl_v_apps))
             {
                 //使用 shift+insert 出字
                 string orin_Clip = Clipboard.GetText();
@@ -836,7 +994,7 @@ namespace uclliu
             else if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_big5_apps))
             {
                 string orin_Clip = Clipboard.GetText();
-                Clipboard.SetText( my.UTF8toBig5(data) );
+                Clipboard.SetText(my.UTF8toBig5(data));
                 is_send_ucl = true;
                 data = "^{v}";
                 SendKeys.Send(data);
@@ -850,7 +1008,7 @@ namespace uclliu
                 SendKeys.Send(data);
                 is_send_ucl = false;
             }
-          
+
         }
     }
 }

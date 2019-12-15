@@ -167,17 +167,56 @@ namespace uclliu
                 }
                 return OK;
             }
-
             if (ucl.is_send_ucl == true)
             {
                 //出字用
                 //ucl.is_send_ucl = false;
                 return OK;
             }
+            //處理額外的功能，如 ,,,version
+            //Console.WriteLine(ea);
+            if (keyup && ((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109 || ea == 189 || ea == 187))
+            { //只允許 a~z , + -
+                int kav = ea;
+                switch (kav)
+                {
+                    case 188: // ,
+                        kav = 44;
+                        break;
+                    case 107: // -
+                    case 187: // -
+                        kav = 43;
+                        break;
+                    case 109: // +
+                    case 189: // +
+                        kav = 45;                    
+                        break;
+                }
+                ucl.last_key = ucl.last_key + ((char)(kav)).ToString().ToLower();
+                if (ucl.last_key.Length > 10)
+                {
+                    //最多保留10個字
+                    int _splace = ucl.last_key.Length - 10;
+                    ucl.last_key = ucl.last_key.Substring(_splace, 10);
+                }
+
+                //Console.WriteLine("ucl.last_key: " + ucl.last_key);
+                if (ucl.run_extra())
+                {                    
+                    return NO;
+                }
+            }
+            else if (keyup && !((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109))
+            {
+                ucl.last_key = "";
+            }
+
+
             if (ucl.flag_is_gamemode)
             {
                 return OK;
             }
+
 
             if (keydown && ucl.is_ucl() && ucl.play_ucl_label.Length >= 1 && ESC)
             {
@@ -917,17 +956,21 @@ namespace uclliu
             }
 
         }
+        // 把 hookProc 抽出來，才不會用到一半 gc 回收就 crash
         static LowLevelKeyboardProcDelegate hookProc;
         public void KeyboardHook(object sender, EventArgs e)
         {
             hookProc = new LowLevelKeyboardProcDelegate(LowLevelKeyboardProc);
-            intLLKey = SetWindowsHookEx(WH_KEYBOARD_LL, hookProc,
+            //這裡改這樣，就算64位元也可以跑了~讚讚
+            //From : https://social.msdn.microsoft.com/Forums/vstudio/en-US/9bb5e76d-e9a3-4264-a9e9-842e6ff5ac32/setwindowshookex-works-in-net-2-but-not-in-net-4?forum=vbgeneral
+            intLLKey = SetWindowsHookEx(WH_KEYBOARD_LL, hookProc, 0, 0);
+            /*
+             intLLKey = SetWindowsHookEx(WH_KEYBOARD_LL, hookProc, 0
                         System.Runtime.InteropServices.Marshal.GetHINSTANCE(
-                        System.Reflection.Assembly.GetExecutingAssembly().GetModules()[0]).ToInt32(), 0);
-
-
+                        System.Reflection.Assembly.GetExecutingAssembly().GetModules()[0]).ToInt32()                        
+                        , 0);
+            */
         }
-
         private void ReleaseKeyboardHook()
         {
             intLLKey = UnhookWindowsHookEx(intLLKey);
