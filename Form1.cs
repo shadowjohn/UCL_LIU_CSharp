@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-//using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using utility;
@@ -523,8 +519,7 @@ namespace uclliu
                             case 220: //\
                                 //kac = 92;
                                 ucl.senddata("＼");
-                                return NO;
-                                break;
+                                return NO;                                
                             case 187: //+
                             case 188: //,
                             case 189: //-                            
@@ -807,8 +802,7 @@ namespace uclliu
                         case 220: //\
                             kac -= 128;
                             ucl.senddata("＼");
-                            return NO;
-                            break;
+                            return NO;                            
                         case 219: //[
                             kac = 91;
                             break;
