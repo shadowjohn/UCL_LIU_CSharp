@@ -28,6 +28,8 @@
         /// </summary>
         public void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.LP = new System.Windows.Forms.TableLayoutPanel();
             this.word_label = new System.Windows.Forms.Label();
             this.btn_UCL = new System.Windows.Forms.Button();
@@ -36,6 +38,7 @@
             this.btn_X = new System.Windows.Forms.Button();
             this.btn_gamemode = new System.Windows.Forms.Button();
             this.btn_simple = new System.Windows.Forms.Button();
+            this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
             this.LP.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -182,6 +185,12 @@
             this.btn_simple.UseVisualStyleBackColor = true;
             this.btn_simple.Visible = false;
             // 
+            // notifyIcon1
+            // 
+            this.notifyIcon1.Icon = ((System.Drawing.Icon)(resources.GetObject("notifyIcon1.Icon")));
+            this.notifyIcon1.Visible = true;
+            this.notifyIcon1.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NotifyIcon1_MouseDoubleClick);
+            // 
             // Form1
             // 
             this.AccessibleRole = System.Windows.Forms.AccessibleRole.Window;
@@ -191,16 +200,19 @@
             this.ClientSize = new System.Drawing.Size(592, 35);
             this.Controls.Add(this.LP);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "Form1";
             this.ShowIcon = false;
             this.ShowInTaskbar = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Deactivate += new System.EventHandler(this.Form1_Deactivate);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseDown);
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseMove);
             this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseUp);
+            this.Resize += new System.EventHandler(this.Form1_Resize);
             this.LP.ResumeLayout(false);
             this.LP.PerformLayout();
             this.ResumeLayout(false);
@@ -217,6 +229,7 @@
         public System.Windows.Forms.Label type_label;
         public System.Windows.Forms.Button btn_gamemode;
         public System.Windows.Forms.Button btn_simple;
+        private System.Windows.Forms.NotifyIcon notifyIcon1;
     }
 }
 

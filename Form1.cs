@@ -1036,6 +1036,8 @@ namespace uclliu
             word_label.Text = "";
             type_label.Text = "";
             KeyboardHook(this, e);
+            //小圖加入版本
+            notifyIcon1.Text = "肥米輸入法：" + ucl.VERSION;
             //修正一下畫面
             //
 
@@ -1088,6 +1090,7 @@ namespace uclliu
         private void btn_X_Click(object sender, EventArgs e)
         {
             ucl.debug_print("Bye Bye!");
+            notifyIcon1.Dispose();
             Application.Exit();
         }
 
@@ -1109,5 +1112,39 @@ namespace uclliu
             ucl.toggle_gamemode();
         }
 
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            if (this.WindowState == FormWindowState.Minimized)//縮小時
+            {
+                this.notifyIcon1.Visible = true;//顯示Icon
+                //this.Hide();//隱藏Form
+                //if (ReadFileTimer.Enabled)//有執行時 眨眼
+                //{
+                //    Eye_timer.Enabled = true;//開始眨眼
+                //    Eye_timer.Start();//開始眨眼
+                //}
+            }
+            else//放大時
+            {
+                this.notifyIcon1.Visible = true;//隱藏Icon
+                //Eye_timer.Stop();//停止眨眼
+                //Eye_timer.Enabled = false;//停止眨眼
+            }
+
+
+        }
+
+        private void NotifyIcon1_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            this.Show();//顯示Form
+            this.WindowState = FormWindowState.Normal;//回到正常大小
+            this.Activate();//焦點
+            this.Focus();//焦點
+        }
+
+        private void Form1_Deactivate(object sender, EventArgs e)
+        {
+            notifyIcon1.Dispose();
+        }
     }
 }
