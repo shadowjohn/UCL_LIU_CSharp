@@ -185,7 +185,7 @@ namespace uclliu
                         break;
                     case 109: // +
                     case 189: // +
-                        kav = 45;                    
+                        kav = 45;
                         break;
                 }
                 ucl.last_key = ucl.last_key + ((char)(kav)).ToString().ToLower();
@@ -198,7 +198,7 @@ namespace uclliu
 
                 //Console.WriteLine("ucl.last_key: " + ucl.last_key);
                 if (ucl.run_extra())
-                {                    
+                {
                     return NO;
                 }
             }
@@ -519,7 +519,7 @@ namespace uclliu
                             case 220: //\
                                 //kac = 92;
                                 ucl.senddata("＼");
-                                return NO;                                
+                                return NO;
                             case 187: //+
                             case 188: //,
                             case 189: //-                            
@@ -802,7 +802,7 @@ namespace uclliu
                         case 220: //\
                             kac -= 128;
                             ucl.senddata("＼");
-                            return NO;                            
+                            return NO;
                         case 219: //[
                             kac = 91;
                             break;
@@ -980,6 +980,7 @@ namespace uclliu
         //}
         uclliu ucl;
         private static Form1 form = null;
+        static ContextMenu cMenu = new ContextMenu();
         public Form1()
         {
             InitializeComponent();
@@ -1055,6 +1056,9 @@ namespace uclliu
             //起始不可以是 topmost ，在程式執行後，才置高，不然
             //首次切換輸入法時，會失去原始的焦點(如記事本)
             this.TopMost = true;
+
+
+
             /*Thread.Sleep(1000);
             SendKeys.SendWait("+");
             Thread.Sleep(1000);
@@ -1136,15 +1140,107 @@ namespace uclliu
 
         private void NotifyIcon1_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            this.Show();//顯示Form
-            this.WindowState = FormWindowState.Normal;//回到正常大小
-            this.Activate();//焦點
-            this.Focus();//焦點
+            //this.Show();//顯示Form
+            //this.WindowState = FormWindowState.Normal;//回到正常大小
+            //this.Activate();//焦點
+            //this.Focus();//焦點
         }
 
         private void Form1_Deactivate(object sender, EventArgs e)
         {
-            notifyIcon1.Dispose();
+            //notifyIcon1.Dispose();
+        }
+        private void menu_about_UCL_Click(object sender, EventArgs e)
+        {
+            ucl.run_about_ucl();
+        }
+        private void menu_chage_gamemode(object sender, EventArgs e)
+        {
+            this.btn_gamemode.PerformClick();
+        }
+        private void menu_change_senddata_kind(object sender, EventArgs e)
+        {
+            //switch(s
+            switch(((MenuItem)sender).Text)
+            {
+                case "【●】正常出字模式":
+                case "【　】正常出字模式":
+                    //MessageBox.Show("OK");
+                    ucl.DEFAULT_OUTPUT_TYPE = "DEFAULT";
+                    break;
+                case "【●】BIG5模式":
+                case "【　】BIG5模式":
+                    ucl.DEFAULT_OUTPUT_TYPE = "BIG5";
+                    break;
+                case "【●】複製貼上模式":
+                case "【　】複製貼上模式":
+                    ucl.DEFAULT_OUTPUT_TYPE = "PASTE";
+                    break;
+            }
+
+            cMenu.MenuItems.Clear();
+            //Console.WriteLine(ucl.DEFAULT_OUTPUT_TYPE);
+            //Console.WriteLine(((MenuItem)sender).Text);
+        }
+        private void menu_run_exit(object sender, EventArgs e)
+        {
+            btn_X.PerformClick();
+        }
+        
+        private void NotifyIcon1_MouseClick(object sender, MouseEventArgs e)
+        {
+            //加入右下表單
+            cMenu.MenuItems.Clear();
+            cMenu.MenuItems.Add("1.關於肥米輸入法", this.menu_about_UCL_Click);
+
+            switch (ucl.flag_is_gamemode)
+            {
+                case true:
+                    cMenu.MenuItems.Add("2.切換至「正常模式」", this.menu_chage_gamemode);
+                    break;
+                case false:
+                    cMenu.MenuItems.Add("2.切換至「普通模式」", this.menu_chage_gamemode);
+                    break;
+            }
+
+            MenuItem cSubMenu = new MenuItem();
+            cSubMenu.Text = "3.選擇出字模式";
+            string is_o = "　";
+            if (ucl.DEFAULT_OUTPUT_TYPE == "DEFAULT")
+            {
+                is_o = "●";
+            }
+            else
+            {
+                is_o = "　";
+            }
+            cSubMenu.MenuItems.Add("【" + is_o + "】正常出字模式", this.menu_change_senddata_kind);
+            is_o = "　";
+            if (ucl.DEFAULT_OUTPUT_TYPE == "BIG5")
+            {
+                is_o = "●";
+            }
+            else
+            {
+                is_o = "　";
+            }
+            cSubMenu.MenuItems.Add("【"+ is_o+"】BIG5模式", this.menu_change_senddata_kind);
+            is_o = "　";
+            if (ucl.DEFAULT_OUTPUT_TYPE == "PASTE")
+            {
+                is_o = "●";
+            }
+            else
+            {
+                is_o = "　";
+            }
+            cSubMenu.MenuItems.Add("【" + is_o + "】複製貼上模式", this.menu_change_senddata_kind);
+
+            cMenu.MenuItems.Add(cSubMenu);
+
+            cMenu.MenuItems.Add("離開(Exit)", this.menu_run_exit);
+            notifyIcon1.ContextMenu = cMenu;
+
         }
     }
 }

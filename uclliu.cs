@@ -24,7 +24,7 @@ namespace uclliu
         public JsonValue uclcode = null;
         public bool is_DEBUG_mode = false; //除錯模式
         public string INI_CONFIG_FILE = "C:\\temp\\UCLLIU.ini"; //預設在 此，實際使用的位置同在 uclliu.exe
-        string DEFAULT_OUTPUT_TYPE = "DEFAULT";
+        public string DEFAULT_OUTPUT_TYPE = "DEFAULT";
         //硬派出字方式選擇
         //#DEFAULT
         //#BIG5
@@ -152,6 +152,14 @@ namespace uclliu
             }
             return my.implode("", m);
         }
+        public void run_about_ucl()
+        {
+            MessageBox.Show(new Form { TopMost = true },
+                    about_uclliu(),
+                    "羽山の說明",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+        }
         public bool run_extra() //跑額外的功能，如 ,,,version
         {
             string code = "";
@@ -193,11 +201,7 @@ namespace uclliu
             {
                 // https://stackoverflow.com/questions/16105097/why-isnt-messagebox-topmost
                 // messagebox top most 的問題
-                MessageBox.Show(new Form { TopMost = true },
-                    about_uclliu(),
-                    "羽山の說明",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                run_about_ucl();
                 return true;
             }
             code = ",,,lock";
