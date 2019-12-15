@@ -1047,7 +1047,7 @@ namespace uclliu
             debug_print("Sendkeys:" + data);
 
             var p_info = getForegroundWindowProcessInfo();
-            if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_shift_ins_apps))
+            if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_shift_ins_apps) || DEFAULT_OUTPUT_TYPE=="DEFAULT")
             {
                 //使用 shift+insert 出字
                 string orin_Clip = Clipboard.GetText();
@@ -1060,7 +1060,7 @@ namespace uclliu
             }
             else if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_ctrl_v_apps))
             {
-                //使用 shift+insert 出字
+                //使用 ctrl+v 出字
                 string orin_Clip = Clipboard.GetText();
                 Clipboard.SetText(data);
                 is_send_ucl = true;
@@ -1069,7 +1069,7 @@ namespace uclliu
                 is_send_ucl = false;
                 Clipboard.SetText(orin_Clip);
             }
-            else if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_big5_apps))
+            else if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_big5_apps) || DEFAULT_OUTPUT_TYPE == "BIG5")
             {
                 string orin_Clip = Clipboard.GetText();
                 Clipboard.SetText(my.UTF8toBig5(data));

@@ -1138,13 +1138,7 @@ namespace uclliu
 
         }
 
-        private void NotifyIcon1_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            //this.Show();//顯示Form
-            //this.WindowState = FormWindowState.Normal;//回到正常大小
-            //this.Activate();//焦點
-            //this.Focus();//焦點
-        }
+        
 
         private void Form1_Deactivate(object sender, EventArgs e)
         {
