@@ -24,6 +24,10 @@ namespace utility
         {
             return File.Exists(filepath);
         }
+        public string trim(string data)
+        {
+            return data.Trim();
+        }
         public void unlink(string filepath)
         {
             if (is_file(filepath))
@@ -219,6 +223,14 @@ namespace utility
         public string[] explode(string keyword, object data)
         {
             return data.ToString().Split(new string[] { keyword }, StringSplitOptions.None);
+        }
+        public string[] array_unique(string[] s)
+        {
+            //去除重複
+            HashSet<string> set = new HashSet<string>(s);
+            string[] result = new string[set.Count];
+            set.CopyTo(result);
+            return result;
         }
         public string[] explode(string[] keyword, string data)
         {

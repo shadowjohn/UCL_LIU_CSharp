@@ -1035,6 +1035,11 @@ namespace uclliu
             ucl.loadConfig();
             //載入字根檔     
             ucl.loadJsonData();
+            //如果有拚音，載入拚音功能
+            if (my.is_file(my.pwd() + "\\pinyi.txt"))
+            {
+                ucl.same_sound_data = new List<string>(my.explode("\n", my.trim(my.b2s(my.file_get_contents(my.pwd() + "\\pinyi.txt")))));
+            }
 
             word_label.Text = "";
             type_label.Text = "";

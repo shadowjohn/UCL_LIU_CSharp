@@ -24,6 +24,7 @@ namespace uclliu
         public JsonValue uclcode = null;
         public bool is_DEBUG_mode = true; //除錯模式
         public string INI_CONFIG_FILE = "C:\\temp\\UCLLIU.ini"; //預設在 此，實際使用的位置同在 uclliu.exe
+        public List<string> same_sound_data = new List<string>(); //拚音
         public string DEFAULT_OUTPUT_TYPE = "DEFAULT";
         //硬派出字方式選擇
         //#DEFAULT
@@ -137,7 +138,7 @@ namespace uclliu
             //正轉殘
             var m = new List<string>();
             for (int i = 0, max_i = data.Length; i < max_i; i++)
-            {                
+            {
                 int is_find = TC_TDATA.IndexOf(data[i]);
                 //Console.WriteLine("data[i]:" + data[i]);
                 //Console.WriteLine("is_find:" + is_find.ToString());
@@ -368,7 +369,7 @@ namespace uclliu
             }
             catch (Exception ex)
             {
-                debug_print("肥米已經被開啟了，取消..."+ex.Message);
+                debug_print("肥米已經被開啟了，取消..." + ex.Message);
                 return false;
             }
         }
@@ -631,7 +632,44 @@ namespace uclliu
         }
         public void use_pinyi(string data)
         {
-
+            string finds = "";
+            foreach (var k in same_sound_data)
+            {
+                if (my.is_string_like(k, data))
+                {
+                    finds = string.Format("{0}{1} ", finds, my.trim(k));
+                }
+            }
+            finds = my.trim(finds);
+            var mfinds = my.explode(" ", finds);
+            mfinds = my.array_unique(mfinds); //去除重複
+            debug_print("Debug Finds: " + mfinds.Length.ToString());
+            debug_print("Debug same_sound_index: " + same_sound_index.ToString());
+            debug_print("Debug same_sound_max_word: " + same_sound_max_word.ToString());
+            int maxword = same_sound_index + same_sound_max_word;
+            debug_print("Debug maxword: " + maxword.ToString());
+            int copy_words = same_sound_max_word;
+            if (maxword >= mfinds.Length ) {                
+                is_has_more_page = false;
+                copy_words =  mfinds.Length- same_sound_index;
+            }
+            else
+            {
+                is_has_more_page = true;
+                //copy_words dont change
+            }
+                        
+            string[] tmp = new string[copy_words];
+            //https://stackoverflow.com/questions/886488/copy-one-string-array-to-another
+            Array.Copy(mfinds, same_sound_index, tmp, 0, copy_words);
+            ucl_find_data = new List<string>(tmp);
+            debug_print("DEBUG same_sound_index: " + same_sound_index.ToString());
+            same_sound_index = same_sound_index + same_sound_max_word;
+            if(same_sound_index >= mfinds.Length)
+            {
+                same_sound_index = 0;
+            }
+            word_label_set_text();
         }
         public bool is_ucl()
         {
@@ -769,7 +807,7 @@ namespace uclliu
             }
             catch (Exception ex)
             {
-                debug_print("Crash..."+ex.Message);
+                debug_print("Crash..." + ex.Message);
             }
         }
         public void debug_print(string data)
@@ -943,7 +981,7 @@ namespace uclliu
                 case "全":
                     f.btn_HALF.Text = "半";
                     break;
-            }        
+            }
         }
         public Dictionary<string, string> getForegroundWindowProcessInfo()
         {
@@ -1047,7 +1085,7 @@ namespace uclliu
             debug_print("Sendkeys:" + data);
 
             var p_info = getForegroundWindowProcessInfo();
-            if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_shift_ins_apps) || DEFAULT_OUTPUT_TYPE=="DEFAULT")
+            if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_shift_ins_apps) || DEFAULT_OUTPUT_TYPE == "DEFAULT")
             {
                 //使用 shift+insert 出字
                 string orin_Clip = Clipboard.GetText();
