@@ -351,3 +351,5 @@ MigrationBackup/
 liu.json
 bin/*
 UCLLIU.ini
+UCLLIU.lock
+dist/UCLLIU.lock
