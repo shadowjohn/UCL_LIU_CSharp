@@ -22,7 +22,7 @@ namespace uclliu
         //把 chardefs 的字碼，變成對照字根，可以加速 ,,,z、,,,x 反查的速度
         public Dictionary<string, string> uclcode_r = new Dictionary<string, string>();
         public JsonValue uclcode = null;
-        public bool is_DEBUG_mode = true; //除錯模式
+        public bool is_DEBUG_mode = false; //除錯模式
         public string INI_CONFIG_FILE = "C:\\temp\\UCLLIU.ini"; //預設在 此，實際使用的位置同在 uclliu.exe
         public List<string> same_sound_data = new List<string>(); //拚音
         public string DEFAULT_OUTPUT_TYPE = "DEFAULT";
@@ -58,7 +58,7 @@ namespace uclliu
         int same_sound_index = 0; //用來放第幾頁
         int same_sound_max_word = 6; //一頁最多5字
         bool is_has_more_page = false; //是否還有下頁
-        bool is_display_sp = false; //是否顯示簡根
+        public bool is_display_sp = false; //是否顯示簡根
         //# GUI Font
         public Font GUI_FONT_12 = new Font("roman", 12, FontStyle.Bold);
         public Font GUI_FONT_14 = new Font("roman", 14, FontStyle.Bold);
@@ -109,9 +109,6 @@ namespace uclliu
                 m[i] = my.mainname(m[i]);
             }
             sendkey_not_use_ucl_apps = new List<string>(m);
-
-            //f.Enabled = true;
-            //f.btn_UCL.Text = "GG";
         }
         //感謝台灣碼農
         public string simple2trad(string data)
@@ -152,6 +149,30 @@ namespace uclliu
                 }
             }
             return my.implode("", m);
+        }
+        public void generator_sp_table()
+        {
+            //產生最簡根速查表
+            foreach (var k in uclcode["chardefs"])
+            {
+                var data = k.ToString().Replace("[", "").Replace("]", "").Replace(" ", "").Replace("\"", "");
+                var m = my.explode(",", data);
+                for (int i = 1, max_i = m.Length; i < max_i; i++)
+                {
+                    if (!uclcode_r.ContainsKey(m[i]))
+                    {
+                        uclcode_r.Add(m[i], m[0]);
+                    }
+                    else
+                    {
+                        if (m[0].Length < uclcode_r[m[i]].Length)
+                        {
+                            uclcode_r[m[i]] = m[0];
+                        }
+                    }
+                }
+            }
+            //Console.WriteLine("測試簡根:" + uclcode_r["臨"]);
         }
         public void run_about_ucl()
         {
@@ -268,6 +289,10 @@ namespace uclliu
                 return true;
             }
             return false;
+        }
+        public void run_toggle_sp()
+        {
+            is_display_sp = (is_display_sp == false) ? true : false;
         }
         public void run_big_small(double kind)
         {
@@ -522,10 +547,16 @@ namespace uclliu
             if (config["DEFAULT"]["SHORT_MODE"] == "1")
             {
                 //短
-                //tape_label
-                f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0);
+                //type_label
+                //加入，判斷有多少字，改多長
+                //一字 25
+                int _tape_label_width = Convert.ToInt32(f.type_label.Text.Length * 18 * Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
+                f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, _tape_label_width);
                 //word_label
-                f.LP.ColumnStyles[3] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0);
+                debug_print("_tape_label_width : " + _tape_label_width.ToString());
+                int _word_label_width = Convert.ToInt32(f.word_label.Text.Length * 18 * Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
+                f.LP.ColumnStyles[3] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, _word_label_width);
+                debug_print("_word_label_width : " + _word_label_width.ToString());
                 //btn_gamemode
                 f.LP.ColumnStyles[5] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0);
 
@@ -628,7 +659,56 @@ namespace uclliu
         }
         public void show_sp_to_label(string data)
         {
+            //# 顯示最簡字根到輸入結束框後
 
+            if (is_display_sp == false)
+            {
+                return;
+            }
+            string sp = "簡根：" + my.strtoupper(word_to_sp(data));
+            //#word_label.set_label(sp)
+            //#word_label.modify_font(pango.FontDescription(GUI_FONT_18))
+            type_label_set_text(sp);
+        }
+        public string find_ucl_in_uclcode(string chinese_data)
+        {
+            //# 用中文反找蝦碼(V1.10版寫法)
+            //一次傳一個字
+            if (uclcode_r.ContainsKey(chinese_data))
+            {
+                return uclcode_r[chinese_data];
+            }
+            else
+            {
+                return chinese_data;
+            }
+        }
+        public string word_to_sp(string data)
+        {
+            //# 中文轉最簡字根
+            //# 回傳字根文字
+            //# 中文轉字根 thread
+            string selectData = data; //#my.trim(data);
+            selectData = selectData.Replace("\r", "");
+            List<string> menter = new List<string>(my.explode("\n", selectData));
+            string output = "";
+            for (int i = 0, max_i = menter.Count; i < max_i; i++)
+            {
+                List<string> output_arr = new List<string>();
+                for (int j = 0, max_j = menter[i].Length; j < max_j; j++)
+                {
+                    string _uclcode = find_ucl_in_uclcode(menter[i][j].ToString());
+                    if (_uclcode != "")
+                    {
+                        output_arr.Add(_uclcode);
+                    }
+                }
+                output += my.implode("{SPACE}", output_arr);
+                if (i != menter.Count - 1) {
+                    output += "{ENTER}";
+                }
+            }
+            return output;
         }
         public void use_pinyi(string data)
         {
@@ -649,23 +729,24 @@ namespace uclliu
             int maxword = same_sound_index + same_sound_max_word;
             debug_print("Debug maxword: " + maxword.ToString());
             int copy_words = same_sound_max_word;
-            if (maxword >= mfinds.Length ) {                
+            if (maxword >= mfinds.Length)
+            {
                 is_has_more_page = false;
-                copy_words =  mfinds.Length- same_sound_index;
+                copy_words = mfinds.Length - same_sound_index;
             }
             else
             {
                 is_has_more_page = true;
                 //copy_words dont change
             }
-                        
+
             string[] tmp = new string[copy_words];
             //https://stackoverflow.com/questions/886488/copy-one-string-array-to-another
             Array.Copy(mfinds, same_sound_index, tmp, 0, copy_words);
             ucl_find_data = new List<string>(tmp);
             debug_print("DEBUG same_sound_index: " + same_sound_index.ToString());
             same_sound_index = same_sound_index + same_sound_max_word;
-            if(same_sound_index >= mfinds.Length)
+            if (same_sound_index >= mfinds.Length)
             {
                 same_sound_index = 0;
             }
@@ -960,6 +1041,18 @@ namespace uclliu
                 f.word_label.Text = tmp;
                 debug_print(string.Format("word_label lens: {0} ", tmp.Length));
                 int lt = tmp.Length;
+                if (config["DEFAULT"]["SHORT_MODE"] == "1")
+                {
+                    //調整長度
+                    //同 python #1042
+                    string _word_label = f.word_label.Text;
+                    int _len_word_label = _word_label.Length;
+                    if (_len_word_label == 0)
+                    {
+
+                    }
+                    update_UI();
+                }
             }
             catch (Exception ex)
             {
@@ -1085,7 +1178,7 @@ namespace uclliu
             debug_print("Sendkeys:" + data);
 
             var p_info = getForegroundWindowProcessInfo();
-            if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_shift_ins_apps) || DEFAULT_OUTPUT_TYPE == "DEFAULT")
+            if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_shift_ins_apps) || DEFAULT_OUTPUT_TYPE == "PASTE")
             {
                 //使用 shift+insert 出字
                 string orin_Clip = Clipboard.GetText();

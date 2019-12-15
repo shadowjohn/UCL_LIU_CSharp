@@ -345,6 +345,7 @@ namespace uclliu
                         string data = ucl.ucl_find_data[Convert.ToInt32(Convert.ToString((char)ea))];
                         ucl.senddata(data);
                         //todo
+                        ucl.show_sp_to_label(data);
                         //ucl.show_sp_to_label(data.decode('utf-8'));
                         //# 快選用的
                         //# print(data)        
@@ -1041,6 +1042,9 @@ namespace uclliu
                 ucl.same_sound_data = new List<string>(my.explode("\n", my.trim(my.b2s(my.file_get_contents(my.pwd() + "\\pinyi.txt")))));
             }
 
+            //產生最簡根表
+            ucl.generator_sp_table();
+
             word_label.Text = "";
             type_label.Text = "";
             KeyboardHook(this, e);
@@ -1187,7 +1191,11 @@ namespace uclliu
         {
             btn_X.PerformClick();
         }
-
+        private void menu_change_sp(object sender, EventArgs e)
+        {
+            //改變顯示短根
+            ucl.run_toggle_sp();
+        }
         private void NotifyIcon1_MouseClick(object sender, MouseEventArgs e)
         {
             //加入右下表單
@@ -1236,8 +1244,18 @@ namespace uclliu
                 is_o = "　";
             }
             cSubMenu.MenuItems.Add("【" + is_o + "】複製貼上模式", this.menu_change_senddata_kind);
-
             cMenu.MenuItems.Add(cSubMenu);
+
+            is_o = "　";
+            if(ucl.is_display_sp == true)
+            {
+                is_o = "●";
+            }
+            else
+            {
+                is_o = "　";
+            }
+            cMenu.MenuItems.Add("4.【"+is_o+"】顯示短根", this.menu_change_sp);
 
             cMenu.MenuItems.Add("離開(Exit)", this.menu_run_exit);
             notifyIcon1.ContextMenu = cMenu;
