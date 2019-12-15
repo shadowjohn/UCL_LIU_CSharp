@@ -406,6 +406,9 @@ namespace uclliu
         }
         public void update_UI()
         {
+            //修正畫面放大、縮小，調整大小， UI 變化很慢的問題
+            //From : http://www.vbforums.com/showthread.php?632550-RESOLVED-Slow-Form-Load-
+            f.SuspendLayout();
             //# GUI Font
             debug_print("font size : " + config["DEFAULT"]["ZOOM"]);
             GUI_FONT_12 = new Font("roman", Convert.ToInt32(Convert.ToDouble(config["DEFAULT"]["ZOOM"]) * 12), FontStyle.Bold);
@@ -539,7 +542,9 @@ namespace uclliu
             f.btn_X.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             f.type_label.AutoSize = true;
             f.word_label.AutoSize = true;
-            f.Refresh();
+            f.Visible = true;
+            //f.Refresh();
+            f.ResumeLayout();
         }
         public void show_sp_to_label(string data)
         {
