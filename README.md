@@ -30,15 +30,15 @@
 　　2、將 「liu.json」與 uclliu.exe 放一起<br>
 　　3、執行 uclliu.exe 即可開始使用<br>　　
 　　4、(待開發)下載 pinyi.txt 與 uclliu.exe 放一起執行，同音字庫，如「'pns」，會出現「0你 1妳 2擬 3禰 4儗 5旎...」同音選擇。<br>
-　　5、(待開發)「正常模式」=「,,,unlock」：平常打字用。<br>
-　　6、(待開發)「遊戲模式」=「,,,lock」：玩遊戲時用，如CS:GO，需要按著Shift消音走路。<br>
+　　5、「正常模式」=「,,,unlock」：平常打字用。<br>
+　　6、「遊戲模式」=「,,,lock」：玩遊戲時用，如CS:GO，需要按著Shift消音走路。<br>
 　　(如果忽然無法打字，也許就是進了「遊戲模式」請按「,,,unlock」解除。)<br>
-　　7、(待開發)「查看目前版本」=「,,,version」 <br>
+　　7、「查看目前版本」=「,,,version」 <br>
 　　8、(待開發)「簡體／繁體」模式 「,,,c」「,,,t」 切換<br>
-　　9、(待開發)UI 變窄「,,,s」 <br>
-　　10、(待開發)UI 變寬「,,,l」 <br>
-　　11、(待開發)UI 變大「,,,+」 <br>
-　　12、(待開發)UI 變小「,,,-」 <br>
+　　9、UI 變窄「,,,s」 <br>
+　　10、UI 變寬「,,,l」 <br>
+　　11、UI 變大「,,,+」 <br>
+　　12、UI 變小「,,,-」 <br>
 　　13、UCLLIU.ini<br>
 　　　　[DEFAULT]<br>
 　　　　short_mode = 0  # 是否為「短」版模式， 0 或 1<br>
@@ -80,9 +80,7 @@
 　　要好的字碼表的話，請買正版，將 tab->cin->json <br>
 　　雖然很麻煩，但沒人想因為實作一套輸入法就被告翻。<br>
 　　<br>
-　　P.S: 請不要使用守義大學FTP裡的那個 liu-uni.tab ，太古早了，而且有些字根都錯的!
-　　<br>
-　　首次使用如果沒有liu.json，會自動進行 tab->cin->json的轉換，tab會自動查找C:\windows\Syswow64\liu-uni.tab 或 C:\\Program Files\\BoshiamyTIP\\liu-uni.tab 或 同目錄下的tab檔。<br>
+
 <br>
 <br>
 
@@ -109,8 +107,7 @@
   <ul>    
     <li>(Third party) include.cs 羽山比較熟php，所以在 C# 裡實作很多php的函式</li>
     <li>(Third party) System.JSON 將 liu.json 轉成 JsonValue 的方法</li>
-    <li>(Third party) (nuget) ini-parser 處理 UCLLIU.ini 檔案</li>
-    <li>(Third party) liu_unitab2cin.py 可以將tab轉成cin的檔案，改成支援python2.7的寫法</li>
+    <li>(Third party) (nuget) ini-parser 處理 UCLLIU.ini 檔案</li>    
     <li>(Third party) ILMerge、MSBuild.ILMerge.Task 目的是將打包後的 uclliu.exe 變成單一檔，才不會帶一堆 dll</li>
     <li>System.Web.Extensions 處理半形字轉全形字的方法</li>
     <li>字碼表亦可參考PIME或python版 UCLLIU 轉出來的 liu.json</li>
