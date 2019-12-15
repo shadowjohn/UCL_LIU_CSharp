@@ -336,11 +336,13 @@ namespace uclliu
                 //107 +
                 if (keydown && ucl.flag_is_shift_down == false && ((ea >= 48 && ea <= 57) || (ea >= 96 && ea <= 105) || ea == 110 || ea == 107 || ea == 109 || ea == 106 || ea == 111))
                 { // #0~9 .=110
-
-                    if (ucl.ucl_find_data.Count >= 1 && Convert.ToInt32((char)(ea)) < ucl.ucl_find_data.Count)
+                    //ucl.debug_print("有後選字時，按數字鍵出字: ucl.ucl_find_data.Count : " + ucl.ucl_find_data.Count.ToString());
+                    //ucl.debug_print("有後選字時，按數字鍵出字:  Convert.ToInt32(  Convert.ToString((char)ea) ) : " + Convert.ToInt32(Convert.ToString((char)ea)).ToString());
+                    if (ucl.ucl_find_data.Count >= 1 && Convert.ToInt32(Convert.ToString((char)ea)) < ucl.ucl_find_data.Count)
                     {
                         //# send data        
-                        string data = ucl.ucl_find_data[Convert.ToInt32((char)(ea))];
+                        //肥模式，打字時，如果後選字有如 0 1 2 3 4…按數字鍵，也可以出字
+                        string data = ucl.ucl_find_data[Convert.ToInt32(Convert.ToString((char)ea))];
                         ucl.senddata(data);
                         //todo
                         //ucl.show_sp_to_label(data.decode('utf-8'));
@@ -1138,7 +1140,7 @@ namespace uclliu
 
         }
 
-        
+
 
         private void Form1_Deactivate(object sender, EventArgs e)
         {
@@ -1155,7 +1157,7 @@ namespace uclliu
         private void menu_change_senddata_kind(object sender, EventArgs e)
         {
             //switch(s
-            switch(((MenuItem)sender).Text)
+            switch (((MenuItem)sender).Text)
             {
                 case "【●】正常出字模式":
                 case "【　】正常出字模式":
@@ -1180,7 +1182,7 @@ namespace uclliu
         {
             btn_X.PerformClick();
         }
-        
+
         private void NotifyIcon1_MouseClick(object sender, MouseEventArgs e)
         {
             //加入右下表單
@@ -1218,7 +1220,7 @@ namespace uclliu
             {
                 is_o = "　";
             }
-            cSubMenu.MenuItems.Add("【"+ is_o+"】BIG5模式", this.menu_change_senddata_kind);
+            cSubMenu.MenuItems.Add("【" + is_o + "】BIG5模式", this.menu_change_senddata_kind);
             is_o = "　";
             if (ucl.DEFAULT_OUTPUT_TYPE == "PASTE")
             {

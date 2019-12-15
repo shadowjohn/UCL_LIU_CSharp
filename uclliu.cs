@@ -22,7 +22,7 @@ namespace uclliu
         //把 chardefs 的字碼，變成對照字根，可以加速 ,,,z、,,,x 反查的速度
         public Dictionary<string, string> uclcode_r = new Dictionary<string, string>();
         public JsonValue uclcode = null;
-        public bool is_DEBUG_mode = false; //除錯模式
+        public bool is_DEBUG_mode = true; //除錯模式
         public string INI_CONFIG_FILE = "C:\\temp\\UCLLIU.ini"; //預設在 此，實際使用的位置同在 uclliu.exe
         public string DEFAULT_OUTPUT_TYPE = "DEFAULT";
         //硬派出字方式選擇
