@@ -83,10 +83,8 @@
 
 <br>
 <br>
-
     (2019-12-15) V0.1 版：
-    初開發，還未完成
-    
+    初開發，還未完成    
 <br>
 <h3>開發工具：</h3>
   <ul>
@@ -105,7 +103,7 @@
 <br>
 <h3>檔案說明：</h3>
   <ul>    
-    <li>(Third party) include.cs 羽山比較熟php，所以在 C# 裡實作很多php的函式</li>
+    <li>(Third party) include.cs 羽山比較熟php，所以在 C# 裡實作很多 php 的函式</li>
     <li>(Third party) System.JSON 將 liu.json 轉成 JsonValue 的方法</li>
     <li>(Third party) (nuget) ini-parser 處理 UCLLIU.ini 檔案</li>    
     <li>(Third party) ILMerge、MSBuild.ILMerge.Task 目的是將打包後的 uclliu.exe 變成單一檔，才不會帶一堆 dll</li>
@@ -138,6 +136,7 @@
   <li>5、半形轉全形：黑暗執行序的方法：https://blog.darkthread.net/blog/strconv-half-full-width-notes</li>
   <li>6、JsonValue 處理 liu.json：https://stackoverflow.com/questions/6620165/how-can-i-parse-json-with-c</li>
   <li>7、ini-parser：https://github.com/rickyah/ini-parser</li>
-  <li>8、sendkey範例：https://www.itread01.com/content/1548344359.html</li>   
+  <li>8、sendkey範例：https://www.itread01.com/content/1548344359.html</li>
+  <li>9、線上語法測試；https://dotnetfiddle.net/</li>   
 </ul>
 <br>

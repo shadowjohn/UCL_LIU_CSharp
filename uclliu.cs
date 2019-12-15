@@ -9,7 +9,7 @@ using utility;
 using System.Json;
 using System.Text;
 using System.Diagnostics;
-
+using System.Threading;
 //using Microsoft.VisualBasic.Strings;
 namespace uclliu
 {
@@ -287,6 +287,66 @@ namespace uclliu
                 toAlphaOrNonAlpha();
                 run_big_small(0.2);
                 return true;
+            }
+            code = ",,,z";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code && is_ucl())
+            {
+                //# 將框選的文字，轉成嘸蝦米的字
+                play_ucl_label = "";
+                ucl_find_data = new List<string>();
+                type_label_set_text();
+                toAlphaOrNonAlpha();
+                try
+                {
+                    string orin_clip = Clipboard.GetText();
+                    is_send_ucl = true;
+                    SendKeys.Send("^C"); //copy                
+                    is_send_ucl = false;
+                    Thread.Sleep(500);
+                    string selectData = Clipboard.GetText();
+                    Thread.Sleep(500);
+                    //# 簡轉繁
+                    selectData = simple2trad(selectData);
+                    //然後寫回
+                    is_send_ucl = true;
+                    selectData = word_to_sp(selectData);
+                    senddata(selectData);
+                    is_send_ucl = false;
+                    Clipboard.SetText(orin_clip);
+                }
+                catch (Exception ex)
+                {
+                    debug_print("可能會當 ,,,z: " + ex.Message);
+                }
+            }
+            code = ",,,x";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code && is_ucl())
+            {
+                //# 將框選嘸蝦米的文字，轉成中文字
+                play_ucl_label = "";
+                ucl_find_data = new List<string>();
+                type_label_set_text();
+                toAlphaOrNonAlpha();
+                try
+                {
+                    string orin_clip = Clipboard.GetText();
+                    is_send_ucl = true;
+                    SendKeys.Send("^C"); //copy                
+                    is_send_ucl = false;
+                    Thread.Sleep(500);
+                    string selectData = Clipboard.GetText();
+                    Thread.Sleep(500);                   
+                    //然後寫回
+                    is_send_ucl = true;
+                    selectData = sp_to_word(selectData);
+                    senddata(selectData);
+                    is_send_ucl = false;
+                    Clipboard.SetText(orin_clip);
+                }
+                catch (Exception ex)
+                {
+                    debug_print("可能會當 ,,,x: " + ex.Message);
+                }
             }
             return false;
         }
@@ -683,6 +743,30 @@ namespace uclliu
                 return chinese_data;
             }
         }
+        public string sp_to_word(string data)
+        {
+            //字根轉中文
+            string selectData = my.trim(data);
+            List<string> menter = new List<string>(my.explode("\n", selectData));
+            string output = "";
+            for (int i = 0, max_i = menter.Count; i < max_i; i++)
+            {
+                List<string> output_arr = new List<string>();
+                List<string> m = new List<string>(my.explode(" ", menter[i]));
+                //#print(len(m));
+                for (int j = 0, max_j = m.Count; j < max_j; j++)
+                {
+                    //# 轉小寫
+                    string ucl_split_code = my.strtolower(m[j]);
+                    output += uclcode_to_chinese(ucl_split_code);
+                }
+                if (i != menter.Count - 1)
+                {
+                    output += "\n";
+                }
+            }
+            return output;
+        }
         public string word_to_sp(string data)
         {
             //# 中文轉最簡字根
@@ -703,9 +787,10 @@ namespace uclliu
                         output_arr.Add(_uclcode);
                     }
                 }
-                output += my.implode("{SPACE}", output_arr);
-                if (i != menter.Count - 1) {
-                    output += "{ENTER}";
+                output += my.implode(" ", output_arr);
+                if (i != menter.Count - 1)
+                {
+                    output += "\n";
                 }
             }
             return output;
@@ -956,6 +1041,45 @@ namespace uclliu
             }
             return true;
         }
+        public string uclcode_to_chinese(string c)
+        {
+            c = my.trim(c);
+            if(c=="")
+            {
+                return "";
+            }
+            if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "v" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 2)
+            {  
+                c = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)])[1];                
+                return c;
+            }
+            else if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "r" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 3)
+            {
+
+                c = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)])[2];
+                return c;
+            }
+            else if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "s" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 4)
+            {
+                c = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)])[3];
+                return c;
+            }
+            else if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "f" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 5)
+            {
+                c = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)])[4];
+                return c;
+            }
+            else if (my.in_array(c, uclcode["chardefs"]))
+            {
+                //# print("Debug V2")
+                c =  my.jsonValueToListString(uclcode["chardefs"][c])[0];                
+                return c;
+            }
+            else
+            {                
+                return c;
+            }
+        }
         public bool show_search()
         {
             //#真的要顯示了
@@ -1202,6 +1326,7 @@ namespace uclliu
             }
             else if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_big5_apps) || DEFAULT_OUTPUT_TYPE == "BIG5")
             {
+                //Big5 貼上
                 string orin_Clip = Clipboard.GetText();
                 Clipboard.SetText(my.UTF8toBig5(data));
                 is_send_ucl = true;
