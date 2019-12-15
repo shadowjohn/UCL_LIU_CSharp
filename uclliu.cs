@@ -29,6 +29,15 @@ namespace uclliu
         public JsonValue uclcode = null;
         public bool is_DEBUG_mode = true; //除錯模式
         public string INI_CONFIG_FILE = "C:\\temp\\UCLLIU.ini"; //預設在 此，實際使用的位置同在 uclliu.exe
+        string DEFAULT_OUTPUT_TYPE = "DEFAULT";
+        //硬派出字方式選擇
+        //#DEFAULT
+        //#BIG5
+        //#PASTE
+        public List<string> sendkey_paste_ctrl_v_apps = new List<string>(); //使用複製文字貼上出字的 ctrl + v app
+        public List<string> sendkey_paste_shift_ins_apps = new List<string>(); //使用複製文字貼上出字的 shift + ins app
+        public List<string> sendkey_paste_big5_apps = new List<string>(); //使用 big5 複製文字貼上出字的 app
+        public List<string> sendkey_not_use_ucl_apps = new List<string>(); //無法使用肥米的 app
         public IniData config = new IniData();
         public bool is_send_ucl = false;
         public bool flag_is_ucl = true;
@@ -58,6 +67,49 @@ namespace uclliu
         public Font GUI_FONT_22 = new Font("roman", 22, FontStyle.Bold);
         public Font GUI_FONT_26 = new Font("roman", 26, FontStyle.Bold);
         static Form1 f;
+        public uclliu(ref Form1 _f)
+        {
+            f = _f;
+            string apps = "";
+            //使用複製文字貼上出字的 app (ctrl+v)
+            apps = "oxygennotincluded.exe,iedit_.exe";
+            var m = my.explode(",", apps.ToLower());
+            for(int i=0,max_i=m.Length;i<max_i;i++)
+            {
+                m[i] = my.mainname(m[i]);
+            }
+            sendkey_paste_ctrl_v_apps = new List<string>(m);
+
+            //使用複製文字貼上出字的 app (shift+ins)
+            apps = "putty,pietty,pcman,xyplorer,kinza.exe,iedit.exe";
+            m = my.explode(",", apps.ToLower());
+            for (int i = 0, max_i = m.Length; i < max_i; i++)
+            {
+                m[i] = my.mainname(m[i]);
+            }
+            sendkey_paste_shift_ins_apps = new List<string>(m);
+
+            //使用 big5 複製文字貼上出字的 app
+            apps = "zip32w,daqkingcon.exe,EWinner.exe";
+            m = my.explode(",", apps.ToLower());
+            for (int i = 0, max_i = m.Length; i < max_i; i++)
+            {
+                m[i] = my.mainname(m[i]);
+            }
+            sendkey_paste_big5_apps = new List<string>(m);
+
+            //無法使用肥米的 app
+            apps = "mstsc.exe";
+            m = my.explode(",", apps.ToLower());
+            for (int i = 0, max_i = m.Length; i < max_i; i++)
+            {
+                m[i] = my.mainname(m[i]);
+            }
+            sendkey_not_use_ucl_apps = new List<string>(m);
+
+            //f.Enabled = true;
+            //f.btn_UCL.Text = "GG";
+        }
         ///字串轉全形
         /// From : https://dotblogs.com.tw/shunnien/2013/07/21/111737
         ///</summary>
@@ -551,7 +603,7 @@ namespace uclliu
             is_has_more_page = false;
             same_sound_last_word = "";
             debug_print("ShowSearch1");
-            string c = play_ucl_label.ToLower().Trim();            
+            string c = play_ucl_label.ToLower().Trim();
             is_need_use_pinyi = false;
             if (c.Substring(0, 1) == "'" && c.Length > 1)
             {
@@ -652,6 +704,57 @@ namespace uclliu
                     break;
             }
         }
+        public string trad2simple(string data)
+        {
+            //正體轉殘體
+            //todo
+            return data;
+        }
+        public Dictionary<string,string> getForegroundWindowProcessInfo()
+        {
+            //取得當前使用環境APP細節
+            //回傳 
+            //PROCESS_TITLE 標題
+            //PROCESS_NAME 檔名
+            //PROCESS_PID 編號
+            //https://stackoverflow.com/questions/115868/how-do-i-get-the-title-of-the-current-active-window-using-c
+            //From : https://stackoverflow.com/questions/115868/how-do-i-get-the-title-of-the-current-active-window-using-c                
+            // Try : https://github.com/ReneLergner/WPinternals/blob/master/CommandLine.cs
+            //Microsoft.Win32.SafeHandles.SafeFileHandle safeFileHandle = new Microsoft.Win32.SafeHandles.SafeFileHandle(handle, true);
+            //FileStream fileStream = new FileStream(safeFileHandle, FileAccess.Write);
+            //fileStream.
+            //Encoding encoding = System.Text.Encoding.GetEncoding(MY_CODE_PAGE);
+            IntPtr handle = Form1.GetForegroundWindow();
+            var intLength = Form1.GetWindowTextLength(handle) + 1;
+            StringBuilder Buff = new StringBuilder(intLength);            
+            if (Form1.GetWindowText(handle, Buff, intLength) > 0)
+            {
+                // return Buff.ToString();
+                //debug_print("BBBBBBBBBBBBBBBB:" + Buff.ToString());
+            }
+            string Proc_TITLE = Buff.ToString();
+            uint Proc_PID;
+            Form1.GetWindowThreadProcessId(handle, out Proc_PID);
+            Process p = Process.GetProcessById((int)Proc_PID);
+            string Proc_NAME = "";
+            try
+            {
+                //某些 app 會當，如 skype
+                Proc_NAME = my.mainname(my.basename(p.MainModule.FileName.ToLower()));
+            }
+            catch (Exception ex)
+            {
+
+            }
+            Dictionary<string, string> output = new Dictionary<string, string>();
+            //PROCESS_TITLE 標題
+            //PROCESS_NAME 檔名
+            //PROCESS_PID 編號
+            output["PROCESS_TITLE"] = Proc_TITLE;
+            output["PROCESS_NAME"] = Proc_NAME;
+            output["PROCESS_PID"] = Proc_PID.ToString();
+            return output;
+        }
 
         public void senddata(string data)
         {
@@ -666,6 +769,12 @@ namespace uclliu
             ucl_find_data = new List<string>();
             type_label_set_text();
 
+            if (is_simple())
+            {
+                //如果是簡體，繁轉簡
+                data = trad2simple(data);
+            }
+
             if (data == "")
             {
                 is_send_ucl = false;
@@ -677,59 +786,6 @@ namespace uclliu
             //From : https://burorly.pixnet.net/blog/post/10185692-c%23%E8%A7%A3%E6%B1%BA%E4%B8%AD%E6%96%87%E5%AD%97%E5%8D%A0%E7%94%A82%E5%80%8Bbyte%E9%95%B7%E5%BA%A6%E8%A8%88%E7%AE%97%E6%96%B9%E5%BC%8F
             //byte[] lineStr = System.Text.Encoding.UTF8.GetBytes(data);
             //int len = System.Text.Encoding.UTF8.GetByteCount(data);
-            debug_print("Sendkeys:" + data);
-            //const int nChars = 256;
-            //https://stackoverflow.com/questions/115868/how-do-i-get-the-title-of-the-current-active-window-using-c
-            IntPtr handle = Form1.GetForegroundWindow();
-            var intLength = Form1.GetWindowTextLength(handle) + 1;
-            StringBuilder Buff = new StringBuilder(intLength);
-            // From : https://stackoverflow.com/questions/115868/how-do-i-get-the-title-of-the-current-active-window-using-c                
-
-            if (Form1.GetWindowText(handle, Buff, intLength) > 0)
-            {
-                // return Buff.ToString();
-                //debug_print("BBBBBBBBBBBBBBBB:" + Buff.ToString());
-            }
-            string P_TITLE = Buff.ToString();
-            uint pid;
-            Form1.GetWindowThreadProcessId(handle, out pid);
-            Process p = Process.GetProcessById((int)pid);
-            string P_NAME = "";
-            try
-            {
-                //某些 app 會當，如 skype
-                P_NAME = p.MainModule.FileName;
-            }
-            catch (Exception ex)
-            {
-
-            }
-            // Try : https://github.com/ReneLergner/WPinternals/blob/master/CommandLine.cs
-            //Microsoft.Win32.SafeHandles.SafeFileHandle safeFileHandle = new Microsoft.Win32.SafeHandles.SafeFileHandle(handle, true);
-            //FileStream fileStream = new FileStream(safeFileHandle, FileAccess.Write);
-            //fileStream.
-            //Encoding encoding = System.Text.Encoding.GetEncoding(MY_CODE_PAGE);
-
-
-
-            //string output = "";
-            string orin_Clip = Clipboard.GetText();
-            Clipboard.SetText(data);
-            is_send_ucl = true;
-            string exec_proc = my.mainname(P_NAME).ToLower();
-            debug_print("exec_proc:" + exec_proc);
-            if (exec_proc == "putty")
-            {
-                data = "+{INSERT}";
-            }
-            else
-            {
-                data = "^{v}";
-            }
-
-            SendKeys.Send(data);
-            is_send_ucl = false;
-            Clipboard.SetText(orin_Clip);
             //{
             //
             //  string str = data.Substring(i, 1); 
@@ -752,13 +808,49 @@ namespace uclliu
             //Thread.Sleep(50);
             //}
 
-        }
+            debug_print("Sendkeys:" + data);
 
-        public uclliu(ref Form1 _f)
-        {
-            f = _f;
-            //f.Enabled = true;
-            //f.btn_UCL.Text = "GG";
+            var p_info = getForegroundWindowProcessInfo();
+            if(my.in_array(p_info["PROCESS_NAME"],sendkey_paste_shift_ins_apps))
+            {
+                //使用 shift+insert 出字
+                string orin_Clip = Clipboard.GetText();
+                Clipboard.SetText(data);
+                is_send_ucl = true;
+                data = "+{INSERT}";
+                SendKeys.Send(data);
+                is_send_ucl = false;
+                Clipboard.SetText(orin_Clip);
+            }
+            else if(my.in_array(p_info["PROCESS_NAME"], sendkey_paste_ctrl_v_apps))
+            {
+                //使用 shift+insert 出字
+                string orin_Clip = Clipboard.GetText();
+                Clipboard.SetText(data);
+                is_send_ucl = true;
+                data = "^{v}";
+                SendKeys.Send(data);
+                is_send_ucl = false;
+                Clipboard.SetText(orin_Clip);
+            }
+            else if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_big5_apps))
+            {
+                string orin_Clip = Clipboard.GetText();
+                Clipboard.SetText( my.UTF8toBig5(data) );
+                is_send_ucl = true;
+                data = "^{v}";
+                SendKeys.Send(data);
+                is_send_ucl = false;
+                Clipboard.SetText(orin_Clip);
+            }
+            else
+            {
+                //其他，平非的出字
+                is_send_ucl = true;
+                SendKeys.Send(data);
+                is_send_ucl = false;
+            }
+          
         }
     }
 }

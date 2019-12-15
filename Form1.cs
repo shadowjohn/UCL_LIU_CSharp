@@ -8,12 +8,13 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
-
+using utility;
 
 namespace uclliu
 {
     public partial class Form1 : Form
     {
+        myinclude my = new myinclude();
         //From : https://stackoverflow.com/questions/115868/how-do-i-get-the-title-of-the-current-active-window-using-c
         //https://stackoverflow.com/questions/6569405/how-to-get-active-process-name-in-c
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
@@ -144,6 +145,7 @@ namespace uclliu
                         //int BK = -1;
 
 
+
             ucl.debug_print("nCode:" + nCode.ToString());
             ucl.debug_print("wParam:" + wParam.ToString());
             ucl.debug_print("vkCode:" + ea.ToString());
@@ -154,6 +156,17 @@ namespace uclliu
             ucl.debug_print("is_send_ucl:" + ucl.is_send_ucl.ToString());
             ucl.debug_print("flag_is_capslock_down:" + ucl.flag_is_capslock_down.ToString());
             ucl.debug_print("flag_is_play_capslock_otherkey:" + ucl.flag_is_play_capslock_otherkey.ToString());
+
+            //如果是需要跳過的 app ，就跳過
+            var p_info = ucl.getForegroundWindowProcessInfo();
+            if (my.in_array(p_info["PROCESS_NAME"].ToString(), ucl.sendkey_not_use_ucl_apps))
+            {
+                if (ucl.is_ucl())
+                {
+                    ucl.toggle_ucl();
+                }
+                return OK;
+            }
 
             if (ucl.is_send_ucl == true)
             {
@@ -791,7 +804,7 @@ namespace uclliu
                     //數字變全形
                     return NO;
                 }
-                else if (keydown && ucl.flag_is_shift_down && ((char)(ea)).ToString().Length == 1 && ucl.is_hf() == false && ea <112 && ea > 123)  // && event.Injected == 0 :
+                else if (keydown && ucl.flag_is_shift_down && ((char)(ea)).ToString().Length == 1 && ucl.is_hf() == false && ea < 112 && ea > 123)  // && event.Injected == 0 :
                 {
                     //112~123 是 F1~F12
                     //英 / 全 按著 shift 時
@@ -989,7 +1002,7 @@ namespace uclliu
             //修正一下畫面
             //
 
-             
+
             /*this.TopLevel = true;
             this.TopLevel = false;
             this.TopLevel = true;
@@ -998,11 +1011,11 @@ namespace uclliu
             this.TopMost = true;
             */
             //Thread.Sleep(3000);
-            btn_UCL.PerformClick();            
+            btn_UCL.PerformClick();
             btn_UCL.PerformClick();
             //起始不可以是 topmost ，在程式執行後，才置高，不然
             //首次切換輸入法時，會失去原始的焦點(如記事本)
-            this.TopMost = true; 
+            this.TopMost = true;
             /*Thread.Sleep(1000);
             SendKeys.SendWait("+");
             Thread.Sleep(1000);
@@ -1040,7 +1053,7 @@ namespace uclliu
             ucl.debug_print("Bye Bye!");
             Application.Exit();
         }
-               
+
         private void btn_UCL_Click(object sender, EventArgs e)
         {
             //點到 肥 或 英
