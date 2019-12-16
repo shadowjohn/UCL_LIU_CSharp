@@ -131,13 +131,16 @@
 <img src="screenshot/microsoft_scan/uclliu_c_0_1.png">
 <br>
 <h3>微軟 Windows Defender 誤判與回報歷程：</h3>
-2019-12-16 V 0.1 版：<br>https://www.microsoft.com/en-us/wdsi/submission/8a9898b7-a105-4ca3-8bdc-eca099d2cbfd<br>
+2019-12-16 V0.1 版：https://www.microsoft.com/en-us/wdsi/submission/8a9898b7-a105-4ca3-8bdc-eca099d2cbfd<br>
 <br>
 
 
 <h3>ToDo：</h3>
 <ul>
-  <li>待列</li>
+  <li>1、短版模式打字的過程，UI loading有點重，打快一點會當機</li>
+  <li>2、後選字未分頁，如「,z」</li>
+  <li>3、自定詞庫遇到\n沒有正常換行</li>
+  <li>4、遊戲模式、正常模式，顯示錯誤</li>
 </ul>
 <br>
 <h3>參考資料：</h3>
@@ -150,6 +153,6 @@
   <li>6、JsonValue 處理 liu.json：https://stackoverflow.com/questions/6620165/how-can-i-parse-json-with-c</li>
   <li>7、ini-parser：https://github.com/rickyah/ini-parser</li>
   <li>8、sendkey範例：https://www.itread01.com/content/1548344359.html</li>
-  <li>9、線上語法測試；https://dotnetfiddle.net/</li>   
+  <li>9、線上語法測試；https://dotnetfiddle.net/</li>     
 </ul>
 <br>
