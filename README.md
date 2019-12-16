@@ -56,6 +56,10 @@
   <h3>建議可以跟筆者一樣</h3>
 </kbd>
 <kbd>
+<img src="screenshot/install/4.png"><br>
+  <h3>或是【開始→地區】，找到【地區及語言設定】</h3>
+</kbd>
+<kbd>
 <img src="screenshot/install/2.png"><br>
   <h3>安裝一個「ENG語系」，點選【語言喜好設定】」，應該可以在控制台找到。</h3>
 </kbd>
