@@ -122,7 +122,7 @@
 <br>
 <br>
 <h3>微軟 Windows Defender 誤判與回報：</h3>
-<img src="screenshot/virus/uclliu_c_0.1.png">
+<img src="screenshot/microsoft_scan/uclliu_c_0_1.png">
 <br>
 <h3>微軟 Windows Defender 誤判與回報歷程：</h3>
 2019-12-16 V 0.1 版：<br>https://www.microsoft.com/en-us/wdsi/submission/8a9898b7-a105-4ca3-8bdc-eca099d2cbfd<br>
