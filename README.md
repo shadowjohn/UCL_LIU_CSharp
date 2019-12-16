@@ -2,7 +2,9 @@
 利用 C# 開發的仿蝦米，肥米輸入法<br>
 <br>
 <center>
-  <img src="screenshot/ucl_1.png">  
+  <img src="screenshot/ucl_1.png">
+  <br><br>
+  <img src="screenshot/uclliu_c_demo.gif">  
 </center>
 <br>
 <h3>作者：</h3>
