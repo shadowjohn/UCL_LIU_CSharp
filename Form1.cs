@@ -1208,7 +1208,7 @@ namespace uclliu
                     cMenu.MenuItems.Add("2.切換至「正常模式」", this.menu_chage_gamemode);
                     break;
                 case false:
-                    cMenu.MenuItems.Add("2.切換至「普通模式」", this.menu_chage_gamemode);
+                    cMenu.MenuItems.Add("2.切換至「遊戲模式」", this.menu_chage_gamemode);
                     break;
             }
 
