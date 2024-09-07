@@ -155,5 +155,7 @@
   <li>7、ini-parser：https://github.com/rickyah/ini-parser</li>
   <li>8、sendkey範例：https://www.itread01.com/content/1548344359.html</li>
   <li>9、線上語法測試；https://dotnetfiddle.net/</li>     
+  <li>10、英文全形，無法正確出全形字</li>
+  <li>11、在ptt打字快點，輸入法容易當掉</li>    
 </ul>
 <br>
