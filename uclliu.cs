@@ -416,26 +416,21 @@ namespace uclliu
         ///<returns>全形字元串</returns>
         private string ToWide(string input)
         {
-            //半形轉全形：
-            /*char[] c = input.ToCharArray();
+            char[] c = input.ToCharArray();
             for (int i = 0; i < c.Length; i++)
             {
-                //全形空格為12288，半形空格為32
+                // Full-width space is 12288, half-width space is 32
                 if (c[i] == 32)
                 {
                     c[i] = (char)12288;
-                    continue;
                 }
-                //其他字元半形(33-126)與全形(65281-65374)的對應關係是：均相差65248
-                if (c[i] < 127)
+                // For other characters, the half-width (33-126) and full-width (65281-65374) differ by 65248
+                else if (c[i] >= 33 && c[i] <= 126)
+                {
                     c[i] = (char)(c[i] + 65248);
+                }
             }
             return new string(c);
-            */
-            //改用黑暗執行序的方法：https://blog.darkthread.net/blog/strconv-half-full-width-notes/
-            //debug_print(input);
-            //return Microsoft.VisualBasic.Strings.StrConv(input, Microsoft.VisualBasic.VbStrConv.Wide, 1028);
-            return Microsoft.VisualBasic.Strings.StrConv(input, Microsoft.VisualBasic.VbStrConv.Wide, 1028);
         }
         public bool checkLockSuccess()
         {
