@@ -142,6 +142,9 @@
   <li>3、自定詞庫遇到\n沒有正常換行</li>
   <li>(2020-01-17 Done) 4、遊戲模式、正常模式，顯示錯誤</li>
   <li>(2020-01-17 Done) 5、執行檔的 icon 調整</li>
+  <li>6、英文全形，無法正確出全形字</li>
+  <li>7、在ptt打字快點，輸入法容易當掉</li>    
+  <li>(2024-09-09 Done) 8、支援 Ctrl + Space 切換輸入法</li>
 </ul>
 <br>
 <h3>參考資料：</h3>
@@ -154,9 +157,6 @@
   <li>6、JsonValue 處理 liu.json：https://stackoverflow.com/questions/6620165/how-can-i-parse-json-with-c</li>
   <li>7、ini-parser：https://github.com/rickyah/ini-parser</li>
   <li>8、sendkey範例：https://www.itread01.com/content/1548344359.html</li>
-  <li>9、線上語法測試；https://dotnetfiddle.net/</li>     
-  <li>10、英文全形，無法正確出全形字</li>
-  <li>11、在ptt打字快點，輸入法容易當掉</li>    
-  <li>12、支援 Ctrl + Space 切換輸入法</li>
+  <li>9、線上語法測試；https://dotnetfiddle.net/</li>       
 </ul>
 <br>
