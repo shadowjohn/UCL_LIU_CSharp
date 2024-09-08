@@ -157,5 +157,6 @@
   <li>9、線上語法測試；https://dotnetfiddle.net/</li>     
   <li>10、英文全形，無法正確出全形字</li>
   <li>11、在ptt打字快點，輸入法容易當掉</li>    
+  <li>12、支援 Ctrl + Space 切換輸入法</li>
 </ul>
 <br>

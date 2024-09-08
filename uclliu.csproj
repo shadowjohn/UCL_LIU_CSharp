@@ -154,6 +154,7 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <None Include="README.md" />
     <None Include="uclliu_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
@@ -191,7 +192,7 @@ del "$(TargetDir)System.Json.xml"
 del "$(TargetDir)uclliu.application"
 del "$(TargetDir)uclliu.exe.config"
 del "$(TargetDir)uclliu.exe.manifest"
-del "$(TargetDir)uclliu.pdb"
+rem del "$(TargetDir)uclliu.pdb"
 rd /S /Q "$(TargetDir)app.publish"
 move "$(TargetDir)MyAppMerged.exe" "$(TargetDir)uclliu.exe"</PostBuildEvent>
   </PropertyGroup>

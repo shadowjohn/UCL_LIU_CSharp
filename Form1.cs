@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using utility;
+using System.Security.Policy;
 
 namespace uclliu
 {
@@ -115,7 +116,7 @@ namespace uclliu
         {
             //return 0;            
             bool isCapsLock = (((ushort)GetKeyState(0x14)) & 0xffff) != 0;
-            bool keydown = (wParam == 256);
+            bool keydown = (wParam == 256); //256
             bool keyup = (wParam == 257);
 
             bool LShift = (lParam.vkCode == 160);
@@ -180,7 +181,7 @@ namespace uclliu
                         kav = 44;
                         break;
                     case 107: // -
-                    case 187: // -
+                    case 187: // --
                         kav = 43;
                         break;
                     case 109: // +
@@ -253,6 +254,14 @@ namespace uclliu
                 ucl.flag_is_play_capslock_otherkey = true;
                 ucl.debug_print("Debug event F");
             }
+            if (keydown && ea == 32 && ucl.config["DEFAULT"]["CTRL_SP"] == "1")
+            { // # check ctrl + space
+                if (ucl.flag_is_ctrl_down == true)
+                {
+                    ucl.toggle_ucl();
+                    return NO;
+                }
+            }
             if (keyup && CAPS)
             {
                 ucl.flag_is_capslock_down = false;
@@ -291,7 +300,7 @@ namespace uclliu
                     return OK;
                 }
             }
-            if (keyup && (LShift || RShift))
+            if (keyup && (LShift || RShift) && ucl.config["DEFAULT"]["CTRL_SP"] == "0")
             {
                 ucl.debug_print("Debug event G");
                 //ucl.debug_print("event.MessageName:"+event.MessageName);
@@ -590,6 +599,10 @@ namespace uclliu
                         return NO;
                     }
                 }
+                ucl.debug_print("ea: " + ea);
+                ucl.debug_print("ucl.config[\"DEFAULT\"][\"CTRL_SP\"]: " + ucl.config["DEFAULT"]["CTRL_SP"]);
+                
+
                 if (keydown && ea == 32) // : #空白
                 {
                     //# Space
@@ -714,6 +727,7 @@ namespace uclliu
             {
                 //ucl.debug_print("DDDDDDDDD: event.Key: " + event.Key + "\nDDDDDDDDD: event.KeyID: " + str(event.KeyID) + "\nDDDDDDDDD: event.MessageName: " +  event.MessageName )
                 ucl.debug_print("flag_is_shift_down:" + ucl.flag_is_shift_down.ToString());
+                ucl.debug_print("flag_is_ctrl_down:" + ucl.flag_is_ctrl_down.ToString());
                 ucl.debug_print("Debug3");
                 ucl.debug_print(ea.ToString());
                 if (keydown && ea == 13)
@@ -764,6 +778,13 @@ namespace uclliu
                 }
                 */
                 //debug_print("Debug3: %s" % (event.Transition))
+                ucl.debug_print("Debug3333333333333");
+                
+                //修正 英/全 模式下，按 CTRL + 任意鍵，也是穿透的問題
+                if (ucl.is_hf() == false && keydown && ucl.flag_is_ctrl_down == true)
+                {
+                    return OK;
+                }
                 if (ea == 8 || ea == 20 || ea == 45 || ea == 46 || ea == 36 || ea == 33 || ea == 34 || ea == 35 || ea == 160 || ea == 161 || ea == 9 || ea == 37 || ea == 38 || ea == 39 || ea == 40 || ea == 231 || ea == 162 || ea == 163)
                 { // #↑←→↓
                     return OK;
@@ -1187,6 +1208,21 @@ namespace uclliu
             //Console.WriteLine(ucl.DEFAULT_OUTPUT_TYPE);
             //Console.WriteLine(((MenuItem)sender).Text);
         }
+        private void m_ctrlsp_switch(object sender, EventArgs e)
+        {
+            //switch(s
+            switch (((MenuItem)sender).Text)
+            {
+                case "5.【●】使用 CTRL+SPACE 切換輸入法":
+                    ucl.config["DEFAULT"]["CTRL_SP"] = "0";
+                    break;
+                case "5.【　】使用 CTRL+SPACE 切換輸入法":
+                    ucl.config["DEFAULT"]["CTRL_SP"] = "1";
+                    break;
+            }
+            cMenu.MenuItems.Clear();
+
+        }
         private void menu_run_exit(object sender, EventArgs e)
         {
             btn_X.PerformClick();
@@ -1247,7 +1283,7 @@ namespace uclliu
             cMenu.MenuItems.Add(cSubMenu);
 
             is_o = "　";
-            if(ucl.is_display_sp == true)
+            if (ucl.config["DEFAULT"]["CTRL_SP"] == "1")
             {
                 is_o = "●";
             }
@@ -1255,9 +1291,20 @@ namespace uclliu
             {
                 is_o = "　";
             }
-            cMenu.MenuItems.Add("4.【"+is_o+"】顯示短根", this.menu_change_sp);
+            cMenu.MenuItems.Add("5.【" + is_o + "】使用 CTRL+SPACE 切換輸入法", this.m_ctrlsp_switch);
 
-            cMenu.MenuItems.Add("離開(Exit)", this.menu_run_exit);
+            is_o = "　";
+            if (ucl.is_display_sp == true)
+            {
+                is_o = "●";
+            }
+            else
+            {
+                is_o = "　";
+            }
+            cMenu.MenuItems.Add("6.【" + is_o + "】顯示短根", this.menu_change_sp);
+
+            cMenu.MenuItems.Add("11. 離開(Quit)", this.menu_run_exit);
             notifyIcon1.ContextMenu = cMenu;
 
         }
