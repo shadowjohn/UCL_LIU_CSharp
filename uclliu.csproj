@@ -131,6 +131,7 @@
     </Compile>
     <Compile Include="App_Code\include.cs" />
     <Compile Include="CustomDictionaryStore.cs" />
+    <Compile Include="KeyboardHookState.cs" />
     <Compile Include="LiuTableConverter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

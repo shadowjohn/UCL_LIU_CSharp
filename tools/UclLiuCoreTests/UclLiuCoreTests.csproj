@@ -11,6 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\CustomDictionaryStore.cs" Link="CustomDictionaryStore.cs" />
+    <Compile Include="..\..\KeyboardHookState.cs" Link="KeyboardHookState.cs" />
     <Compile Include="..\..\LiuTableConverter.cs" Link="LiuTableConverter.cs" />
     <Compile Include="..\..\TextOutput.cs" Link="TextOutput.cs" />
     <Compile Include="..\..\TypingSound.cs" Link="TypingSound.cs" />

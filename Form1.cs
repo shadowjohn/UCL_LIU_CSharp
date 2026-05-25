@@ -115,9 +115,17 @@ namespace uclliu
             ref KBDLLHOOKSTRUCT lParam)
         {
             //return 0;            
+            if (nCode < 0)
+            {
+                return CallNextHookEx(0, nCode, wParam, ref lParam);
+            }
             bool isCapsLock = (((ushort)GetKeyState(0x14)) & 0xffff) != 0;
-            bool keydown = (wParam == 256); //256
-            bool keyup = (wParam == 257);
+            bool keydown = KeyboardHookMessage.IsKeyDown(wParam);
+            bool keyup = KeyboardHookMessage.IsKeyUp(wParam);
+            if (!keydown && !keyup)
+            {
+                return CallNextHookEx(0, nCode, wParam, ref lParam);
+            }
 
             bool LShift = (lParam.vkCode == 160);
             bool RShift = (lParam.vkCode == 161);
@@ -157,6 +165,12 @@ namespace uclliu
                 ucl.debug_print("flag_is_play_capslock_otherkey:" + ucl.flag_is_play_capslock_otherkey.ToString());
             }
 
+            if (ucl.is_send_ucl == true)
+            {
+                //出字用
+                //ucl.is_send_ucl = false;
+                return OK;
+            }
             //如果是需要跳過的 app ，就跳過
             var p_info = ucl.getForegroundWindowProcessInfo();
             if (my.in_array(p_info["PROCESS_NAME"].ToString(), ucl.sendkey_not_use_ucl_apps))
@@ -165,12 +179,6 @@ namespace uclliu
                 {
                     ucl.toggle_ucl();
                 }
-                return OK;
-            }
-            if (ucl.is_send_ucl == true)
-            {
-                //出字用
-                //ucl.is_send_ucl = false;
                 return OK;
             }
             ucl.handle_typing_sound(keydown, keyup, ea);
@@ -304,7 +312,7 @@ namespace uclliu
                     return OK;
                 }
             }
-            if (keyup && (LShift || RShift) && ucl.config["DEFAULT"]["CTRL_SP"] == "0")
+            if (keyup && (LShift || RShift))
             {
                 ucl.debug_print("Debug event G");
                 //ucl.debug_print("event.MessageName:"+event.MessageName);
@@ -314,12 +322,16 @@ namespace uclliu
                 //ucl.debug_print("flag_is_shift_down:"+str(flag_is_shift_down))        ;
                 //ucl.debug_print("flag_is_capslock_down:"+str(flag_is_capslock_down));
                 //ucl.debug_print("flag_is_play_capslock_otherkey:"+str(flag_is_play_capslock_otherkey));
-                ucl.flag_is_shift_down = false;
+                ShiftKeyReleaseDecision shiftDecision = KeyboardHookStateRules.EvaluateShiftRelease(ucl.config["DEFAULT"]["CTRL_SP"] == "1", ucl.flag_is_play_otherkey);
+                if (shiftDecision.ShouldClearShiftState)
+                {
+                    ucl.flag_is_shift_down = false;
+                }
                 ucl.debug_print("Press shift");
 
                 //# 不可是右邊的2、4、6、8      
                 //# toAlphaOrNonAlpha()
-                if (ucl.flag_is_play_otherkey == false && (ea > 40 || ea < 37))
+                if (shiftDecision.ShouldToggleInputMode && (ea > 40 || ea < 37))
                 {
                     ucl.toggle_ucl();
                     ucl.debug_print("Debug15");

@@ -134,3 +134,28 @@
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
 - `dotnet msbuild uclliu.sln ...` 因本機缺完整 .NET Framework 4.5.2 reference assemblies 失敗於 MSB3644。
 - `MSBuild.exe uclliu.csproj /p:TargetFrameworkVersion=v4.8 /p:PostBuildEvent=` 臨時覆寫編譯通過，確認 WinForms 整合與 wav copy 無編譯錯。
+
+---
+
+## 2026-05-26 - Shift 黏住與 hook 卡頓修正
+
+### 問題觀察
+
+- 使用者回報切換輸入法或按 Shift 後 UI 偶爾卡頓，並且有時 Shift 狀態像是黏住。
+- 追查 `Form1.LowLevelKeyboardProc` 後確認：`Shift keyup` 只有在 `CTRL_SP=0` 時才會清掉 `flag_is_shift_down`。
+- low-level hook 只認 `WM_KEYDOWN/WM_KEYUP`，沒有涵蓋 `WM_SYSKEYDOWN/WM_SYSKEYUP`。
+- 打字音效第一次播放特定音量時，wav 音量縮放與快取檔準備仍在 hook 執行緒上進行。
+
+### 實作紀錄
+
+- 新增 `KeyboardHookState.cs`，將 hook message 與 Shift release 規則抽成可測邏輯。
+- `Shift keyup` 現在無論 `CTRL_SP` 設定都會清掉 Shift 狀態；只有 `CTRL_SP=0` 且沒有按其他鍵時才切換肥/英。
+- hook 判斷支援 `WM_SYSKEYDOWN/WM_SYSKEYUP`，避免 Alt/系統組合鍵漏 keyup。
+- `is_send_ucl` 檢查提前到 foreground process 查詢之前，減少程式送字造成的 hook 負擔。
+- `TypingSoundPlayer` 將 `PrepareSoundPath()` 移入背景 ThreadPool，hook 不再同步做 wav 檔案 I/O。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `KeyboardHookMessage`、`ShiftKeyReleaseDecision`、`KeyboardHookStateRules`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過，ILRepack post-build 也成功。

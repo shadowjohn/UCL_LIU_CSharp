@@ -26,6 +26,9 @@ internal static class Program
         failed += Run("typing sound suppresses repeated keydown until keyup", TestTypingSoundKeyState);
         failed += Run("typing sound catalog maps special wav names", TestTypingSoundCatalogSpecialNames);
         failed += Run("typing sound volume scaler adjusts pcm16 samples", TestTypingSoundVolumeScalerPcm16);
+        failed += Run("keyboard hook treats system key messages as key transitions", TestKeyboardHookSystemMessages);
+        failed += Run("shift release clears state even when ctrl space is enabled", TestShiftReleaseClearsStateWithCtrlSpace);
+        failed += Run("shift release toggles input only for standalone shift mode", TestShiftReleaseToggleRules);
 
         if (failed > 0)
         {
@@ -269,6 +272,34 @@ internal static class Program
         AssertEqual(-500, ReadInt16(scaled, 2));
         AssertEqual(16384, ReadInt16(scaled, 4));
         AssertEqual(-16384, ReadInt16(scaled, 6));
+    }
+
+    private static void TestKeyboardHookSystemMessages()
+    {
+        AssertTrue(KeyboardHookMessage.IsKeyDown(0x0100), "WM_KEYDOWN should be keydown");
+        AssertTrue(KeyboardHookMessage.IsKeyDown(0x0104), "WM_SYSKEYDOWN should be keydown");
+        AssertTrue(KeyboardHookMessage.IsKeyUp(0x0101), "WM_KEYUP should be keyup");
+        AssertTrue(KeyboardHookMessage.IsKeyUp(0x0105), "WM_SYSKEYUP should be keyup");
+        AssertTrue(!KeyboardHookMessage.IsKeyDown(0x0101), "WM_KEYUP should not be keydown");
+    }
+
+    private static void TestShiftReleaseClearsStateWithCtrlSpace()
+    {
+        ShiftKeyReleaseDecision decision = KeyboardHookStateRules.EvaluateShiftRelease(true, false);
+
+        AssertTrue(decision.ShouldClearShiftState, "shift keyup should always clear shift state");
+        AssertTrue(!decision.ShouldToggleInputMode, "CTRL+SPACE mode should not toggle input on Shift keyup");
+    }
+
+    private static void TestShiftReleaseToggleRules()
+    {
+        ShiftKeyReleaseDecision standaloneShift = KeyboardHookStateRules.EvaluateShiftRelease(false, false);
+        ShiftKeyReleaseDecision shiftWithOtherKey = KeyboardHookStateRules.EvaluateShiftRelease(false, true);
+
+        AssertTrue(standaloneShift.ShouldClearShiftState, "standalone shift release should clear state");
+        AssertTrue(standaloneShift.ShouldToggleInputMode, "standalone shift release should toggle input when CTRL+SPACE is disabled");
+        AssertTrue(shiftWithOtherKey.ShouldClearShiftState, "shift release after another key should clear state");
+        AssertTrue(!shiftWithOtherKey.ShouldToggleInputMode, "shift release after another key should not toggle input");
     }
 
     private static byte[] BuildUnitab(string firstTwoKeys, int key3, int key4, int unicodeCodePoint)

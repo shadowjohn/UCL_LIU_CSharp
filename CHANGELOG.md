@@ -4,7 +4,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ---
 
-## [Unreleased] - 2026-05-25
+## [Unreleased] - 2026-05-26
 
 ### Added
 
@@ -24,10 +24,17 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - `ENABLE_HALF_FULL=0` 時，`Shift+Space` 不再觸發半全形切換。
 - `STARTUP_DEFAULT_UCL=0` 時，啟動後會套用英模式。
 
+### Fixed
+
+- 修正 `CTRL_SP=1` 時 Shift 放開不會清掉 `flag_is_shift_down`，造成後續輸入像 Shift 黏住。
+- low-level keyboard hook 支援 `WM_SYSKEYDOWN` / `WM_SYSKEYUP`，避免 Alt/系統組合鍵流程漏掉 keyup。
+- 打字音效的 wav 音量快取與檔案準備移到背景執行緒，降低第一次按鍵或切換時卡 UI 的機會。
+- 程式自己送字時會先跳過 hook 處理，避免不必要的 foreground process 查詢。
+
 ### Verification
 
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj`
-- Visual Studio MSBuild 以 `/p:TargetFrameworkVersion=v4.8 /p:PostBuildEvent=` 臨時覆寫編譯通過，用於驗證 WinForms 整合語法；正式 `v4.5.2` build 仍需要安裝完整 Developer Pack。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"`
 
 ---
 

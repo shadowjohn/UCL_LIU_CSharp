@@ -304,12 +304,6 @@ namespace uclliu
                 return;
             }
 
-            string playPath = PrepareSoundPath(soundPath, safeVolume);
-            if (String.IsNullOrEmpty(playPath))
-            {
-                return;
-            }
-
             lock (syncRoot)
             {
                 if (activePlayCount >= MaxActivePlayCount)
@@ -323,6 +317,12 @@ namespace uclliu
             {
                 try
                 {
+                    string playPath = PrepareSoundPath(soundPath, safeVolume);
+                    if (String.IsNullOrEmpty(playPath))
+                    {
+                        return;
+                    }
+
                     using (SoundPlayer player = new SoundPlayer(playPath))
                     {
                         player.PlaySync();
