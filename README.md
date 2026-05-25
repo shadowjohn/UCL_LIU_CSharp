@@ -18,6 +18,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是
 | UI 效能 | 已降低短版模式與 foreground process 查詢熱路徑負擔 | Python 版後期另有多輪 Win11/位置修正 |
 | TSF Bridge | 尚未移植 | v1.67 實驗性支援 |
 | 打字音效 | 支援 `wavs\*.wav`、開關、10%-100% 音量、特殊鍵音效、防長按連發 | 已支援音效與音量設定 |
+| 同音/注音 | 支援新版 `pinyi.txt` 同音字、`';` 注音查詢、出字後提示注音 | 已支援 |
 | 啟動與半全形 UX | 支援啟動預設肥/英、允許停用 `Shift+Space` 半全形切換 | 已支援 |
 | 測試 | `tools/UclLiuCoreTests` 可用 .NET SDK 跑核心測試 | Python 版以實機與歷史回報為主 |
 
@@ -28,7 +29,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是
    - `liu.json`
    - `liu.cin`
    - `liu-uni.tab`
-3. 可選：放入 `pinyi.txt` 啟用同音字查詢。
+3. 可選：放入 `pinyi.txt` 啟用同音字與注音查詢。
 4. 執行 `uclliu.exe`。
 
 因字碼表版權問題，本專案不提供 `liu.json` / `liu.cin` / `liu-uni.tab`。若使用 `liu.cin` 或 `liu-uni.tab`，C# 版啟動時會自動產生 `liu.json`。
@@ -55,6 +56,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是
 | `,,,z` | 將反白文字轉成字根 |
 | `,,,x` | 將反白字根轉回文字 |
 | `,,,BOX` | 開啟自定詞庫 |
+| `';zo6` | 注音查詢「ㄈㄟˊ」，例如候選會含「肥」 |
 
 ## 出字模式
 
@@ -109,12 +111,13 @@ y = 950
 ctrl_sp = 1
 play_sound_enable = 0
 keyboard_volume = 30
+show_phone_code = 0
 startup_default_ucl = 1
 enable_half_full = 1
 ```
 
 `send_kind_1_paste`、`send_kind_2_big5`、`send_kind_3_noucl` 可填入額外 process 名稱，用逗號分隔。
-`play_sound_enable` 控制打字音，`keyboard_volume` 會限制在 0-100；右下角選單提供 10%-100% 快速切換。`startup_default_ucl=0` 時啟動預設為英模式，`enable_half_full=0` 時停用 `Shift+Space` 半全形切換。
+`play_sound_enable` 控制打字音，`keyboard_volume` 會限制在 0-100；右下角選單提供 10%-100% 快速切換。`show_phone_code=1` 時出字後會提示注音讀音。`startup_default_ucl=0` 時啟動預設為英模式，`enable_half_full=0` 時停用 `Shift+Space` 半全形切換。
 
 ## 與 Python 版主要差異
 

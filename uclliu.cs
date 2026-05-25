@@ -61,6 +61,8 @@ namespace uclliu
 
         public string same_sound_last_word = "";
         public bool is_need_use_pinyi = false;
+        public bool is_need_use_phone = false;
+        public PhoneCodeTable phone_code_table = PhoneCodeTable.Empty();
         public List<string> ucl_find_data = new List<string>();
         int same_sound_index = 0; //用來放第幾頁
         int same_sound_max_word = 6; //一頁最多5字
@@ -165,6 +167,15 @@ namespace uclliu
         public bool run_extra() //跑額外的功能，如 ,,,version
         {
             string code = "";
+            code = "';";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
+            {
+                if (start_phone_mode())
+                {
+                    last_key = "";
+                    return true;
+                }
+            }
             //Console.WriteLine("last_key:" + last_key);
             code = ",,,c";
             if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
@@ -344,6 +355,31 @@ namespace uclliu
         public void run_toggle_sp()
         {
             is_display_sp = (is_display_sp == false) ? true : false;
+        }
+        public bool start_phone_mode()
+        {
+            if (phone_code_table == null || !phone_code_table.IsAvailable)
+            {
+                return false;
+            }
+
+            is_need_use_pinyi = false;
+            is_need_use_phone = true;
+            play_ucl_label = "";
+            ucl_find_data = new List<string>();
+            same_sound_index = 0;
+            is_has_more_page = false;
+            type_label_set_text("注:");
+            toAlphaOrNonAlpha();
+            return true;
+        }
+        public void stop_phone_mode()
+        {
+            is_need_use_phone = false;
+            if (play_ucl_label.Length == 0)
+            {
+                type_label_set_text();
+            }
         }
         public void run_big_small(double kind)
         {
@@ -867,9 +903,13 @@ namespace uclliu
         }
         public void show_sp_to_label(string data)
         {
+            show_sp_to_label(data, false);
+        }
+        public void show_sp_to_label(string data, bool force)
+        {
             //# 顯示最簡字根到輸入結束框後
 
-            if (is_display_sp == false)
+            if (is_display_sp == false && !force)
             {
                 return;
             }
@@ -877,6 +917,38 @@ namespace uclliu
             //#word_label.set_label(sp)
             //#word_label.modify_font(pango.FontDescription(GUI_FONT_18))
             type_label_set_text(sp);
+        }
+        public void show_phone_to_label(string data)
+        {
+            show_phone_to_label(data, false);
+        }
+        public void show_phone_to_label(string data, bool force)
+        {
+            if (!force && config["DEFAULT"]["SHOW_PHONE_CODE"] == "0")
+            {
+                return;
+            }
+            if (phone_code_table == null || !phone_code_table.IsAvailable)
+            {
+                return;
+            }
+
+            List<string> phones = phone_code_table.GetPhonesForWord(data);
+            if (phones.Count == 0)
+            {
+                return;
+            }
+
+            string readPhone = String.Join("或", phones.ToArray());
+            string label = f.word_label.Text;
+            if (String.IsNullOrEmpty(label) || label == "注:")
+            {
+                type_label_set_text("音:" + readPhone);
+            }
+            else
+            {
+                type_label_set_text(label + ",音:" + readPhone);
+            }
         }
         public string find_ucl_in_uclcode(string chinese_data)
         {
@@ -973,6 +1045,12 @@ namespace uclliu
         }
         public void play_ucl(string thekey)
         {
+            if (is_need_use_phone)
+            {
+                handle_phone_key(thekey);
+                return;
+            }
+
             play_ucl_label = f.type_label.Text;
             //# 不可以超過5個字
             if (play_ucl_label.Length < 5)
@@ -981,6 +1059,58 @@ namespace uclliu
                 type_label_set_text();
             }
 
+        }
+        public bool handle_phone_key(string thekey)
+        {
+            if (!is_need_use_phone || phone_code_table == null || !phone_code_table.IsAvailable || String.IsNullOrEmpty(thekey))
+            {
+                return false;
+            }
+
+            char key = Char.ToLowerInvariant(thekey[0]);
+            if (Char.IsDigit(key) && ucl_find_data.Count > 0)
+            {
+                int index = Convert.ToInt32(key.ToString());
+                if (index < ucl_find_data.Count)
+                {
+                    string data = ucl_find_data[index];
+                    is_need_use_phone = false;
+                    senddata(data);
+                    show_sp_to_label(data, true);
+                    show_phone_to_label(data);
+                    return true;
+                }
+            }
+
+            if (key == ' ')
+            {
+                type_label_set_text("", false);
+                return true;
+            }
+
+            string phone;
+            if (!phone_code_table.TryKeyboardKeyToPhone(key, out phone))
+            {
+                return false;
+            }
+
+            if (play_ucl_label.Length >= 4)
+            {
+                return true;
+            }
+
+            if (play_ucl_label.Length > 0 && is_phone_tone(play_ucl_label[play_ucl_label.Length - 1].ToString()))
+            {
+                return true;
+            }
+
+            play_ucl_label = play_ucl_label + phone;
+            type_label_set_text("", !is_phone_tone(phone));
+            return true;
+        }
+        private bool is_phone_tone(string phone)
+        {
+            return phone == "ˊ" || phone == "ˇ" || phone == "ˋ" || phone == "˙";
         }
         public void toggle_gamemode()
         {
@@ -1078,6 +1208,7 @@ namespace uclliu
                 {
                     case true:
                         f.btn_UCL.Text = "英";
+                        is_need_use_phone = false;
                         play_ucl_label = "";
                         type_label_set_text();
                         flag_is_ucl = false;
@@ -1105,19 +1236,53 @@ namespace uclliu
         }
         public bool type_label_set_text(string last_word_label_txt = "")
         {
+            return type_label_set_text(last_word_label_txt, false);
+        }
+        public bool type_label_set_text(string last_word_label_txt, bool showOnly)
+        {
             f.type_label.Text = play_ucl_label;
             if (play_ucl_label.Length > 0)
             {
                 debug_print("ShowSearch");
-                show_search();
+                if (is_need_use_phone)
+                {
+                    if (!showOnly)
+                    {
+                        show_search("phone");
+                    }
+                    else
+                    {
+                        f.word_label.Text = "注:";
+                        f.word_label.ForeColor = Color.FromArgb(0, 127, 255);
+                    }
+                    f.type_label.ForeColor = Color.FromArgb(0, 127, 255);
+                }
+                else
+                {
+                    show_search();
+                }
             }
             else
             {
-                f.word_label.Text = "";
+                if (is_need_use_phone)
+                {
+                    f.word_label.Text = "注:";
+                    f.word_label.ForeColor = Color.FromArgb(0, 127, 255);
+                    f.type_label.ForeColor = Color.FromArgb(0, 127, 255);
+                }
+                else
+                {
+                    f.word_label.Text = "";
+                    f.word_label.ForeColor = Color.Black;
+                    f.type_label.ForeColor = Color.Black;
+                }
             }
             // 如果 last_word_label_txt 不是空值，代表有簡根或其他用字
             //word_label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
-            f.word_label.ForeColor = Color.Black;
+            if (!is_need_use_phone)
+            {
+                f.word_label.ForeColor = Color.Black;
+            }
             if (last_word_label_txt != "")
             {
                 f.word_label.Text = last_word_label_txt;
@@ -1210,11 +1375,25 @@ namespace uclliu
         }
         public bool show_search()
         {
+            return show_search(null);
+        }
+        public bool show_search(string kind)
+        {
             //#真的要顯示了
             same_sound_index = 0;
             is_has_more_page = false;
             same_sound_last_word = "";
             debug_print("ShowSearch1");
+            if (kind == "phone")
+            {
+                List<string> phoneCandidates = phone_code_table.FindCandidatesByPhoneCode(play_ucl_label);
+                int nextIndex;
+                ucl_find_data = PinyiCandidateSelector.PageCandidates(phoneCandidates, same_sound_index, same_sound_max_word, out is_has_more_page, out nextIndex);
+                same_sound_index = nextIndex;
+                word_label_set_text();
+                return phoneCandidates.Count > 0;
+            }
+
             string c = play_ucl_label.ToLower().Trim();
             is_need_use_pinyi = false;
             if (c.Length > 1 && c.Substring(0, 1) == "'")
@@ -1269,7 +1448,15 @@ namespace uclliu
         {
             if (play_ucl_label == "")
             {
-                f.word_label.Text = "";
+                if (is_need_use_phone)
+                {
+                    f.word_label.Text = "注:";
+                    f.word_label.ForeColor = Color.FromArgb(0, 127, 255);
+                }
+                else
+                {
+                    f.word_label.Text = "";
+                }
                 //word_label.modify_font(pango.FontDescription(GUI_FONT_18))
                 return true;
             }
@@ -1450,6 +1637,7 @@ namespace uclliu
             same_sound_index = 0;// #回到第零頁
             is_has_more_page = false;// #回到沒有分頁
             same_sound_last_word = "";
+            is_need_use_phone = false;
             play_ucl_label = "";
             ucl_find_data = new List<string>();
             type_label_set_text();

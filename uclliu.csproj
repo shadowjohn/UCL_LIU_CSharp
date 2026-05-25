@@ -127,6 +127,7 @@
     <Compile Include="LiuTableConverter.cs" />
     <Compile Include="LiuJsonTable.cs" />
     <Compile Include="PinyiCandidateSelector.cs" />
+    <Compile Include="PhoneCodeTable.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleIni.cs" />

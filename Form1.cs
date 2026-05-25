@@ -184,7 +184,7 @@ namespace uclliu
             ucl.handle_typing_sound(keydown, keyup, ea);
             //處理額外的功能，如 ,,,version
             //Console.WriteLine(ea);
-            if (keyup && ((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109 || ea == 189 || ea == 187))
+            if (keyup && ((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109 || ea == 189 || ea == 187 || ea == 222 || ea == 186))
             { //只允許 a~z , + -
                 int kav = ea;
                 switch (kav)
@@ -199,6 +199,12 @@ namespace uclliu
                     case 109: // +
                     case 189: // +
                         kav = 45;
+                        break;
+                    case 222: // '
+                        kav = 39;
+                        break;
+                    case 186: // ;
+                        kav = 59;
                         break;
                 }
                 ucl.last_key = ucl.last_key + ((char)(kav)).ToString().ToLower();
@@ -215,7 +221,7 @@ namespace uclliu
                     return NO;
                 }
             }
-            else if (keyup && !((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109))
+            else if (keyup && !((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109 || ea == 222 || ea == 186))
             {
                 ucl.last_key = "";
             }
@@ -226,6 +232,15 @@ namespace uclliu
                 return OK;
             }
 
+
+            if (keydown && ucl.is_ucl() && ucl.is_need_use_phone && ESC)
+            {
+                ucl.is_need_use_phone = false;
+                ucl.play_ucl_label = "";
+                ucl.ucl_find_data = new List<string>();
+                ucl.type_label_set_text();
+                return NO;
+            }
 
             if (keydown && ucl.is_ucl() && ucl.play_ucl_label.Length >= 1 && ESC)
             {
@@ -353,9 +368,21 @@ namespace uclliu
             }
             if (ucl.is_ucl())
             {
+                if (keydown && ea == 186 && ucl.last_key.EndsWith("'"))
+                {
+                    return NO;
+                }
                 if (keydown && ucl.flag_is_win_down == true)
                 {// # win key
                     return OK;
+                }
+                if (keydown && ucl.is_need_use_phone)
+                {
+                    string phoneKey = get_phone_key_from_vk(ea);
+                    if (phoneKey != "" && ucl.handle_phone_key(phoneKey))
+                    {
+                        return NO;
+                    }
                 }
                 //#2018-05-05要考慮右邊數字鍵的 . 
                 //107 +
@@ -371,6 +398,7 @@ namespace uclliu
                         ucl.senddata(data);
                         //todo
                         ucl.show_sp_to_label(data);
+                        ucl.show_phone_to_label(data);
                         //ucl.show_sp_to_label(data.decode('utf-8'));
                         //# 快選用的
                         //# print(data)        
@@ -640,6 +668,7 @@ namespace uclliu
                         {
                             ucl.senddata(text);
                             ucl.show_sp_to_label(text);
+                            ucl.show_phone_to_label(text);
                         }
                         ucl.debug_print("Debug4");
                         return NO;
@@ -990,6 +1019,42 @@ namespace uclliu
             }
 
         }
+        private string get_phone_key_from_vk(int vkCode)
+        {
+            if (vkCode >= 65 && vkCode <= 90)
+            {
+                return ((char)(vkCode + 32)).ToString();
+            }
+            if (vkCode >= 48 && vkCode <= 57)
+            {
+                return ((char)vkCode).ToString();
+            }
+            if (vkCode >= 96 && vkCode <= 105)
+            {
+                return ((char)('0' + (vkCode - 96))).ToString();
+            }
+
+            switch (vkCode)
+            {
+                case 32:
+                    return " ";
+                case 188:
+                    return ",";
+                case 190:
+                case 110:
+                    return ".";
+                case 191:
+                case 111:
+                    return "/";
+                case 186:
+                    return ";";
+                case 189:
+                case 109:
+                    return "-";
+                default:
+                    return "";
+            }
+        }
         // 把 hookProc 抽出來，才不會用到一半 gc 回收就 crash
         static LowLevelKeyboardProcDelegate hookProc;
         public void KeyboardHook(object sender, EventArgs e)
@@ -1078,6 +1143,7 @@ namespace uclliu
             if (my.is_file(my.pwd() + "\\pinyi.txt"))
             {
                 ucl.same_sound_data = new List<string>(my.explode("\n", my.trim(my.b2s(my.file_get_contents(my.pwd() + "\\pinyi.txt")))));
+                ucl.phone_code_table = PhoneCodeTable.Parse(ucl.same_sound_data);
             }
 
             //產生最簡根表
@@ -1323,6 +1389,19 @@ namespace uclliu
             //改變顯示短根
             ucl.run_toggle_sp();
         }
+        private void menu_change_phone_code(object sender, EventArgs e)
+        {
+            if (ucl.config["DEFAULT"]["SHOW_PHONE_CODE"] == "1")
+            {
+                ucl.config["DEFAULT"]["SHOW_PHONE_CODE"] = "0";
+            }
+            else
+            {
+                ucl.config["DEFAULT"]["SHOW_PHONE_CODE"] = "1";
+            }
+            ucl.saveConfig();
+            cMenu.MenuItems.Clear();
+        }
         private void menu_open_custom_dict(object sender, EventArgs e)
         {
             OpenCustomDictionaryWindow();
@@ -1419,6 +1498,13 @@ namespace uclliu
                 is_o = "　";
             }
             cMenu.MenuItems.Add("6.【" + is_o + "】顯示短根", this.menu_change_sp);
+
+            is_o = "　";
+            if (ucl.config["DEFAULT"]["SHOW_PHONE_CODE"] == "1")
+            {
+                is_o = "●";
+            }
+            cMenu.MenuItems.Add("7.【" + is_o + "】顯示提示注音", this.menu_change_phone_code);
 
             MenuItem soundMenu = new MenuItem();
             soundMenu.Text = "8.打字音";

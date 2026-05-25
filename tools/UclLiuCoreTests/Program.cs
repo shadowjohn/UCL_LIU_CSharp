@@ -38,6 +38,8 @@ internal static class Program
         failed += Run("pinyi v001 same sound skips phonetic code and bopomofo tokens", TestPinyiV001SkipsPhoneCodeAndBopomofo);
         failed += Run("pinyi v001 same sound sorts by closest token index", TestPinyiV001SortsByClosestTokenIndex);
         failed += Run("pinyi legacy same sound keeps whole matching lines", TestPinyiLegacyKeepsWholeMatchingLines);
+        failed += Run("phone table converts zhuyin query to candidates", TestPhoneTableConvertsZhuyinQueryToCandidates);
+        failed += Run("phone table maps words back to zhuyin labels", TestPhoneTableMapsWordsBackToZhuyinLabels);
 
         if (failed > 0)
         {
@@ -463,6 +465,39 @@ internal static class Program
         List<string> candidates = PinyiCandidateSelector.FindCandidates(lines, "安");
 
         AssertSequence(new string[] { "安", "鞍", "庵", "案", "岸" }, candidates.ToArray());
+    }
+
+    private static void TestPhoneTableConvertsZhuyinQueryToCandidates()
+    {
+        PhoneCodeTable table = PhoneCodeTable.Parse(new string[]
+        {
+            "VERSION_0.01",
+            ", - . / 0 1 2 3 4 5 6 7 8 9 ; a b c d e f g h i j k l m n o p q r s t u v w x y z",
+            "ㄝ ㄦ ㄡ ㄥ ㄢ ㄅ ㄉ ˇ ˋ ㄓ ˊ ˙ ㄚ ㄞ ㄤ ㄇ ㄖ ㄏ ㄎ ㄍ ㄑ ㄕ ㄘ ㄛ ㄨ ㄜ ㄠ ㄩ ㄙ ㄟ ㄣ ㄆ ㄐ ㄋ ㄔ ㄧ ㄒ ㄊ ㄌ ㄗ ㄈ",
+            "zo 非 飛 菲",
+            "zo6 肥 淝 腓",
+            "u ㄧ 一 壹 衣"
+        });
+
+        AssertEqual("ㄈㄟˊ", table.KeyboardToPhoneCode("zo6"));
+        AssertEqual("zo6", table.PhoneCodeToKeyboard("ㄈㄟˊ"));
+        AssertSequence(new string[] { "肥", "淝", "腓" }, table.FindCandidatesByPhoneCode("ㄈㄟˊ").ToArray());
+        AssertSequence(new string[] { "一", "壹", "衣" }, table.FindCandidatesByPhoneCode("ㄧ").ToArray());
+    }
+
+    private static void TestPhoneTableMapsWordsBackToZhuyinLabels()
+    {
+        PhoneCodeTable table = PhoneCodeTable.Parse(new string[]
+        {
+            "VERSION_0.01",
+            ", - . / 0 1 2 3 4 5 6 7 8 9 ; a b c d e f g h i j k l m n o p q r s t u v w x y z",
+            "ㄝ ㄦ ㄡ ㄥ ㄢ ㄅ ㄉ ˇ ˋ ㄓ ˊ ˙ ㄚ ㄞ ㄤ ㄇ ㄖ ㄏ ㄎ ㄍ ㄑ ㄕ ㄘ ㄛ ㄨ ㄜ ㄠ ㄩ ㄙ ㄟ ㄣ ㄆ ㄐ ㄋ ㄔ ㄧ ㄒ ㄊ ㄌ ㄗ ㄈ",
+            "zo 非 飛 菲",
+            "zo6 肥 菲 腓"
+        });
+
+        AssertSequence(new string[] { "ㄈㄟˊ" }, table.GetPhonesForWord("肥").ToArray());
+        AssertSequence(new string[] { "ㄈㄟ", "ㄈㄟˊ" }, table.GetPhonesForWord("菲").ToArray());
     }
 
     private static byte[] BuildUnitab(string firstTwoKeys, int key3, int key4, int unicodeCodePoint)
