@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // 組件的一般資訊是由下列的屬性集控制。
 // 變更這些屬性的值即可修改組件的相關
 // 資訊。
-[assembly: AssemblyTitle("uclliu")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle(uclliu.UclLiuAppInfo.ProductName)]
+[assembly: AssemblyDescription(uclliu.UclLiuAppInfo.ProductName)]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("uclliu")]
-[assembly: AssemblyCopyright("Copyright ©  2019")]
+[assembly: AssemblyCompany(uclliu.UclLiuAppInfo.CompanyName)]
+[assembly: AssemblyProduct(uclliu.UclLiuAppInfo.ProductName)]
+[assembly: AssemblyCopyright(uclliu.UclLiuAppInfo.Copyright)]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -32,5 +32,6 @@ using System.Runtime.InteropServices;
 // 您可以指定所有的值，也可以依照以下的方式，使用 '*' 將組建和修訂編號
 // 指定為預設值: 
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("0.11.0.0")]
+[assembly: AssemblyFileVersion("0.11.0.0")]
+[assembly: AssemblyInformationalVersion(uclliu.UclLiuAppInfo.Version)]

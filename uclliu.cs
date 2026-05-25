@@ -16,7 +16,7 @@ namespace uclliu
         private readonly UnicodeSendInputOutput unicodeSendInputOutput = new UnicodeSendInputOutput();
         private readonly ClipboardPasteOutput clipboardPasteOutput = new ClipboardPasteOutput();
         private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
-        public string VERSION = "0.1";
+        public string VERSION = UclLiuAppInfo.Version;
         public FileStream lockFileString;
         public string CUSTOM_JSON_FILE
         {
@@ -385,21 +385,7 @@ namespace uclliu
         }
         public string about_uclliu()
         {
-            string _msg_text = string.Format("肥米輸入法 C# 版\n\n作者：羽山秋人 (http://3wa.tw)\n版本：{0}", VERSION);
-            _msg_text += "\n\n熱鍵提示：\n\n";
-            _msg_text += "「,,,VERSION」目前版本\n";
-            _msg_text += "「,,,UNLOCK」回到正常模式\n";
-            _msg_text += "「,,,LOCK」進入遊戲模式\n";
-            _msg_text += "「,,,C」簡體模式\n";
-            _msg_text += "「,,,T」正體模式\n";
-            _msg_text += "「,,,S」UI變窄\n";
-            _msg_text += "「,,,L」UI變寬\n";
-            _msg_text += "「,,,+」UI變大\n";
-            _msg_text += "「,,,-」UI變小\n";
-            _msg_text += "「,,,X」框字的字根轉回文字\n";
-            _msg_text += "「,,,Z」框字的文字變成字根\n";
-            _msg_text += "「,,,BOX」開啟自定詞庫\n";
-            return _msg_text;
+            return UclLiuAppInfo.BuildAboutText();
         }
         ///字串轉全形
         /// From : https://dotblogs.com.tw/shunnien/2013/07/21/111737

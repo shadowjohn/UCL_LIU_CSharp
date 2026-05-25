@@ -12,6 +12,7 @@ internal static class Program
         failed += Run("cin parser groups multiple words under one root", TestCinParserGroupsWords);
         failed += Run("unitab converter writes expected cin entry", TestUnitabConverterWritesCinEntry);
         failed += Run("ensure json converts cin in working directory", TestEnsureJsonConvertsCin);
+        failed += Run("app info exposes version and author message", TestAppInfoExposesVersionAndAuthorMessage);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
@@ -104,6 +105,34 @@ internal static class Program
         {
             Directory.Delete(dir, true);
         }
+    }
+
+    private static void TestAppInfoExposesVersionAndAuthorMessage()
+    {
+        string expected = "UCLLIU 肥米輸入法 C# 版\n\n"
+            + "作者：羽山秋人 (https://3wa.tw)\n"
+            + "版本：0.11\n\n"
+            + "熱鍵提示：\n\n"
+            + "「,,,VERSION」目前版本\n"
+            + "「'ucl」同音字查詢\n"
+            + "「';zo6」注音查詢\n"
+            + "「,,,UNLOCK」回到正常模式\n"
+            + "「,,,LOCK」進入遊戲模式\n"
+            + "「,,,C」簡體模式\n"
+            + "「,,,T」繁體模式\n"
+            + "「,,,S」UI變窄\n"
+            + "「,,,L」UI變寬\n"
+            + "「,,,+」UI變大\n"
+            + "「,,,-」UI變小\n"
+            + "「,,,X」框字的字根轉回文字\n"
+            + "「,,,Z」框字的文字變成字根\n"
+            + "「,,,BOX」開啟自定詞庫\n";
+
+        AssertEqual("0.11", UclLiuAppInfo.Version);
+        AssertEqual("UCLLIU 肥米輸入法 C# 版", UclLiuAppInfo.ProductName);
+        AssertEqual("3WA Studio (https://3wa.tw)", UclLiuAppInfo.CompanyName);
+        AssertEqual("Copyright (c) 2019-2026 羽山秋人 (https://3wa.tw)", UclLiuAppInfo.Copyright);
+        AssertEqual(expected, UclLiuAppInfo.BuildAboutText());
     }
 
     private static void TestShortModeWidth()

@@ -25,6 +25,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - `UCLLIU.ini` 改用內建 `SimpleIni` 讀寫，移除 `ini-parser` / `INIFileParser` 與 `packages.config`。
 - 出字模式選擇改為支援視窗標題規則，PTT/term.ptt.cc/ws.ptt.cc 與 Win11 Notepad 會自動改用剪貼簿貼上。
 - process 相容清單會忽略大小寫與 `.exe` 副檔名，並補上 Windows Terminal / mintty / RimWorld / mstsc 等 Python 版後期清單。
+- 版本資訊更新至 v0.11，關於視窗對齊 Python 版格式並補上作者與 `https://3wa.tw`。
 - `KEYBOARD_VOLUME` 會限制在 0-100，避免錯誤設定造成音量邏輯異常。
 - `ENABLE_HALF_FULL=0` 時，`Shift+Space` 不再觸發半全形切換。
 - `STARTUP_DEFAULT_UCL=0` 時，啟動後會套用英模式。

@@ -15,6 +15,7 @@
     <Compile Include="..\..\SimpleIni.cs" Link="SimpleIni.cs" />
     <Compile Include="..\..\TextOutput.cs" Link="TextOutput.cs" />
     <Compile Include="..\..\TypingSound.cs" Link="TypingSound.cs" />
+    <Compile Include="..\..\UclLiuAppInfo.cs" Link="UclLiuAppInfo.cs" />
     <Compile Include="..\..\UiLayoutCalculator.cs" Link="UiLayoutCalculator.cs" />
   </ItemGroup>
 </Project>

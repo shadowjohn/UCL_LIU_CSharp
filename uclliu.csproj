@@ -132,6 +132,7 @@
     <Compile Include="SimpleIni.cs" />
     <Compile Include="TextOutput.cs" />
     <Compile Include="TypingSound.cs" />
+    <Compile Include="UclLiuAppInfo.cs" />
     <Compile Include="uclliu.cs" />
     <Compile Include="UiLayoutCalculator.cs" />
     <EmbeddedResource Include="Form1.resx">

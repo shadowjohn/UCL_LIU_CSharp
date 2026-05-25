@@ -1,6 +1,6 @@
 # UCL_LIU_CSharp
 
-C# / WinForms 版肥米輸入法。這個分支的目標是保留 2019 年 C# 版輕量、單檔、低依賴的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
+C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是保留 2019 年 C# 版輕量、單檔、低依賴的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
 
 目前 C# 版仍不是 Python 版 v1.67 的完整替代品。它已補上字碼表自動轉換、自定詞庫、Unicode SendInput 出字、打字音效 UX 與核心測試；TSF Bridge 與更完整的 Windows 11 應用相容清單仍在後續項目。
 
