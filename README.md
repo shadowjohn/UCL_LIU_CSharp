@@ -140,7 +140,7 @@ Python 版仍領先的重點：
 - Visual Studio 2019 / 2022
 - .NET Framework 4.5.2 Developer Pack
 - WinForms
-- NuGet: `System.Json`, `ini-parser`, `ILRepack`
+- NuGet: `ini-parser`, `ILRepack`
 
 核心測試：
 

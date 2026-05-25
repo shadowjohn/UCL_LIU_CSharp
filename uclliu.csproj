@@ -114,10 +114,8 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
-    <Reference Include="System.Json, Version=2.0.8.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>packages\System.Json.4.7.1\lib\netstandard1.0\System.Json.dll</HintPath>
-    </Reference>
     <Reference Include="System.Data" />
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
@@ -134,6 +132,7 @@
     <Compile Include="CustomDictionaryStore.cs" />
     <Compile Include="KeyboardHookState.cs" />
     <Compile Include="LiuTableConverter.cs" />
+    <Compile Include="LiuJsonTable.cs" />
     <Compile Include="PinyiCandidateSelector.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -197,12 +196,10 @@
     <Error Condition="!Exists('packages\ILRepack.2.0.34\build\ILRepack.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\ILRepack.2.0.34\build\ILRepack.props'))" />
   </Target>
   <PropertyGroup>
-    <PostBuildEvent>"$(SolutionDir)\packages\ILRepack.2.0.34\tools\ILRepack.exe" /out:"$(TargetDir)MyAppMerged.exe" "$(TargetPath)" "$(TargetDir)INIFileParser.dll" "$(TargetDir)System.Json.dll"
+    <PostBuildEvent>"$(SolutionDir)\packages\ILRepack.2.0.34\tools\ILRepack.exe" /out:"$(TargetDir)MyAppMerged.exe" "$(TargetPath)" "$(TargetDir)INIFileParser.dll"
 del "$(TargetDir)uclliu.exe"
 del "$(TargetDir)INIFileParser.dll" "$(TargetDir)INIFileParser.xml"
 del "$(TargetDir)MyAppMerged.exe.config" "$(TargetDir)MyAppMerged.pdb"
-del "$(TargetDir)System.Json.dll"
-del "$(TargetDir)System.Json.xml"
 del "$(TargetDir)uclliu.application"
 del "$(TargetDir)uclliu.exe.config"
 del "$(TargetDir)uclliu.exe.manifest"

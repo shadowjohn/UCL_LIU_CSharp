@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections;
-using System.Json;
+using System.Web.Script.Serialization;
 
 namespace utility
 {
@@ -80,21 +80,15 @@ namespace utility
             }
             return string.Join(keyword, tmp);
         }
-        public List<string> jsonValueToListString(JsonValue data)
+        public object json_decode(string data)
         {
-            List<string> o = new List<string>();
-            if (data.ToString().Contains("["))
-            {
-                for (int i = 0, max_i = data.Count; i < max_i; i++)
-                {
-                    o.Add(data[i].ToString().Replace("\"", ""));
-                }
-            }
-            else
-            {
-                o.Add(data.ToString().Replace("\"", ""));
-            }
-            return o;
+            JavaScriptSerializer serializer = new JavaScriptSerializer();
+            serializer.MaxJsonLength = int.MaxValue;
+            return serializer.DeserializeObject(data);
+        }
+        public object json_decode(byte[] input)
+        {
+            return json_decode(b2s(input));
         }
         public string UTF8toBig5(string strInput)
         {
@@ -112,10 +106,6 @@ namespace utility
         public bool in_array(string find_key, ArrayList arr)
         {
             return arr.Contains(find_key);
-        }
-        public bool in_array(string find_key, JsonValue arr)
-        {
-            return arr.ContainsKey(find_key);
         }
         public bool is_string_like(string data, string find_string)
         {

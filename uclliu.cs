@@ -6,7 +6,6 @@ using System.Drawing;
 using IniParser;
 using IniParser.Model;
 using utility;
-using System.Json;
 using System.Text;
 using System.Diagnostics;
 using System.Threading;
@@ -28,7 +27,7 @@ namespace uclliu
 
         //把 chardefs 的字碼，變成對照字根，可以加速 ,,,z、,,,x 反查的速度
         public Dictionary<string, string> uclcode_r = new Dictionary<string, string>();
-        public JsonValue uclcode = null;
+        public Dictionary<string, List<string>> uclcode = null;
         public bool is_DEBUG_mode = false; //除錯模式
         public string INI_CONFIG_FILE = "C:\\temp\\UCLLIU.ini"; //預設在 此，實際使用的位置同在 uclliu.exe
         public List<string> same_sound_data = new List<string>(); //拚音
@@ -130,21 +129,26 @@ namespace uclliu
         {
             //產生最簡根速查表
             uclcode_r.Clear();
-            foreach (var k in uclcode["chardefs"])
+            if (uclcode == null)
             {
-                var data = k.ToString().Replace("[", "").Replace("]", "").Replace(" ", "").Replace("\"", "");
-                var m = my.explode(",", data);
-                for (int i = 1, max_i = m.Length; i < max_i; i++)
+                return;
+            }
+
+            foreach (KeyValuePair<string, List<string>> pair in uclcode)
+            {
+                string root = pair.Key;
+                for (int i = 0, max_i = pair.Value.Count; i < max_i; i++)
                 {
-                    if (!uclcode_r.ContainsKey(m[i]))
+                    string word = pair.Value[i];
+                    if (!uclcode_r.ContainsKey(word))
                     {
-                        uclcode_r.Add(m[i], m[0]);
+                        uclcode_r.Add(word, root);
                     }
                     else
                     {
-                        if (m[0].Length < uclcode_r[m[i]].Length)
+                        if (root.Length < uclcode_r[word].Length)
                         {
-                            uclcode_r[m[i]] = m[0];
+                            uclcode_r[word] = root;
                         }
                     }
                 }
@@ -458,15 +462,15 @@ namespace uclliu
                 MessageBox.Show("查無 liu.json 檔...");
                 f.btn_X.PerformClick();
             }
-            //uclcode = my.json_decode(my.file_get_contents(PWD + "\\liu.json"))            
             try
             {
-                //JsonValue 使用 System.Json
-                //https://stackoverflow.com/questions/6620165/how-can-i-parse-json-with-c
                 string data = my.b2s(my.file_get_contents(liu_json_path));
-                uclcode = JsonValue.Parse(data);
+                uclcode = LiuJsonTable.ParseChardefsRoot(my.json_decode(data));
                 loadCustomDictionaryData();
-                debug_print(uclcode["chardefs"]["ucl"].ToString());
+                if (uclcode.ContainsKey("ucl"))
+                {
+                    debug_print(my.implode(",", uclcode["ucl"]));
+                }
             }
             catch (Exception ex)
             {
@@ -474,7 +478,6 @@ namespace uclliu
                 debug_print("liu.json 檔內容解算錯誤..." + ex.Message);
                 f.btn_X.PerformClick();
             }
-            //debug_print(uclcode["chardefs"]["addr"].ToString());
 
         }
         public void loadCustomDictionaryData()
@@ -1139,6 +1142,49 @@ namespace uclliu
             }
             return true;
         }
+        private bool has_ucl_root(string c)
+        {
+            return uclcode != null && c != null && uclcode.ContainsKey(c);
+        }
+        private bool try_get_root_candidates(string c, out List<string> candidates)
+        {
+            candidates = null;
+            if (uclcode == null || c == null)
+            {
+                return false;
+            }
+            return uclcode.TryGetValue(c, out candidates);
+        }
+        private bool try_get_suffix_candidate(string c, string suffix, int candidateIndex, out string candidate)
+        {
+            candidate = "";
+            if (c == null || c.Length <= suffix.Length || has_ucl_root(c) || !c.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            string root = c.Substring(0, c.Length - suffix.Length);
+            List<string> candidates;
+            if (try_get_root_candidates(root, out candidates) && candidates.Count > candidateIndex)
+            {
+                candidate = candidates[candidateIndex];
+                return true;
+            }
+            return false;
+        }
+        private bool try_get_suffix_search_candidates(string c, string suffix, int candidateIndex, out List<string> candidates)
+        {
+            candidates = null;
+            string candidate;
+            if (!try_get_suffix_candidate(c, suffix, candidateIndex, out candidate))
+            {
+                return false;
+            }
+
+            candidates = new List<string>();
+            candidates.Add(candidate);
+            return true;
+        }
         public string uclcode_to_chinese(string c)
         {
             c = my.trim(c);
@@ -1146,37 +1192,32 @@ namespace uclliu
             {
                 return "";
             }
-            if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "v" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 2)
-            {
-                c = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)])[1];
-                return c;
-            }
-            else if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "r" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 3)
-            {
 
-                c = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)])[2];
-                return c;
-            }
-            else if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "s" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 4)
+            string candidate;
+            if (try_get_suffix_candidate(c, "v", 1, out candidate))
             {
-                c = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)])[3];
-                return c;
+                return candidate;
             }
-            else if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "f" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 5)
+            if (try_get_suffix_candidate(c, "r", 2, out candidate))
             {
-                c = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)])[4];
-                return c;
+                return candidate;
             }
-            else if (my.in_array(c, uclcode["chardefs"]))
+            if (try_get_suffix_candidate(c, "s", 3, out candidate))
             {
-                //# print("Debug V2")
-                c = my.jsonValueToListString(uclcode["chardefs"][c])[0];
-                return c;
+                return candidate;
             }
-            else
+            if (try_get_suffix_candidate(c, "f", 4, out candidate))
             {
-                return c;
+                return candidate;
             }
+
+            List<string> candidates;
+            if (try_get_root_candidates(c, out candidates) && candidates.Count > 0)
+            {
+                return candidates[0];
+            }
+
+            return c;
         }
         public bool show_search()
         {
@@ -1187,43 +1228,44 @@ namespace uclliu
             debug_print("ShowSearch1");
             string c = play_ucl_label.ToLower().Trim();
             is_need_use_pinyi = false;
-            if (c.Substring(0, 1) == "'" && c.Length > 1)
+            if (c.Length > 1 && c.Substring(0, 1) == "'")
             {
                 c = c.Substring(1);
                 is_need_use_pinyi = true;
             }
-            if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "v" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 2)
+            List<string> candidates;
+            if (try_get_suffix_search_candidates(c, "v", 1, out candidates))
             {
                 //#print("Debug V1")
-                ucl_find_data = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)][1]);
+                ucl_find_data = candidates;
                 word_label_set_text();
                 return true;
             }
-            else if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "r" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 3)
+            else if (try_get_suffix_search_candidates(c, "r", 2, out candidates))
             {
                 //#print("Debug V1")
-                ucl_find_data = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)][2]);
+                ucl_find_data = candidates;
                 word_label_set_text();
                 return true;
             }
-            else if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "s" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 4)
+            else if (try_get_suffix_search_candidates(c, "s", 3, out candidates))
             {
                 //#print("Debug V1")
-                ucl_find_data = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)][3]);
+                ucl_find_data = candidates;
                 word_label_set_text();
                 return true;
             }
-            else if (!my.in_array(c, uclcode["chardefs"]) && c.Substring(c.Length - 1, 1) == "f" && my.in_array(c.Substring(0, c.Length - 1), uclcode["chardefs"]) && uclcode["chardefs"][c.Substring(0, c.Length - 1)].Count >= 5)
+            else if (try_get_suffix_search_candidates(c, "f", 4, out candidates))
             {
                 //#print("Debug V1")
-                ucl_find_data = my.jsonValueToListString(uclcode["chardefs"][c.Substring(0, c.Length - 1)][4]);
+                ucl_find_data = candidates;
                 word_label_set_text();
                 return true;
             }
-            else if (my.in_array(c, uclcode["chardefs"]))
+            else if (try_get_root_candidates(c, out candidates))
             {
                 //# print("Debug V2")
-                ucl_find_data = my.jsonValueToListString(uclcode["chardefs"][c]);
+                ucl_find_data = new List<string>(candidates);
                 word_label_set_text();
                 return true;
             }

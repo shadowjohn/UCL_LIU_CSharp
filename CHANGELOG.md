@@ -20,6 +20,8 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ### Changed
 
+- `liu.json` / `custom.json` 解析改用 `JavaScriptSerializer` 風格的 `json_decode` 流程，核心字根表改為 `Dictionary<string, List<string>>`。
+- 移除 `System.Json` NuGet 依賴與 ILRepack 合併項目。
 - `KEYBOARD_VOLUME` 會限制在 0-100，避免錯誤設定造成音量邏輯異常。
 - `ENABLE_HALF_FULL=0` 時，`Shift+Space` 不再觸發半全形切換。
 - `STARTUP_DEFAULT_UCL=0` 時，啟動後會套用英模式。

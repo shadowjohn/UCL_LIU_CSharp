@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Json;
 using System.Text;
 
 namespace uclliu
@@ -52,8 +51,12 @@ namespace uclliu
                 return entries;
             }
 
-            JsonObject root = JsonValue.Parse(json) as JsonObject;
-            if (root == null)
+            Dictionary<string, List<string>> decodedEntries;
+            try
+            {
+                decodedEntries = LiuJsonTable.ParseStringListDictionaryJson(json);
+            }
+            catch (InvalidDataException)
             {
                 if (log != null)
                 {
@@ -62,7 +65,7 @@ namespace uclliu
                 return entries;
             }
 
-            foreach (KeyValuePair<string, JsonValue> pair in root)
+            foreach (KeyValuePair<string, List<string>> pair in decodedEntries)
             {
                 string key = NormalizeRootKey(pair.Key);
                 if (!IsValidRootKey(key))
@@ -79,7 +82,7 @@ namespace uclliu
                     entries[key] = new List<string>();
                 }
 
-                foreach (string value in JsonValueToStrings(pair.Value))
+                foreach (string value in pair.Value)
                 {
                     AddUnique(entries[key], value);
                 }
@@ -99,15 +102,9 @@ namespace uclliu
             File.WriteAllText(path, ToJson(entries), Utf8NoBom);
         }
 
-        public static int MergeInto(JsonValue uclcode, IDictionary<string, List<string>> customEntries)
+        public static int MergeInto(Dictionary<string, List<string>> chardefs, IDictionary<string, List<string>> customEntries)
         {
-            if (uclcode == null || customEntries == null || !uclcode.ContainsKey("chardefs"))
-            {
-                return 0;
-            }
-
-            JsonObject chardefs = uclcode["chardefs"] as JsonObject;
-            if (chardefs == null)
+            if (chardefs == null || customEntries == null)
             {
                 return 0;
             }
@@ -124,7 +121,7 @@ namespace uclliu
                 List<string> merged = new List<string>();
                 if (chardefs.ContainsKey(key))
                 {
-                    merged.AddRange(JsonValueToStrings(chardefs[key]));
+                    merged.AddRange(chardefs[key]);
                 }
 
                 foreach (string value in pair.Value)
@@ -135,28 +132,10 @@ namespace uclliu
                     }
                 }
 
-                chardefs[key] = ParseJsonArray(merged);
+                chardefs[key] = merged;
             }
 
             return addedCount;
-        }
-
-        public static List<string> JsonValueToStrings(JsonValue value)
-        {
-            List<string> result = new List<string>();
-            JsonArray array = value as JsonArray;
-            if (array != null)
-            {
-                foreach (JsonValue item in array)
-                {
-                    AddUnique(result, ReadJsonString(item));
-                }
-            }
-            else
-            {
-                AddUnique(result, ReadJsonString(value));
-            }
-            return result;
         }
 
         public static string ToJson(IDictionary<string, List<string>> entries)
@@ -205,22 +184,6 @@ namespace uclliu
             return json.ToString();
         }
 
-        private static JsonValue ParseJsonArray(List<string> values)
-        {
-            StringBuilder json = new StringBuilder();
-            json.Append("[");
-            for (int i = 0; i < values.Count; i++)
-            {
-                if (i > 0)
-                {
-                    json.Append(",");
-                }
-                json.Append("\"").Append(EscapeJson(values[i])).Append("\"");
-            }
-            json.Append("]");
-            return JsonValue.Parse(json.ToString());
-        }
-
         private static bool AddUnique(List<string> values, string value)
         {
             if (value == null)
@@ -234,22 +197,6 @@ namespace uclliu
             }
             values.Add(value);
             return true;
-        }
-
-        private static string ReadJsonString(JsonValue value)
-        {
-            if (value == null)
-            {
-                return "";
-            }
-            try
-            {
-                return (string)value;
-            }
-            catch
-            {
-                return value.ToString().Trim('"');
-            }
         }
 
         private static string EscapeJson(string value)

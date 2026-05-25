@@ -6,7 +6,7 @@
 
 **Architecture:** Keep dictionary persistence in a pure `CustomDictionaryStore` class with tests, merge custom entries into `uclcode` after base `liu.json` loads, and add a small WinForms editor opened from tray menu or `,,,BOX`.
 
-**Tech Stack:** C# / WinForms / System.Json / .NET SDK console harness for core tests.
+**Tech Stack:** C# / WinForms / JavaScriptSerializer / .NET SDK console harness for core tests.
 
 ---
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Json;
 using System.Text;
 using uclliu;
 
@@ -15,6 +14,7 @@ internal static class Program
         failed += Run("ensure json converts cin in working directory", TestEnsureJsonConvertsCin);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
+        failed += Run("liu json parser decodes chardefs without System.Json", TestLiuJsonParserDecodesChardefs);
         failed += Run("custom dictionary lowercases and merges values", TestCustomDictionaryMerge);
         failed += Run("custom dictionary save writes deterministic json", TestCustomDictionarySave);
         failed += Run("unicode sendinput builds literal down/up events", TestUnicodeSendInputBuildsLiteralEvents);
@@ -118,18 +118,28 @@ internal static class Program
         AssertEqual("ucl", CustomDictionaryStore.NormalizeRootKey("UCL"));
     }
 
+    private static void TestLiuJsonParserDecodesChardefs()
+    {
+        Dictionary<string, List<string>> chardefs = LiuJsonTable.ParseChardefsJson("{\"chardefs\":{\"ucl\":[\"肥\",\"米\"],\"abc\":\"一\"}}");
+
+        AssertSequence(new string[] { "肥", "米" }, chardefs["ucl"].ToArray());
+        AssertSequence(new string[] { "一" }, chardefs["abc"].ToArray());
+    }
+
     private static void TestCustomDictionaryMerge()
     {
-        JsonValue root = JsonValue.Parse("{\"chardefs\":{\"ucl\":[\"肥\"],\"abc\":[\"一\"]}}");
+        Dictionary<string, List<string>> chardefs = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        chardefs["ucl"] = new List<string>() { "肥" };
+        chardefs["abc"] = new List<string>() { "一" };
         Dictionary<string, List<string>> custom = new Dictionary<string, List<string>>();
         custom["UCL"] = new List<string>() { "肥宅", "肥" };
         custom["new"] = new List<string>() { "新詞" };
 
-        int merged = CustomDictionaryStore.MergeInto(root, custom);
+        int merged = CustomDictionaryStore.MergeInto(chardefs, custom);
 
         AssertEqual(2, merged);
-        AssertSequence(new string[] { "肥", "肥宅" }, CustomDictionaryStore.JsonValueToStrings(root["chardefs"]["ucl"]).ToArray());
-        AssertSequence(new string[] { "新詞" }, CustomDictionaryStore.JsonValueToStrings(root["chardefs"]["new"]).ToArray());
+        AssertSequence(new string[] { "肥", "肥宅" }, chardefs["ucl"].ToArray());
+        AssertSequence(new string[] { "新詞" }, chardefs["new"].ToArray());
     }
 
     private static void TestCustomDictionarySave()
