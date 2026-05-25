@@ -17,6 +17,11 @@ internal static class Program
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
         failed += Run("custom dictionary lowercases and merges values", TestCustomDictionaryMerge);
         failed += Run("custom dictionary save writes deterministic json", TestCustomDictionarySave);
+        failed += Run("unicode sendinput builds literal down/up events", TestUnicodeSendInputBuildsLiteralEvents);
+        failed += Run("unicode sendinput preserves surrogate pairs", TestUnicodeSendInputPreservesSurrogatePairs);
+        failed += Run("clipboard paste restores original text after send failure", TestClipboardPasteRestoresOriginalTextAfterSendFailure);
+        failed += Run("clipboard paste reports set clipboard failure before send", TestClipboardPasteReportsSetClipboardFailureBeforeSend);
+        failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
 
         if (failed > 0)
         {
@@ -140,6 +145,77 @@ internal static class Program
         }
     }
 
+    private static void TestUnicodeSendInputBuildsLiteralEvents()
+    {
+        UnicodeSendInputOutput.INPUT[] inputs = UnicodeSendInputOutput.BuildInputsForText("+^%{}() ");
+
+        AssertEqual(16, inputs.Length);
+        AssertKeyboardInput(inputs[0], '+', false);
+        AssertKeyboardInput(inputs[1], '+', true);
+        AssertKeyboardInput(inputs[2], '^', false);
+        AssertKeyboardInput(inputs[3], '^', true);
+        AssertKeyboardInput(inputs[14], ' ', false);
+        AssertKeyboardInput(inputs[15], ' ', true);
+    }
+
+    private static void TestUnicodeSendInputPreservesSurrogatePairs()
+    {
+        string text = char.ConvertFromUtf32(0x20BB7);
+
+        UnicodeSendInputOutput.INPUT[] inputs = UnicodeSendInputOutput.BuildInputsForText(text);
+
+        AssertEqual(4, inputs.Length);
+        AssertKeyboardInput(inputs[0], text[0], false);
+        AssertKeyboardInput(inputs[1], text[0], true);
+        AssertKeyboardInput(inputs[2], text[1], false);
+        AssertKeyboardInput(inputs[3], text[1], true);
+    }
+
+    private static void TestClipboardPasteRestoresOriginalTextAfterSendFailure()
+    {
+        FakeClipboardGateway clipboard = new FakeClipboardGateway("原剪貼簿");
+        FakeKeySender keySender = new FakeKeySender();
+        keySender.ThrowOnSend = true;
+        ClipboardPasteOutput output = new ClipboardPasteOutput(clipboard, keySender, delegate(int ms) { });
+
+        string error;
+        bool ok = output.TryPasteText("肥米", "^{v}", out error);
+
+        AssertTrue(!ok, "paste should report send failure");
+        AssertContains(error, "send keys failed");
+        AssertEqual("原剪貼簿", clipboard.Text);
+        AssertEqual(1, keySender.SendCount);
+    }
+
+    private static void TestClipboardPasteReportsSetClipboardFailureBeforeSend()
+    {
+        FakeClipboardGateway clipboard = new FakeClipboardGateway("原剪貼簿");
+        clipboard.ThrowOnSetText = true;
+        FakeKeySender keySender = new FakeKeySender();
+        ClipboardPasteOutput output = new ClipboardPasteOutput(clipboard, keySender, delegate(int ms) { });
+
+        string error;
+        bool ok = output.TryPasteText("肥米", "^{v}", out error);
+
+        AssertTrue(!ok, "paste should report clipboard failure");
+        AssertContains(error, "set clipboard failed");
+        AssertEqual("原剪貼簿", clipboard.Text);
+        AssertEqual(0, keySender.SendCount);
+    }
+
+    private static void TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste()
+    {
+        List<string> shiftInsertApps = new List<string>() { "putty" };
+        List<string> ctrlVApps = new List<string>() { "oxygennotincluded.exe" };
+        List<string> big5Apps = new List<string>() { "zip32w" };
+
+        AssertEqual((int)TextOutputMode.UnicodeSendInput, (int)TextOutputRouter.Select("DEFAULT", "notepad.exe", shiftInsertApps, ctrlVApps, big5Apps));
+        AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("DEFAULT", "putty.exe", shiftInsertApps, ctrlVApps, big5Apps));
+        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", "oxygennotincluded.exe", shiftInsertApps, ctrlVApps, big5Apps));
+        AssertEqual((int)TextOutputMode.PasteBig5, (int)TextOutputRouter.Select("BIG5", "notepad.exe", shiftInsertApps, ctrlVApps, big5Apps));
+        AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("PASTE", "notepad.exe", shiftInsertApps, ctrlVApps, big5Apps));
+    }
+
     private static byte[] BuildUnitab(string firstTwoKeys, int key3, int key4, int unicodeCodePoint)
     {
         ushort[] keyTable = new ushort[1024];
@@ -227,6 +303,20 @@ internal static class Program
         }
     }
 
+    private static void AssertKeyboardInput(UnicodeSendInputOutput.INPUT input, char expectedChar, bool isKeyUp)
+    {
+        AssertEqual(UnicodeSendInputOutput.InputKeyboard, input.type);
+        AssertEqual(0, input.u.ki.wVk);
+        AssertEqual((int)expectedChar, input.u.ki.wScan);
+
+        uint expectedFlags = UnicodeSendInputOutput.KeyEventUnicode;
+        if (isKeyUp)
+        {
+            expectedFlags |= UnicodeSendInputOutput.KeyEventKeyUp;
+        }
+        AssertEqual((int)expectedFlags, (int)input.u.ki.dwFlags);
+    }
+
     private static void AssertSequence(string[] expected, string[] actual)
     {
         if (expected.Length != actual.Length)
@@ -238,6 +328,66 @@ internal static class Program
             if (expected[i] != actual[i])
             {
                 throw new Exception("Expected [" + i + "] " + expected[i] + ", got " + actual[i]);
+            }
+        }
+    }
+
+    private sealed class FakeClipboardGateway : IClipboardGateway
+    {
+        public FakeClipboardGateway(string text)
+        {
+            Text = text;
+        }
+
+        public string Text { get; private set; }
+        public bool ThrowOnSetText { get; set; }
+
+        public object GetDataObject()
+        {
+            return Text;
+        }
+
+        public bool ContainsText()
+        {
+            return Text != null;
+        }
+
+        public string GetText()
+        {
+            return Text;
+        }
+
+        public void SetText(string text, ClipboardTextKind textKind)
+        {
+            if (ThrowOnSetText)
+            {
+                throw new InvalidOperationException("fake clipboard failure");
+            }
+            Text = text;
+        }
+
+        public void Clear()
+        {
+            Text = null;
+        }
+
+        public void SetDataObject(object dataObject)
+        {
+            Text = dataObject as string;
+        }
+    }
+
+    private sealed class FakeKeySender : IKeySender
+    {
+        public bool ThrowOnSend { get; set; }
+        public int SendCount { get; private set; }
+
+        public void SendWait(string keys)
+        {
+            SendCount++;
+            if (ThrowOnSend)
+            {
+                throw new InvalidOperationException("fake send failure");
             }
         }
     }

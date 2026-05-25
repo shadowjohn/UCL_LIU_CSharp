@@ -61,3 +61,27 @@
 - Win11/Chrome/PTT/Notepad 出字相容與剪貼簿復原策略。
 - README/CHANGELOG 對齊 Python 版新結構。
 - TSF Bridge 移植評估。
+
+---
+
+## 2026-05-25 - C# 版第三輪追功能：Unicode SendInput 出字
+
+### 任務目標
+
+1. 研究 TSF 以外，比舊 `SendKeys.Send(data)` 更穩的出字方式。
+2. 在 C# 版加入 Unicode `SendInput` 預設出字，保留剪貼簿與舊 `SendKeys` fallback。
+3. 將剪貼簿貼上集中封裝，避免貼上失敗時直接中斷或永久覆蓋文字剪貼簿。
+
+### 實作紀錄
+
+- 新增 `TextOutput.cs`，包含 `UnicodeSendInputOutput`、`ClipboardPasteOutput` 與 `TextOutputRouter`。
+- `UnicodeSendInputOutput` 以 `KEYEVENTF_UNICODE` 建立每個 UTF-16 code unit 的 key down/up 事件，避免 `SendKeys` 特殊字元語法干擾。
+- `ClipboardPasteOutput` 加入剪貼簿 retry、送鍵後短暫等待、try/finally 還原原剪貼簿資料。
+- `TextOutputRouter` 讓 `DEFAULT` 預設走 Unicode SendInput；特殊 App 與 `PASTE` / `BIG5` 模式仍走剪貼簿貼上。
+- `uclliu.senddata()` 改為先走選定輸出策略，失敗時 fallback 到 Unicode SendInput 或舊 `SendKeys`，避免單點失敗造成出字流程中斷。
+- 右下角出字模式選單將「正常出字模式」標示為「正常出字模式（Unicode）」。
+
+### 驗證紀錄
+
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- 新增核心測試：Unicode SendInput 事件建立、代理對 surrogate pair 的 UTF-16 保留、剪貼簿貼上失敗後還原、輸出策略選擇。

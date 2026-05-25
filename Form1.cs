@@ -1195,6 +1195,8 @@ namespace uclliu
             {
                 case "【●】正常出字模式":
                 case "【　】正常出字模式":
+                case "【●】正常出字模式（Unicode）":
+                case "【　】正常出字模式（Unicode）":
                     //MessageBox.Show("OK");
                     ucl.DEFAULT_OUTPUT_TYPE = "DEFAULT";
                     break;
@@ -1288,7 +1290,7 @@ namespace uclliu
             {
                 is_o = "　";
             }
-            cSubMenu.MenuItems.Add("【" + is_o + "】正常出字模式", this.menu_change_senddata_kind);
+            cSubMenu.MenuItems.Add("【" + is_o + "】正常出字模式（Unicode）", this.menu_change_senddata_kind);
             is_o = "　";
             if (ucl.DEFAULT_OUTPUT_TYPE == "BIG5")
             {

@@ -11,7 +11,8 @@
 ## 第二輪候選
 
 - [x] 對齊 Python 版 v1.63~v1.65 自定詞庫：`custom.json` 合併載入、`,,,BOX`、單例視窗。
-- [ ] 補 Win11/Chrome/PTT/Notepad 出字模式相容清單與剪貼簿復原策略。
+- [x] 補 Unicode SendInput 預設出字，並將剪貼簿貼上集中成 retry/restore fallback。
+- [ ] 補 Win11/Chrome/PTT/Notepad 出字模式相容清單與標題規則。
 - [ ] README/CHANGELOG 現代化，將 C# 版目前狀態與 Python 版差異寫清楚。
 
 ## 第三輪候選

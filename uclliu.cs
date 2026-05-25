@@ -16,6 +16,8 @@ namespace uclliu
     public class uclliu
     {
         myinclude my = new myinclude();
+        private readonly UnicodeSendInputOutput unicodeSendInputOutput = new UnicodeSendInputOutput();
+        private readonly ClipboardPasteOutput clipboardPasteOutput = new ClipboardPasteOutput();
         public string VERSION = "0.1";
         public FileStream lockFileString;
         public string CUSTOM_JSON_FILE
@@ -1359,11 +1361,58 @@ namespace uclliu
             return output;
         }
 
+        private bool try_send_output(TextOutputMode outputMode, string data, out string error)
+        {
+            error = null;
+            is_send_ucl = true;
+            try
+            {
+                switch (outputMode)
+                {
+                    case TextOutputMode.UnicodeSendInput:
+                        return unicodeSendInputOutput.TrySendText(data, out error);
+                    case TextOutputMode.PasteShiftInsert:
+                        return clipboardPasteOutput.TryPasteText(data, "+{INSERT}", out error);
+                    case TextOutputMode.PasteCtrlV:
+                        return clipboardPasteOutput.TryPasteText(data, "^{v}", out error);
+                    case TextOutputMode.PasteBig5:
+                        return clipboardPasteOutput.TryPasteAnsiText(my.UTF8toBig5(data), "^{v}", out error);
+                    default:
+                        error = "unknown output mode: " + outputMode;
+                        return false;
+                }
+            }
+            finally
+            {
+                is_send_ucl = false;
+            }
+        }
+
+        private bool try_send_legacy_sendkeys(string data, out string error)
+        {
+            error = null;
+            is_send_ucl = true;
+            try
+            {
+                SendKeys.Send(data);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = "legacy SendKeys failed: " + ex.Message;
+                return false;
+            }
+            finally
+            {
+                is_send_ucl = false;
+            }
+        }
+
         public void senddata(string data)
         {
             //人生很難，研究很久 C# 的 sendkeys 遇到有些吃 iso-8859-1、big5 的app 如pcman、putty
             //或是早期的 photoimpact，最好的方法還是利用剪貼簿貼上，使用前備份一下原來的內容即可
-            //sendinput 似乎也是一個解法，但有空再來研究
+            //一般視窗先使用 Unicode SendInput；剪貼簿仍保留給終端機、Big5、特殊 App。
             //data = "肥的天下";
             same_sound_index = 0;// #回到第零頁
             is_has_more_page = false;// #回到沒有分頁
@@ -1414,45 +1463,28 @@ namespace uclliu
             debug_print("Sendkeys:" + data);
 
             var p_info = getForegroundWindowProcessInfo();
-            if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_shift_ins_apps) || DEFAULT_OUTPUT_TYPE == "PASTE")
+            TextOutputMode outputMode = TextOutputRouter.Select(DEFAULT_OUTPUT_TYPE, p_info["PROCESS_NAME"], sendkey_paste_shift_ins_apps, sendkey_paste_ctrl_v_apps, sendkey_paste_big5_apps);
+            debug_print("senddata output mode:" + outputMode.ToString());
+
+            string outputError;
+            if (try_send_output(outputMode, data, out outputError))
             {
-                //使用 shift+insert 出字
-                string orin_Clip = Clipboard.GetText();
-                Clipboard.SetText(data);
-                is_send_ucl = true;
-                data = "+{INSERT}";
-                SendKeys.Send(data);
-                is_send_ucl = false;
-                Clipboard.SetText(orin_Clip);
+                return;
             }
-            else if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_ctrl_v_apps))
+
+            debug_print("senddata primary output failed:" + outputError);
+            if (outputMode != TextOutputMode.UnicodeSendInput && outputMode != TextOutputMode.PasteBig5)
             {
-                //使用 ctrl+v 出字
-                string orin_Clip = Clipboard.GetText();
-                Clipboard.SetText(data);
-                is_send_ucl = true;
-                data = "^{v}";
-                SendKeys.Send(data);
-                is_send_ucl = false;
-                Clipboard.SetText(orin_Clip);
+                if (try_send_output(TextOutputMode.UnicodeSendInput, data, out outputError))
+                {
+                    return;
+                }
+                debug_print("senddata unicode fallback failed:" + outputError);
             }
-            else if (my.in_array(p_info["PROCESS_NAME"], sendkey_paste_big5_apps) || DEFAULT_OUTPUT_TYPE == "BIG5")
+
+            if (!try_send_legacy_sendkeys(data, out outputError))
             {
-                //Big5 貼上
-                string orin_Clip = Clipboard.GetText();
-                Clipboard.SetText(my.UTF8toBig5(data));
-                is_send_ucl = true;
-                data = "^{v}";
-                SendKeys.Send(data);
-                is_send_ucl = false;
-                Clipboard.SetText(orin_Clip);
-            }
-            else
-            {
-                //其他，平非的出字
-                is_send_ucl = true;
-                SendKeys.Send(data);
-                is_send_ucl = false;
+                debug_print("senddata legacy fallback failed:" + outputError);
             }
 
         }
