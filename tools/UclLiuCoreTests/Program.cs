@@ -14,6 +14,8 @@ internal static class Program
         failed += Run("ensure json converts cin in working directory", TestEnsureJsonConvertsCin);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
+        failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
+        failed += Run("simple ini writes readable sections", TestSimpleIniWritesReadableSections);
         failed += Run("liu json parser decodes chardefs without System.Json", TestLiuJsonParserDecodesChardefs);
         failed += Run("custom dictionary lowercases and merges values", TestCustomDictionaryMerge);
         failed += Run("custom dictionary save writes deterministic json", TestCustomDictionarySave);
@@ -116,6 +118,40 @@ internal static class Program
         AssertTrue(!CustomDictionaryStore.IsValidRootKey("abcde1"), "digits should be invalid");
         AssertTrue(!CustomDictionaryStore.IsValidRootKey("abcdef"), "longer than 5 chars should be invalid");
         AssertEqual("ucl", CustomDictionaryStore.NormalizeRootKey("UCL"));
+    }
+
+    private static void TestSimpleIniReadsDefaultSectionValues()
+    {
+        string ini = "; comment\r\n[DEFAULT]\r\nX = 120\r\nSEND_KIND_1_PASTE = putty.exe,foo=bar\r\n\r\n[OTHER]\r\nX=999\r\n";
+
+        SimpleIniData data = SimpleIniData.Parse(ini);
+
+        AssertEqual("120", data["DEFAULT"]["X"]);
+        AssertEqual("putty.exe,foo=bar", data["DEFAULT"]["SEND_KIND_1_PASTE"]);
+        AssertEqual("", data["DEFAULT"]["MISSING"]);
+    }
+
+    private static void TestSimpleIniWritesReadableSections()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "uclliu-ini-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            string path = Path.Combine(dir, "UCLLIU.ini");
+            SimpleIniData data = new SimpleIniData();
+            data["DEFAULT"]["X"] = "120";
+            data["DEFAULT"]["PLAY_SOUND_ENABLE"] = "1";
+
+            SimpleIniFile.WriteFile(path, data);
+            SimpleIniData loaded = SimpleIniFile.ReadFile(path);
+
+            AssertEqual("120", loaded["DEFAULT"]["X"]);
+            AssertEqual("1", loaded["DEFAULT"]["PLAY_SOUND_ENABLE"]);
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
     }
 
     private static void TestLiuJsonParserDecodesChardefs()

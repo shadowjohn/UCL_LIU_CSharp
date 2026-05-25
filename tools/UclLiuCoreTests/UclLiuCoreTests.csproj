@@ -12,6 +12,7 @@
     <Compile Include="..\..\LiuJsonTable.cs" Link="LiuJsonTable.cs" />
     <Compile Include="..\..\LiuTableConverter.cs" Link="LiuTableConverter.cs" />
     <Compile Include="..\..\PinyiCandidateSelector.cs" Link="PinyiCandidateSelector.cs" />
+    <Compile Include="..\..\SimpleIni.cs" Link="SimpleIni.cs" />
     <Compile Include="..\..\TextOutput.cs" Link="TextOutput.cs" />
     <Compile Include="..\..\TypingSound.cs" Link="TypingSound.cs" />
     <Compile Include="..\..\UiLayoutCalculator.cs" Link="UiLayoutCalculator.cs" />
