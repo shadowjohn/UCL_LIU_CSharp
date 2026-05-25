@@ -107,3 +107,30 @@
 - README / CHANGELOG 關鍵字與舊版 emoji 檢查無殘留項目。
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
 - `dotnet msbuild uclliu.sln /p:Configuration=Debug /p:Platform="Any CPU" /v:minimal` 仍受限於本機缺 .NET Framework 4.5.2 Developer Pack。
+
+---
+
+## 2026-05-25 - C# 版第五輪追功能：打字音效與 UX 設定
+
+### 任務目標
+
+1. 補 Python 版後期打字音效、音量與特殊鍵音效。
+2. 將托盤選單補上打字音、啟動預設肥/英、允許半全形切換。
+3. 讓 `ENABLE_HALF_FULL` 與 `STARTUP_DEFAULT_UCL` 設定真正影響 C# 版行為。
+
+### 實作紀錄
+
+- 新增 `TypingSound.cs`，負責 wav 掃描、特殊鍵分類、音量正規化、PCM 16-bit 音量縮放、背景播放與同鍵長按抑制。
+- 複製 Python 版 `wavs\*.wav` 音效素材，並在 `uclliu.csproj` 設定輸出時複製。
+- `uclliu.cs` 將 `KEYBOARD_VOLUME` 限制在 0-100，並提供打字音播放、預覽、重載方法。
+- `Form1.cs` 在 keyboard hook 熱路徑只做短判斷，實際音效播放走 ThreadPool 與最多 3 個播放工作。
+- `Shift+Space` 現在會尊重 `ENABLE_HALF_FULL=0`。
+- 啟動後若 `STARTUP_DEFAULT_UCL=0`，會套用英模式。
+- 右下角選單新增打字音開關、音量 10%-100%、啟動預設肥模式、允許半全形切換。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `TypingSoundVolume`、`TypingSoundKeyState`、`TypingSoundCatalog`、`WavPcmVolumeScaler`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `dotnet msbuild uclliu.sln ...` 因本機缺完整 .NET Framework 4.5.2 reference assemblies 失敗於 MSB3644。
+- `MSBuild.exe uclliu.csproj /p:TargetFrameworkVersion=v4.8 /p:PostBuildEvent=` 臨時覆寫編譯通過，確認 WinForms 整合與 wav copy 無編譯錯。

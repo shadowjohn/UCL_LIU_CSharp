@@ -173,6 +173,7 @@ namespace uclliu
                 //ucl.is_send_ucl = false;
                 return OK;
             }
+            ucl.handle_typing_sound(keydown, keyup, ea);
             //處理額外的功能，如 ,,,version
             //Console.WriteLine(ea);
             if (keyup && ((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109 || ea == 189 || ea == 187))
@@ -327,7 +328,7 @@ namespace uclliu
                 return OK;
             }
 
-            if (keydown && ea == 32 && ucl.flag_is_shift_down)
+            if (keydown && ea == 32 && ucl.flag_is_shift_down && ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] == "1")
             {
                 //# Press shift and space
                 //# switch 半/全
@@ -1089,6 +1090,11 @@ namespace uclliu
             //Thread.Sleep(3000);
             btn_UCL.PerformClick();
             btn_UCL.PerformClick();
+            if (ucl.config["DEFAULT"]["STARTUP_DEFAULT_UCL"] == "0" && ucl.is_ucl())
+            {
+                // 使用者可指定啟動先進英模式，沿用既有切換流程避免 UI 狀態不同步。
+                btn_UCL.PerformClick();
+            }
             //起始不可以是 topmost ，在程式執行後，才置高，不然
             //首次切換輸入法時，會失去原始的焦點(如記事本)
             this.TopMost = true;
@@ -1227,7 +1233,74 @@ namespace uclliu
                     break;
             }
             cMenu.MenuItems.Clear();
+            ucl.saveConfig();
 
+        }
+        private void menu_toggle_play_sound(object sender, EventArgs e)
+        {
+            if (ucl.config["DEFAULT"]["PLAY_SOUND_ENABLE"] == "0")
+            {
+                ucl.config["DEFAULT"]["PLAY_SOUND_ENABLE"] = "1";
+                ucl.preview_typing_sound();
+            }
+            else
+            {
+                ucl.config["DEFAULT"]["PLAY_SOUND_ENABLE"] = "0";
+            }
+            ucl.saveConfig();
+            cMenu.MenuItems.Clear();
+        }
+        private void menu_change_keyboard_volume(object sender, EventArgs e)
+        {
+            int volume = get_volume_from_menu_text(((MenuItem)sender).Text);
+            ucl.config["DEFAULT"]["KEYBOARD_VOLUME"] = TypingSoundVolume.Clamp(volume).ToString();
+            ucl.saveConfig();
+            ucl.preview_typing_sound();
+            cMenu.MenuItems.Clear();
+        }
+        private int get_volume_from_menu_text(string text)
+        {
+            string digits = "";
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (Char.IsDigit(text[i]))
+                {
+                    digits += text[i].ToString();
+                }
+            }
+
+            int volume;
+            if (!Int32.TryParse(digits, out volume))
+            {
+                volume = ucl.get_keyboard_volume();
+            }
+            return volume;
+        }
+        private void menu_toggle_startup_default_ucl(object sender, EventArgs e)
+        {
+            if (ucl.config["DEFAULT"]["STARTUP_DEFAULT_UCL"] == "0")
+            {
+                ucl.config["DEFAULT"]["STARTUP_DEFAULT_UCL"] = "1";
+            }
+            else
+            {
+                ucl.config["DEFAULT"]["STARTUP_DEFAULT_UCL"] = "0";
+            }
+            ucl.saveConfig();
+            cMenu.MenuItems.Clear();
+        }
+        private void menu_toggle_half_full(object sender, EventArgs e)
+        {
+            if (ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] == "0")
+            {
+                ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] = "1";
+            }
+            else
+            {
+                ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] = "0";
+            }
+            ucl.saveConfig();
+            cMenu.MenuItems.Clear();
         }
         private void menu_run_exit(object sender, EventArgs e)
         {
@@ -1334,6 +1407,42 @@ namespace uclliu
                 is_o = "　";
             }
             cMenu.MenuItems.Add("6.【" + is_o + "】顯示短根", this.menu_change_sp);
+
+            MenuItem soundMenu = new MenuItem();
+            soundMenu.Text = "8.打字音";
+            is_o = "　";
+            if (ucl.config["DEFAULT"]["PLAY_SOUND_ENABLE"] == "1")
+            {
+                is_o = "●";
+            }
+            soundMenu.MenuItems.Add("【" + is_o + "】打字音啟動", this.menu_toggle_play_sound);
+
+            int keyboardVolume = ucl.get_keyboard_volume();
+            for (int i = 1; i <= 10; i++)
+            {
+                int volume = i * 10;
+                is_o = "　";
+                if (keyboardVolume == volume)
+                {
+                    is_o = "●";
+                }
+                soundMenu.MenuItems.Add("【" + is_o + "】" + volume.ToString() + " %", this.menu_change_keyboard_volume);
+            }
+            cMenu.MenuItems.Add(soundMenu);
+
+            is_o = "　";
+            if (ucl.config["DEFAULT"]["STARTUP_DEFAULT_UCL"] == "1")
+            {
+                is_o = "●";
+            }
+            cMenu.MenuItems.Add("9.【" + is_o + "】啟動預設為「肥」模式", this.menu_toggle_startup_default_ucl);
+
+            is_o = "　";
+            if (ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] == "1")
+            {
+                is_o = "●";
+            }
+            cMenu.MenuItems.Add("10.【" + is_o + "】允許(Shift+Space)切換 全形/半形", this.menu_toggle_half_full);
 
             cMenu.MenuItems.Add("11. 自定詞庫", this.menu_open_custom_dict);
             cMenu.MenuItems.Add("12. 離開(Quit)", this.menu_run_exit);

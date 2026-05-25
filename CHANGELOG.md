@@ -6,14 +6,37 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ## [Unreleased] - 2026-05-25
 
+### Added
+
+- 新增 `TypingSound.cs`，支援：
+  - `wavs\*.wav` 音效掃描
+  - Enter / Delete / Backspace / Space 特殊鍵音效
+  - 一般按鍵隨機音效
+  - 0-100 音量正規化與 PCM 16-bit wav 音量縮放
+  - 長按同鍵不重複連發音效
+- 右下角選單新增「打字音」子選單，可開關打字音並切換 10%-100% 音量。
+- 右下角選單新增「啟動預設為肥模式」與「允許 Shift+Space 切換全形/半形」。
+- 專案加入 Python 版後期 `wavs` 音效素材，build 時複製到輸出目錄。
+
+### Changed
+
+- `KEYBOARD_VOLUME` 會限制在 0-100，避免錯誤設定造成音量邏輯異常。
+- `ENABLE_HALF_FULL=0` 時，`Shift+Space` 不再觸發半全形切換。
+- `STARTUP_DEFAULT_UCL=0` 時，啟動後會套用英模式。
+
+### Verification
+
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj`
+- Visual Studio MSBuild 以 `/p:TargetFrameworkVersion=v4.8 /p:PostBuildEvent=` 臨時覆寫編譯通過，用於驗證 WinForms 整合語法；正式 `v4.5.2` build 仍需要安裝完整 Developer Pack。
+
+---
+
+## 2026-05-25 - README/CHANGELOG 現代化
+
 ### Documentation
 
 - 現代化 `README.md`，改成快速開始、目前狀態、出字模式、與 Python 版差異、開發驗證等章節。
 - 新增本檔，將 C# 版近期追功能獨立整理，避免 README 繼續混入大量歷史流水帳。
-
-### Notes
-
-- 這次只更新文件，不改執行邏輯。
 
 ---
 

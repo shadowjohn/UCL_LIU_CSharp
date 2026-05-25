@@ -22,6 +22,10 @@ internal static class Program
         failed += Run("clipboard paste restores original text after send failure", TestClipboardPasteRestoresOriginalTextAfterSendFailure);
         failed += Run("clipboard paste reports set clipboard failure before send", TestClipboardPasteReportsSetClipboardFailureBeforeSend);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
+        failed += Run("typing sound volume clamps to supported range", TestTypingSoundVolumeClamp);
+        failed += Run("typing sound suppresses repeated keydown until keyup", TestTypingSoundKeyState);
+        failed += Run("typing sound catalog maps special wav names", TestTypingSoundCatalogSpecialNames);
+        failed += Run("typing sound volume scaler adjusts pcm16 samples", TestTypingSoundVolumeScalerPcm16);
 
         if (failed > 0)
         {
@@ -216,6 +220,57 @@ internal static class Program
         AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("PASTE", "notepad.exe", shiftInsertApps, ctrlVApps, big5Apps));
     }
 
+    private static void TestTypingSoundVolumeClamp()
+    {
+        AssertEqual(0, TypingSoundVolume.Clamp(-10));
+        AssertEqual(30, TypingSoundVolume.Normalize("bad", 30));
+        AssertEqual(30, TypingSoundVolume.Normalize("", 30));
+        AssertEqual(45, TypingSoundVolume.Normalize("45", 30));
+        AssertEqual(100, TypingSoundVolume.Normalize("500", 30));
+    }
+
+    private static void TestTypingSoundKeyState()
+    {
+        TypingSoundKeyState state = new TypingSoundKeyState();
+
+        AssertTrue(state.ShouldPlayKeyDown(65), "first A keydown should play");
+        AssertTrue(!state.ShouldPlayKeyDown(65), "held A keydown should not play repeatedly");
+        AssertTrue(state.ShouldPlayKeyDown(66), "different key should play");
+        state.HandleKeyUp(66);
+        AssertTrue(!state.ShouldPlayKeyDown(65), "A should still be treated as held until A keyup");
+        state.HandleKeyUp(65);
+        AssertTrue(state.ShouldPlayKeyDown(65), "A should play again after keyup");
+    }
+
+    private static void TestTypingSoundCatalogSpecialNames()
+    {
+        AssertEqual(13, TypingSoundCatalog.GetSpecialKeyCode("enter.wav").Value);
+        AssertEqual(13, TypingSoundCatalog.GetSpecialKeyCode("return.WAV").Value);
+        AssertEqual(46, TypingSoundCatalog.GetSpecialKeyCode("delete.wav").Value);
+        AssertEqual(46, TypingSoundCatalog.GetSpecialKeyCode("del.wav").Value);
+        AssertEqual(8, TypingSoundCatalog.GetSpecialKeyCode("backspace.wav").Value);
+        AssertEqual(8, TypingSoundCatalog.GetSpecialKeyCode("bs.wav").Value);
+        AssertEqual(32, TypingSoundCatalog.GetSpecialKeyCode("space.wav").Value);
+        AssertEqual(32, TypingSoundCatalog.GetSpecialKeyCode("sp.wav").Value);
+        AssertTrue(!TypingSoundCatalog.GetSpecialKeyCode("1.wav").HasValue, "numeric wav should be random typing sound");
+    }
+
+    private static void TestTypingSoundVolumeScalerPcm16()
+    {
+        byte[] pcm = new byte[8];
+        WriteInt16(pcm, 0, 1000);
+        WriteInt16(pcm, 2, -1000);
+        WriteInt16(pcm, 4, short.MaxValue);
+        WriteInt16(pcm, 6, short.MinValue);
+
+        byte[] scaled = WavPcmVolumeScaler.ScalePcm16Data(pcm, 50);
+
+        AssertEqual(500, ReadInt16(scaled, 0));
+        AssertEqual(-500, ReadInt16(scaled, 2));
+        AssertEqual(16384, ReadInt16(scaled, 4));
+        AssertEqual(-16384, ReadInt16(scaled, 6));
+    }
+
     private static byte[] BuildUnitab(string firstTwoKeys, int key3, int key4, int unicodeCodePoint)
     {
         ushort[] keyTable = new ushort[1024];
@@ -315,6 +370,18 @@ internal static class Program
             expectedFlags |= UnicodeSendInputOutput.KeyEventKeyUp;
         }
         AssertEqual((int)expectedFlags, (int)input.u.ki.dwFlags);
+    }
+
+    private static void WriteInt16(byte[] buffer, int offset, short value)
+    {
+        byte[] data = BitConverter.GetBytes(value);
+        buffer[offset] = data[0];
+        buffer[offset + 1] = data[1];
+    }
+
+    private static short ReadInt16(byte[] buffer, int offset)
+    {
+        return BitConverter.ToInt16(buffer, offset);
     }
 
     private static void AssertSequence(string[] expected, string[] actual)

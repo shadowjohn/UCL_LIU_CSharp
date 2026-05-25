@@ -18,6 +18,7 @@ namespace uclliu
         myinclude my = new myinclude();
         private readonly UnicodeSendInputOutput unicodeSendInputOutput = new UnicodeSendInputOutput();
         private readonly ClipboardPasteOutput clipboardPasteOutput = new ClipboardPasteOutput();
+        private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
         public string VERSION = "0.1";
         public FileStream lockFileString;
         public string CUSTOM_JSON_FILE
@@ -589,14 +590,7 @@ namespace uclliu
             }
             config["DEFAULT"]["SEND_KIND_1_PASTE"] = config["DEFAULT"]["SEND_KIND_1_PASTE"].ToString().Trim();
             config["DEFAULT"]["SEND_KIND_2_BIG5"] = config["DEFAULT"]["SEND_KIND_2_BIG5"].ToString().Trim();
-            try
-            {
-                config["DEFAULT"]["KEYBOARD_VOLUME"] = Convert.ToInt32(config["DEFAULT"]["KEYBOARD_VOLUME"]).ToString();
-            }
-            catch (Exception ex)
-            {
-                config["DEFAULT"]["KEYBOARD_VOLUME"] = "30";
-            }
+            config["DEFAULT"]["KEYBOARD_VOLUME"] = TypingSoundVolume.Normalize(config["DEFAULT"]["KEYBOARD_VOLUME"], 30).ToString();
             config["DEFAULT"]["SP"] = Convert.ToInt32(config["DEFAULT"]["SP"]).ToString();
             config["DEFAULT"]["SHOW_PHONE_CODE"] = Convert.ToInt32(config["DEFAULT"]["SHOW_PHONE_CODE"]).ToString();
             if (Convert.ToInt32(config["DEFAULT"]["SHOW_PHONE_CODE"]) <= 0)
@@ -666,6 +660,33 @@ namespace uclliu
             update_UI();
             //不管如何，先存一次
             saveConfig();
+        }
+        public int get_keyboard_volume()
+        {
+            return TypingSoundVolume.Normalize(config["DEFAULT"]["KEYBOARD_VOLUME"], 30);
+        }
+        public void handle_typing_sound(bool keydown, bool keyup, int keyCode)
+        {
+            if (keyup)
+            {
+                typingSoundPlayer.HandleKey(false, true, keyCode, get_keyboard_volume());
+                return;
+            }
+
+            if (config["DEFAULT"]["PLAY_SOUND_ENABLE"] != "1")
+            {
+                return;
+            }
+
+            typingSoundPlayer.HandleKey(keydown, false, keyCode, get_keyboard_volume());
+        }
+        public void preview_typing_sound()
+        {
+            typingSoundPlayer.PlayForKey(0, get_keyboard_volume());
+        }
+        public void reload_typing_sound()
+        {
+            typingSoundPlayer.Reload();
         }
         public bool is_simple()
         {
