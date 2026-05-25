@@ -29,6 +29,9 @@ internal static class Program
         failed += Run("keyboard hook treats system key messages as key transitions", TestKeyboardHookSystemMessages);
         failed += Run("shift release clears state even when ctrl space is enabled", TestShiftReleaseClearsStateWithCtrlSpace);
         failed += Run("shift release toggles input only for standalone shift mode", TestShiftReleaseToggleRules);
+        failed += Run("pinyi v001 same sound skips phonetic code and bopomofo tokens", TestPinyiV001SkipsPhoneCodeAndBopomofo);
+        failed += Run("pinyi v001 same sound sorts by closest token index", TestPinyiV001SortsByClosestTokenIndex);
+        failed += Run("pinyi legacy same sound keeps whole matching lines", TestPinyiLegacyKeepsWholeMatchingLines);
 
         if (failed > 0)
         {
@@ -300,6 +303,55 @@ internal static class Program
         AssertTrue(standaloneShift.ShouldToggleInputMode, "standalone shift release should toggle input when CTRL+SPACE is disabled");
         AssertTrue(shiftWithOtherKey.ShouldClearShiftState, "shift release after another key should clear state");
         AssertTrue(!shiftWithOtherKey.ShouldToggleInputMode, "shift release after another key should not toggle input");
+    }
+
+    private static void TestPinyiV001SkipsPhoneCodeAndBopomofo()
+    {
+        string[] lines = new string[]
+        {
+            "VERSION_0.01",
+            ", - . / 0 1 u",
+            "ㄝ ㄦ ㄡ ㄥ ㄢ ㄅ ㄧ",
+            "u ㄧ 一 壹 衣",
+            "u4 意 義 一 ㄧ",
+            "0 安 鞍 ㄢ"
+        };
+
+        List<string> candidates = PinyiCandidateSelector.FindCandidates(lines, "一");
+
+        AssertSequence(new string[] { "一", "壹", "衣", "意", "義" }, candidates.ToArray());
+        AssertTrue(!candidates.Contains("u"), "phonetic code should not become candidate");
+        AssertTrue(!candidates.Contains("ㄧ"), "bopomofo token should not become candidate");
+    }
+
+    private static void TestPinyiV001SortsByClosestTokenIndex()
+    {
+        string[] lines = new string[]
+        {
+            "VERSION_0.01",
+            ", - . / 0 1 u",
+            "ㄝ ㄦ ㄡ ㄥ ㄢ ㄅ ㄧ",
+            "x 甲 乙 同",
+            "y 同 丙 丁"
+        };
+
+        List<string> candidates = PinyiCandidateSelector.FindCandidates(lines, "同");
+
+        AssertSequence(new string[] { "同", "丙", "丁", "甲", "乙" }, candidates.ToArray());
+    }
+
+    private static void TestPinyiLegacyKeepsWholeMatchingLines()
+    {
+        string[] lines = new string[]
+        {
+            "安 鞍 庵",
+            "案 安 岸",
+            "同 童 銅"
+        };
+
+        List<string> candidates = PinyiCandidateSelector.FindCandidates(lines, "安");
+
+        AssertSequence(new string[] { "安", "鞍", "庵", "案", "岸" }, candidates.ToArray());
     }
 
     private static byte[] BuildUnitab(string firstTwoKeys, int key3, int key4, int unicodeCodePoint)

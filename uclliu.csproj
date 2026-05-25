@@ -134,6 +134,7 @@
     <Compile Include="CustomDictionaryStore.cs" />
     <Compile Include="KeyboardHookState.cs" />
     <Compile Include="LiuTableConverter.cs" />
+    <Compile Include="PinyiCandidateSelector.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TextOutput.cs" />

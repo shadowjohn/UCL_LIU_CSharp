@@ -159,3 +159,28 @@
 - 先新增核心測試並確認紅燈：缺少 `KeyboardHookMessage`、`ShiftKeyReleaseDecision`、`KeyboardHookStateRules`。
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
 - `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過，ILRepack post-build 也成功。
+
+---
+
+## 2026-05-26 - 新版 pinyi.txt 同音字候選修正
+
+### 問題觀察
+
+- 使用者回報同音字第 0 字會出現注音，推測與新舊 `pinyi.txt` 格式差異有關。
+- 新版 `pinyi.txt` 以 `VERSION_0.01` 開頭，前 3 行是檔頭，每筆資料第 0 欄是注音碼，例如 `u 一 壹 ... ㄧ`。
+- C# 版原本將整行空白切開後全部當候選，導致注音碼或純注音符號可能混入候選字。
+- Python 版 v0.01 會跳過每筆資料第 0 欄，只用後面的同音字資料。
+
+### 實作紀錄
+
+- 新增 `PinyiCandidateSelector.cs`，集中處理同音字候選解析。
+- 新版 `VERSION_0.01` 格式會跳過前 3 行檔頭與每行第 0 欄注音碼。
+- 同音字候選會過濾純注音符號 token，避免 `ㄧ`、`ㄢ` 等出現在候選第 0 字。
+- 舊版無版本檔頭格式維持整行候選邏輯，保留相容。
+- `uclliu.use_pinyi()` 改用 selector 做查詢與分頁。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `PinyiCandidateSelector`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過，ILRepack post-build 成功。
