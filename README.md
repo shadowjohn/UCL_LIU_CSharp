@@ -68,6 +68,18 @@ C# 版目前右下角選單提供三種出字模式：
 
 貼上流程已改為集中封裝：先備份剪貼簿、設定輸出文字、送出 `Ctrl+V` 或 `Shift+Insert`、最後盡量還原原本剪貼簿。
 
+### 內建相容規則
+
+| 環境 | 判斷方式 | 出字模式 |
+| --- | --- | --- |
+| Chrome / Edge / Brave / Firefox / Opera 開 PTT | 視窗標題包含 `批踢踢實業坊`、`term.ptt.cc` 或 `ws.ptt.cc` | `Ctrl+V` 貼上 |
+| Win11 Notepad | Windows build >= 22000 且 process 為 `notepad` / `notepad.exe` | `Ctrl+V` 貼上 |
+| PuTTY / PCMan / Pietty / Windows Terminal / mintty / RimWorld 等 | process 相容清單 | `Shift+Insert` 貼上 |
+| Oxygen Not Included / PhotoImpact `iedit_` | process 相容清單 | `Ctrl+V` 貼上 |
+| zip32w / DaqKing / EWinner | process 相容清單 | Big5 `Ctrl+V` 貼上 |
+
+process 規則會自動忽略大小寫與 `.exe` 副檔名，`notepad` 與 `notepad.exe` 視為同一個程式。
+
 ## 自定詞庫
 
 自定詞庫檔案為 `custom.json`，放在 `uclliu.exe` 同目錄。啟動時會自動合併到 `liu.json` 的 `chardefs`。
@@ -101,7 +113,7 @@ startup_default_ucl = 1
 enable_half_full = 1
 ```
 
-`send_kind_1_paste` 與 `send_kind_2_big5` 可填入額外 process 名稱，用逗號分隔。
+`send_kind_1_paste`、`send_kind_2_big5`、`send_kind_3_noucl` 可填入額外 process 名稱，用逗號分隔。
 `play_sound_enable` 控制打字音，`keyboard_volume` 會限制在 0-100；右下角選單提供 10%-100% 快速切換。`startup_default_ucl=0` 時啟動預設為英模式，`enable_half_full=0` 時停用 `Shift+Space` 半全形切換。
 
 ## 與 Python 版主要差異

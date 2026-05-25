@@ -24,6 +24,9 @@ internal static class Program
         failed += Run("clipboard paste restores original text after send failure", TestClipboardPasteRestoresOriginalTextAfterSendFailure);
         failed += Run("clipboard paste reports set clipboard failure before send", TestClipboardPasteReportsSetClipboardFailureBeforeSend);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
+        failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
+        failed += Run("output router forces paste for PTT browser titles", TestOutputRouterForcesPasteForPttBrowserTitles);
+        failed += Run("output router forces paste for Windows 11 Notepad", TestOutputRouterForcesPasteForWindows11Notepad);
         failed += Run("typing sound volume clamps to supported range", TestTypingSoundVolumeClamp);
         failed += Run("typing sound suppresses repeated keydown until keyup", TestTypingSoundKeyState);
         failed += Run("typing sound catalog maps special wav names", TestTypingSoundCatalogSpecialNames);
@@ -270,6 +273,36 @@ internal static class Program
         AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", "oxygennotincluded.exe", shiftInsertApps, ctrlVApps, big5Apps));
         AssertEqual((int)TextOutputMode.PasteBig5, (int)TextOutputRouter.Select("BIG5", "notepad.exe", shiftInsertApps, ctrlVApps, big5Apps));
         AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("PASTE", "notepad.exe", shiftInsertApps, ctrlVApps, big5Apps));
+    }
+
+    private static void TestOutputRouterMatchesAppNamesWithOptionalExeSuffix()
+    {
+        List<string> shiftInsertApps = new List<string>() { "rimworldwin64.exe" };
+        List<string> ctrlVApps = new List<string>() { "oxygennotincluded.exe" };
+        List<string> big5Apps = new List<string>() { "EWinner.exe" };
+
+        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", "oxygennotincluded", shiftInsertApps, ctrlVApps, big5Apps));
+        AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("DEFAULT", "rimworldwin64", shiftInsertApps, ctrlVApps, big5Apps));
+        AssertEqual((int)TextOutputMode.PasteBig5, (int)TextOutputRouter.Select("DEFAULT", "ewinner", shiftInsertApps, ctrlVApps, big5Apps));
+    }
+
+    private static void TestOutputRouterForcesPasteForPttBrowserTitles()
+    {
+        List<string> empty = new List<string>();
+
+        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("chrome", "批踢踢實業坊 - Google Chrome", false), empty, empty, empty));
+        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("msedge", "ws.ptt.cc - 個人 - Microsoft Edge", false), empty, empty, empty));
+        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("brave", "term.ptt.cc - Brave", false), empty, empty, empty));
+        AssertEqual((int)TextOutputMode.UnicodeSendInput, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("chrome", "一般網頁 - Google Chrome", false), empty, empty, empty));
+    }
+
+    private static void TestOutputRouterForcesPasteForWindows11Notepad()
+    {
+        List<string> empty = new List<string>();
+
+        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("notepad", "未命名 - 記事本", true), empty, empty, empty));
+        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("notepad.exe", "Untitled - Notepad", true), empty, empty, empty));
+        AssertEqual((int)TextOutputMode.UnicodeSendInput, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("notepad", "Untitled - Notepad", false), empty, empty, empty));
     }
 
     private static void TestTypingSoundVolumeClamp()

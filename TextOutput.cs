@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
@@ -15,11 +16,34 @@ namespace uclliu
         PasteBig5
     }
 
+    public sealed class TextOutputContext
+    {
+        public TextOutputContext(string processName, string windowTitle, bool isWindows11)
+        {
+            ProcessName = processName ?? "";
+            WindowTitle = windowTitle ?? "";
+            IsWindows11 = isWindows11;
+        }
+
+        public string ProcessName { get; private set; }
+        public string WindowTitle { get; private set; }
+        public bool IsWindows11 { get; private set; }
+    }
+
     public static class TextOutputRouter
     {
         public static TextOutputMode Select(string defaultOutputType, string processName, IEnumerable<string> shiftInsertApps, IEnumerable<string> ctrlVApps, IEnumerable<string> big5Apps)
         {
+            return Select(defaultOutputType, new TextOutputContext(processName, "", false), shiftInsertApps, ctrlVApps, big5Apps);
+        }
+
+        public static TextOutputMode Select(string defaultOutputType, TextOutputContext context, IEnumerable<string> shiftInsertApps, IEnumerable<string> ctrlVApps, IEnumerable<string> big5Apps)
+        {
             string outputType = (defaultOutputType ?? "DEFAULT").Trim().ToUpperInvariant();
+            if (context == null)
+            {
+                context = new TextOutputContext("", "", false);
+            }
 
             if (outputType == "BIG5")
             {
@@ -31,17 +55,27 @@ namespace uclliu
                 return TextOutputMode.PasteShiftInsert;
             }
 
-            if (MatchesApp(processName, shiftInsertApps))
-            {
-                return TextOutputMode.PasteShiftInsert;
-            }
-
-            if (MatchesApp(processName, ctrlVApps))
+            if (IsPttWindow(context.WindowTitle))
             {
                 return TextOutputMode.PasteCtrlV;
             }
 
-            if (MatchesApp(processName, big5Apps))
+            if (context.IsWindows11 && MatchesProcess(context.ProcessName, new string[] { "notepad" }))
+            {
+                return TextOutputMode.PasteCtrlV;
+            }
+
+            if (MatchesProcess(context.ProcessName, shiftInsertApps))
+            {
+                return TextOutputMode.PasteShiftInsert;
+            }
+
+            if (MatchesProcess(context.ProcessName, ctrlVApps))
+            {
+                return TextOutputMode.PasteCtrlV;
+            }
+
+            if (MatchesProcess(context.ProcessName, big5Apps))
             {
                 return TextOutputMode.PasteBig5;
             }
@@ -49,14 +83,14 @@ namespace uclliu
             return TextOutputMode.UnicodeSendInput;
         }
 
-        private static bool MatchesApp(string processName, IEnumerable<string> appPatterns)
+        public static bool MatchesProcess(string processName, IEnumerable<string> appPatterns)
         {
             if (string.IsNullOrWhiteSpace(processName) || appPatterns == null)
             {
                 return false;
             }
 
-            string normalizedProcess = processName.Trim().ToLowerInvariant();
+            string normalizedProcess = NormalizeProcessName(processName);
             foreach (string appPattern in appPatterns)
             {
                 if (string.IsNullOrWhiteSpace(appPattern))
@@ -64,7 +98,7 @@ namespace uclliu
                     continue;
                 }
 
-                string normalizedPattern = appPattern.Trim().ToLowerInvariant();
+                string normalizedPattern = NormalizeProcessName(appPattern);
                 if (normalizedProcess == normalizedPattern || normalizedProcess.IndexOf(normalizedPattern, StringComparison.Ordinal) >= 0)
                 {
                     return true;
@@ -72,6 +106,80 @@ namespace uclliu
             }
 
             return false;
+        }
+
+        private static string NormalizeProcessName(string value)
+        {
+            value = (value ?? "").Trim().ToLowerInvariant();
+            try
+            {
+                value = Path.GetFileName(value);
+                value = Path.GetFileNameWithoutExtension(value);
+            }
+            catch
+            {
+            }
+            return value;
+        }
+
+        private static bool IsPttWindow(string windowTitle)
+        {
+            if (string.IsNullOrWhiteSpace(windowTitle))
+            {
+                return false;
+            }
+
+            string title = windowTitle.Trim().ToLowerInvariant();
+            return title.IndexOf("批踢踢實業坊", StringComparison.Ordinal) >= 0
+                || title.IndexOf("term.ptt.cc", StringComparison.Ordinal) >= 0
+                || title.IndexOf("ws.ptt.cc", StringComparison.Ordinal) >= 0;
+        }
+    }
+
+    public static class WindowsVersionDetector
+    {
+        public static bool IsWindows11OrLater()
+        {
+            Version version = GetWindowsVersion();
+            return version.Major > 10 || (version.Major == 10 && version.Build >= 22000);
+        }
+
+        private static Version GetWindowsVersion()
+        {
+            OSVERSIONINFOEX versionInfo = new OSVERSIONINFOEX();
+            versionInfo.dwOSVersionInfoSize = Marshal.SizeOf(typeof(OSVERSIONINFOEX));
+            try
+            {
+                if (RtlGetVersion(ref versionInfo) == 0)
+                {
+                    return new Version((int)versionInfo.dwMajorVersion, (int)versionInfo.dwMinorVersion, (int)versionInfo.dwBuildNumber);
+                }
+            }
+            catch
+            {
+            }
+
+            return Environment.OSVersion.Version;
+        }
+
+        [DllImport("ntdll.dll")]
+        private static extern int RtlGetVersion(ref OSVERSIONINFOEX versionInfo);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct OSVERSIONINFOEX
+        {
+            public int dwOSVersionInfoSize;
+            public uint dwMajorVersion;
+            public uint dwMinorVersion;
+            public uint dwBuildNumber;
+            public uint dwPlatformId;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string szCSDVersion;
+            public ushort wServicePackMajor;
+            public ushort wServicePackMinor;
+            public ushort wSuiteMask;
+            public byte wProductType;
+            public byte wReserved;
         }
     }
 

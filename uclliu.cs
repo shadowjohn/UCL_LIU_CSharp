@@ -53,9 +53,9 @@ namespace uclliu
         //#BIG5
         //#PASTE
         public List<string> sendkey_paste_ctrl_v_apps = new List<string>() { "oxygennotincluded.exe", "iedit_.exe" }; //使用複製文字貼上出字的 ctrl + v app
-        public List<string> sendkey_paste_shift_ins_apps = new List<string>() { "putty", "pietty", "pcman", "xyplorer", "kinza.exe", "iedit.exe" }; //使用複製文字貼上出字的 shift + ins app
+        public List<string> sendkey_paste_shift_ins_apps = new List<string>() { "putty", "pietty", "pcman", "xyplorer", "kinza.exe", "iedit.exe", "rimworldwin64.exe", "windowsterminal.exe", "wt.exe", "mintty.exe" }; //使用複製文字貼上出字的 shift + ins app
         public List<string> sendkey_paste_big5_apps = new List<string>() { "zip32w", "daqkingcon.exe", "EWinner.exe" }; //使用 big5 複製文字貼上出字的 app
-        public List<string> sendkey_not_use_ucl_apps = new List<string>() { "cyberpunk2077.exe", "vncviewer.exe" }; //無法使用肥米的 app
+        public List<string> sendkey_not_use_ucl_apps = new List<string>() { "mstsc.exe", "cyberpunk2077.exe", "vncviewer.exe" }; //無法使用肥米的 app
 
         
 
@@ -78,6 +78,7 @@ namespace uclliu
         private DateTime foregroundProcessCachedAt = DateTime.MinValue;
         private IntPtr foregroundProcessCachedHandle = IntPtr.Zero;
         private Dictionary<string, string> foregroundProcessCache = null;
+        private bool? isWindows11OrLaterCache = null;
         static Form1 f;
         public uclliu(ref Form1 _f)
         {
@@ -637,24 +638,34 @@ namespace uclliu
             config["DEFAULT"]["SEND_KIND_2_BIG5"] = config["DEFAULT"]["SEND_KIND_2_BIG5"].Trim();
             config["DEFAULT"]["SEND_KIND_2_BIG5"] = config["DEFAULT"]["SEND_KIND_2_BIG5"].Replace("\"", "");
             config["DEFAULT"]["SEND_KIND_3_NOUCL"] = config["DEFAULT"]["SEND_KIND_3_NOUCL"].Replace("\"", "");
-            /*if (config["DEFAULT"]["SEND_KIND_1_PASTE"] != "")
-            {
-                //f_arr merge List<string>
-                f_arr.AddRange(my.explode(",", config["DEFAULT"]["SEND_KIND_1_PASTE"]));
-            }
-            if (config["DEFAULT"]["SEND_KIND_2_BIG5"] != "")
-            {
-                f_big5_arr.AddRange(my.explode(",", config["DEFAULT"]["SEND_KIND_2_BIG5"]));
-            }
-            if (config["DEFAULT"]["SEND_KIND_3_NOUCL"] != "")
-            {
-                f_pass_app.AddRange(my.explode(",", config["DEFAULT"]["SEND_KIND_3_NOUCL"]));
-            }
-            */
+            add_configured_apps(sendkey_paste_shift_ins_apps, config["DEFAULT"]["SEND_KIND_1_PASTE"]);
+            add_configured_apps(sendkey_paste_big5_apps, config["DEFAULT"]["SEND_KIND_2_BIG5"]);
+            add_configured_apps(sendkey_not_use_ucl_apps, config["DEFAULT"]["SEND_KIND_3_NOUCL"]);
 
             update_UI();
             //不管如何，先存一次
             saveConfig();
+        }
+        private void add_configured_apps(List<string> appList, string configValue)
+        {
+            if (appList == null || string.IsNullOrWhiteSpace(configValue))
+            {
+                return;
+            }
+
+            string[] apps = my.explode(",", configValue);
+            for (int i = 0; i < apps.Length; i++)
+            {
+                string app = apps[i].Trim();
+                if (app.Length == 0)
+                {
+                    continue;
+                }
+                if (!TextOutputRouter.MatchesProcess(app, appList))
+                {
+                    appList.Add(app);
+                }
+            }
         }
         public int get_keyboard_volume()
         {
@@ -1435,6 +1446,15 @@ namespace uclliu
             }
         }
 
+        private bool is_windows11_or_later()
+        {
+            if (!isWindows11OrLaterCache.HasValue)
+            {
+                isWindows11OrLaterCache = WindowsVersionDetector.IsWindows11OrLater();
+            }
+            return isWindows11OrLaterCache.Value;
+        }
+
         public void senddata(string data)
         {
             //人生很難，研究很久 C# 的 sendkeys 遇到有些吃 iso-8859-1、big5 的app 如pcman、putty
@@ -1490,7 +1510,8 @@ namespace uclliu
             debug_print("Sendkeys:" + data);
 
             var p_info = getForegroundWindowProcessInfo();
-            TextOutputMode outputMode = TextOutputRouter.Select(DEFAULT_OUTPUT_TYPE, p_info["PROCESS_NAME"], sendkey_paste_shift_ins_apps, sendkey_paste_ctrl_v_apps, sendkey_paste_big5_apps);
+            TextOutputContext outputContext = new TextOutputContext(p_info["PROCESS_NAME"], p_info["PROCESS_TITLE"], is_windows11_or_later());
+            TextOutputMode outputMode = TextOutputRouter.Select(DEFAULT_OUTPUT_TYPE, outputContext, sendkey_paste_shift_ins_apps, sendkey_paste_ctrl_v_apps, sendkey_paste_big5_apps);
             debug_print("senddata output mode:" + outputMode.ToString());
 
             string outputError;
