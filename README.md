@@ -51,6 +51,8 @@ C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是
 | [dist/uclliu.exe](dist/uclliu.exe) | 目前 dist 執行檔 |
 | [dist/pinyi.txt](dist/pinyi.txt) | 同音字庫，放在 exe 旁 |
 
+v0.11 發行日期：2026-05-26。病毒碼掃描已提交 Microsoft WDSI：[submission 2a365b04-dea0-496f-937f-9051b163a968](https://www.microsoft.com/en-us/wdsi/submission/2a365b04-dea0-496f-937f-9051b163a968)。
+
 若自行編譯，請使用 .NET Framework 4.5.2 WinForms 專案重建，並確認 `pinyi.txt`、`wavs`、`liu.json` 或可轉換字碼表與 exe 放在同一目錄。
 
 ## 常用命令
