@@ -18,6 +18,10 @@ namespace uclliu
         myinclude my = new myinclude();
         public string VERSION = "0.1";
         public FileStream lockFileString;
+        public string CUSTOM_JSON_FILE
+        {
+            get { return my.pwd() + "\\custom.json"; }
+        }
 
         //把 chardefs 的字碼，變成對照字根，可以加速 ,,,z、,,,x 反查的速度
         public Dictionary<string, string> uclcode_r = new Dictionary<string, string>();
@@ -122,6 +126,7 @@ namespace uclliu
         public void generator_sp_table()
         {
             //產生最簡根速查表
+            uclcode_r.Clear();
             foreach (var k in uclcode["chardefs"])
             {
                 var data = k.ToString().Replace("[", "").Replace("]", "").Replace(" ", "").Replace("\"", "");
@@ -317,6 +322,17 @@ namespace uclliu
                     debug_print("可能會當 ,,,x: " + ex.Message);
                 }
             }
+            code = ",,,box";
+            if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
+            {
+                play_ucl_label = "";
+                ucl_find_data = new List<string>();
+                type_label_set_text();
+                toAlphaOrNonAlpha();
+                last_key = "";
+                f.OpenCustomDictionaryWindow();
+                return true;
+            }
             return false;
         }
         public void run_toggle_sp()
@@ -376,6 +392,7 @@ namespace uclliu
             _msg_text += "「,,,-」UI變小\n";
             _msg_text += "「,,,X」框字的字根轉回文字\n";
             _msg_text += "「,,,Z」框字的文字變成字根\n";
+            _msg_text += "「,,,BOX」開啟自定詞庫\n";
             return _msg_text;
         }
         ///字串轉全形
@@ -445,6 +462,7 @@ namespace uclliu
                 //https://stackoverflow.com/questions/6620165/how-can-i-parse-json-with-c
                 string data = my.b2s(my.file_get_contents(liu_json_path));
                 uclcode = JsonValue.Parse(data);
+                loadCustomDictionaryData();
                 debug_print(uclcode["chardefs"]["ucl"].ToString());
             }
             catch (Exception ex)
@@ -455,6 +473,31 @@ namespace uclliu
             }
             //debug_print(uclcode["chardefs"]["addr"].ToString());
 
+        }
+        public void loadCustomDictionaryData()
+        {
+            try
+            {
+                Dictionary<string, List<string>> customEntries = CustomDictionaryStore.Load(CUSTOM_JSON_FILE, debug_print);
+                int addedCount = CustomDictionaryStore.MergeInto(uclcode, customEntries);
+                if (addedCount > 0)
+                {
+                    debug_print("自定詞庫載入完成：" + addedCount.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                // 自定詞庫錯誤不應阻斷主字根載入，避免使用者因 custom.json 格式錯誤完全不能打字。
+                debug_print("自定詞庫載入失敗：" + ex.Message);
+            }
+        }
+        public void reload_word_root()
+        {
+            loadJsonData();
+            generator_sp_table();
+            play_ucl_label = "";
+            ucl_find_data = new List<string>();
+            type_label_set_text();
         }
         public void saveConfig()
         {

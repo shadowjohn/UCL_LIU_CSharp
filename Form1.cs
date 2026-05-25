@@ -1008,6 +1008,7 @@ namespace uclliu
         uclliu ucl;
         private static Form1 form = null;
         static ContextMenu cMenu = new ContextMenu();
+        private CustomDictionaryForm customDictionaryForm = null;
         public Form1()
         {
             InitializeComponent();
@@ -1235,6 +1236,31 @@ namespace uclliu
             //改變顯示短根
             ucl.run_toggle_sp();
         }
+        private void menu_open_custom_dict(object sender, EventArgs e)
+        {
+            OpenCustomDictionaryWindow();
+        }
+        public void OpenCustomDictionaryWindow()
+        {
+            if (customDictionaryForm != null && !customDictionaryForm.IsDisposed)
+            {
+                if (customDictionaryForm.WindowState == FormWindowState.Minimized)
+                {
+                    customDictionaryForm.WindowState = FormWindowState.Normal;
+                }
+                customDictionaryForm.Activate();
+                customDictionaryForm.Focus();
+                return;
+            }
+
+            customDictionaryForm = new CustomDictionaryForm(ucl.CUSTOM_JSON_FILE, ucl.reload_word_root, this.Icon);
+            customDictionaryForm.FormClosed += customDictionaryForm_FormClosed;
+            customDictionaryForm.Show(this);
+        }
+        private void customDictionaryForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            customDictionaryForm = null;
+        }
         private void NotifyIcon1_MouseClick(object sender, MouseEventArgs e)
         {
             //加入右下表單
@@ -1307,7 +1333,8 @@ namespace uclliu
             }
             cMenu.MenuItems.Add("6.【" + is_o + "】顯示短根", this.menu_change_sp);
 
-            cMenu.MenuItems.Add("11. 離開(Quit)", this.menu_run_exit);
+            cMenu.MenuItems.Add("11. 自定詞庫", this.menu_open_custom_dict);
+            cMenu.MenuItems.Add("12. 離開(Quit)", this.menu_run_exit);
             notifyIcon1.ContextMenu = cMenu;
 
         }

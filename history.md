@@ -30,3 +30,34 @@
 - 自定詞庫：`custom.json` 合併載入、`,,,BOX`、單例視窗。
 - Win11/Chrome/PTT/Notepad 出字相容與剪貼簿復原策略。
 - README/CHANGELOG 對齊 Python 版新結構。
+
+---
+
+## 2026-05-25 - C# 版第二輪追功能：自定詞庫
+
+### 任務目標
+
+1. 對齊 Python 版 v1.63~v1.65 的 `custom.json` 自定字詞。
+2. 加入 `,,,BOX` 快捷命令與右下角選單入口。
+3. 自定詞庫視窗最多只允許開啟一個，已存在時改為聚焦。
+
+### 實作紀錄
+
+- 新增 `CustomDictionaryStore.cs`，負責 `custom.json` 載入、儲存、字根驗證與合併到 `liu.json` 的 `chardefs`。
+- 新增核心測試：字根規則、大小寫轉小寫、合併順序、重複值處理、儲存再載入。
+- `uclliu.cs` 載入 `liu.json` 後會自動合併同目錄 `custom.json`，並新增 `reload_word_root()` 供編輯器儲存後立即重載。
+- 新增 `CustomDictionaryForm.cs`，提供新增/更新/刪除/上下移排序，並在關閉或修改後寫回 `custom.json`。
+- `Form1.cs` 增加單例視窗管理；右下角選單加入「自定詞庫」。
+- `run_extra()` 增加 `,,,BOX`，可直接開啟自定詞庫。
+
+### 驗證紀錄
+
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `CustomDictionaryForm.cs` + `CustomDictionaryStore.cs` 以臨時 `net10.0-windows` WinForms 專案編譯通過。
+- 完整舊專案仍受限於本機缺 .NET Framework 4.5.2 Developer Pack，無法跑正式 `uclliu.sln` build。
+
+### 下一輪候選
+
+- Win11/Chrome/PTT/Notepad 出字相容與剪貼簿復原策略。
+- README/CHANGELOG 對齊 Python 版新結構。
+- TSF Bridge 移植評估。
