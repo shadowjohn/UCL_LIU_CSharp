@@ -3,15 +3,19 @@ namespace uclliu
     public static class UclLiuAppInfo
     {
         public const string Version = "0.11";
-        public const string ProductName = "UCLLIU 肥米輸入法 C# 版";
+        public const string AboutTitle = "UCLLIU 肥米輸入法 C# 版";
+        public const string ProductName = "UCLLIU Input Method";
+        public const string FileDescription = "Fastest Chinese Input Method";
         public const string Author = "羽山秋人";
+        public const string AuthorAlias = "FeatherMountain";
         public const string Website = "https://3wa.tw";
-        public const string CompanyName = "3WA Studio (https://3wa.tw)";
-        public const string Copyright = "Copyright (c) 2019-2026 羽山秋人 (https://3wa.tw)";
+        public const string CompanyName = "Magic 3WA The legend of trainer (https://3wa.tw)";
+        public const string Copyright = "Copyright (c) MIT 3WA Studio (https://3wa.tw)";
+        public const string Comments = "Author: FeatherMountain (https://3wa.tw)";
 
         public static string BuildAboutText()
         {
-            string msg = ProductName + "\n\n";
+            string msg = AboutTitle + "\n\n";
             msg += "作者：" + Author + " (" + Website + ")\n";
             msg += "版本：" + Version + "\n";
             msg += "\n熱鍵提示：\n\n";

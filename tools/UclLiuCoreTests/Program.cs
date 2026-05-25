@@ -129,9 +129,12 @@ internal static class Program
             + "「,,,BOX」開啟自定詞庫\n";
 
         AssertEqual("0.11", UclLiuAppInfo.Version);
-        AssertEqual("UCLLIU 肥米輸入法 C# 版", UclLiuAppInfo.ProductName);
-        AssertEqual("3WA Studio (https://3wa.tw)", UclLiuAppInfo.CompanyName);
-        AssertEqual("Copyright (c) 2019-2026 羽山秋人 (https://3wa.tw)", UclLiuAppInfo.Copyright);
+        AssertEqual("UCLLIU 肥米輸入法 C# 版", UclLiuAppInfo.AboutTitle);
+        AssertEqual("Fastest Chinese Input Method", UclLiuAppInfo.FileDescription);
+        AssertEqual("UCLLIU Input Method", UclLiuAppInfo.ProductName);
+        AssertEqual("Magic 3WA The legend of trainer (https://3wa.tw)", UclLiuAppInfo.CompanyName);
+        AssertEqual("Copyright (c) MIT 3WA Studio (https://3wa.tw)", UclLiuAppInfo.Copyright);
+        AssertEqual("Author: FeatherMountain (https://3wa.tw)", UclLiuAppInfo.Comments);
         AssertEqual(expected, UclLiuAppInfo.BuildAboutText());
     }
 

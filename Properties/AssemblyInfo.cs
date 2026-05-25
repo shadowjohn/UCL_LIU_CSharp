@@ -5,8 +5,8 @@ using System.Runtime.InteropServices;
 // 組件的一般資訊是由下列的屬性集控制。
 // 變更這些屬性的值即可修改組件的相關
 // 資訊。
-[assembly: AssemblyTitle(uclliu.UclLiuAppInfo.ProductName)]
-[assembly: AssemblyDescription(uclliu.UclLiuAppInfo.ProductName)]
+[assembly: AssemblyTitle(uclliu.UclLiuAppInfo.FileDescription)]
+[assembly: AssemblyDescription(uclliu.UclLiuAppInfo.Comments)]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany(uclliu.UclLiuAppInfo.CompanyName)]
 [assembly: AssemblyProduct(uclliu.UclLiuAppInfo.ProductName)]
