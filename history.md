@@ -85,3 +85,25 @@
 
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
 - 新增核心測試：Unicode SendInput 事件建立、代理對 surrogate pair 的 UTF-16 保留、剪貼簿貼上失敗後還原、輸出策略選擇。
+
+---
+
+## 2026-05-25 - C# 版第四輪追功能：README/CHANGELOG 現代化
+
+### 任務目標
+
+1. 將 C# 版 README 從舊 HTML 筆記整理成目前可維護的專案說明。
+2. 清楚寫出 C# 版目前狀態與 Python 版 v1.67 的差異。
+3. 新增 C# 版 CHANGELOG，讓後續每輪追功能有固定紀錄位置。
+
+### 實作紀錄
+
+- 重寫 `README.md`，改成快速開始、目前狀態、常用命令、出字模式、自定詞庫、設定檔、與 Python 版差異、開發與驗證等章節。
+- 新增 `CHANGELOG.md`，整理 2019 初版與 2026-05-25 三輪追功能。
+- 更新 `GOALS.md`，將 README/CHANGELOG 現代化標記完成。
+
+### 驗證紀錄
+
+- README / CHANGELOG 關鍵字與舊版 emoji 檢查無殘留項目。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `dotnet msbuild uclliu.sln /p:Configuration=Debug /p:Platform="Any CPU" /v:minimal` 仍受限於本機缺 .NET Framework 4.5.2 Developer Pack。

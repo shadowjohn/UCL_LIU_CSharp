@@ -1,162 +1,172 @@
-# UCL_LIU CSharp
-利用 C# 開發的仿蝦米，肥米輸入法<br>
-<br>
-<center>
-  <img src="screenshot/ucl_1.png">
-  <br><br>
-  <img src="screenshot/uclliu_c_demo.gif">  
-</center>
-<br>
-<h3>作者：</h3>
-  羽山秋人 (<a target="_blank" href="http://3wa.tw">http://3wa.tw</a>)<br>
-<h3>信箱：</h3>
-  <a target="_blank" href="mailto:uclliu.3wa@gmail.com">uclliu.3wa@gmail.com</a><br>
-<br>
-<h3>最初開發日期：</h3>2019-12-12 22:24<br>
-<h3>最後更新日期：</h3>2019-12-15 23:01
-<br>
-<h3>版本：</h3>V 0.1<br>
-<br>
-<h3>版權：</h3>
-　免錢的 MIT-License
-<br>
-<h3>下載位置：</h3>
-　　1.主程式：<a download="uclliu.exe" target="_blank" href="https://raw.githubusercontent.com/shadowjohn/UCL_LIU_CSharp/master/dist/uclliu.exe">https://raw.githubusercontent.com/shadowjohn/UCL_LIU_CSharp/master/dist/uclliu.exe</a><br>
-　　2.同音字庫：<a download="pinyi.txt" target="_blank" href="https://raw.githubusercontent.com/shadowjohn/UCL_LIU_CSharp/master/dist/pinyi.txt">https://raw.githubusercontent.com/shadowjohn/UCL_LIU_CSharp/master/dist/pinyi.txt</a><br>
-　　3.字根檔(liu.json) 因版權問題無法提供  
-<br>
-<br>
+# UCL_LIU_CSharp
 
-<h3>使用方法：</h3>
-　　1、您可以只下載dist/uclliu.exe<br>
-　　2、將 「liu.json」與 uclliu.exe 放一起<br>
-　　3、執行 uclliu.exe 即可開始使用<br>　　
-　　4、下載 pinyi.txt 與 uclliu.exe 放一起執行，同音字庫，如「'pns」，會出現「0你 1妳 2擬 3禰 4儗 5旎...」同音選擇。<br>
-　　5、「正常模式」=「,,,unlock」：平常打字用。<br>
-　　6、「遊戲模式」=「,,,lock」：玩遊戲時用，如CS:GO，需要按著Shift消音走路。<br>
-　　(如果忽然無法打字，也許就是進了「遊戲模式」請按「,,,unlock」解除。)<br>
-　　7、「查看目前版本」=「,,,version」 <br>
-　　8、「簡體／繁體」模式 「,,,c」「,,,t」 切換<br>
-　　9、UI 變窄「,,,s」 <br>
-　　10、UI 變寬「,,,l」 <br>
-　　11、UI 變大「,,,+」 <br>
-　　12、UI 變小「,,,-」 <br>
-　　13、把框選的文章變成字根「,,,z」 <br>
-　　14、把框選的字根變回文章「,,,x」 <br>
-　　15、UCLLIU.ini<br>
-　　　　[DEFAULT]<br>
-　　　　short_mode = 0  # 是否為「短」版模式， 0 或 1<br>
-　　　　zoom = 0.90  # 縮放大小<br>
-　　　　send_kind_2_big5 = # 如 EWinner.exe 遇到此種程式，以 「big5」 方式出字 <br>
-　　　　send_kind_1_paste = # 如 putty.exe,pcman 遇到此程程式，以 「複製、貼上」 方式出字 <br>
-　　　　alpha = 1 # 透明度<br>
-　　　　y = 950 # 肥米輸入法最後在螢幕 y 軸位置<br>
-　　　　x = 1239 # 肥米輸入法最後在螢幕 x 軸位置<br>
-　　16、環境設定(強列建議)：<br>
-<kbd>
-<img src="screenshot/install/1.png"><br>
-  <h3>建議可以跟筆者一樣</h3>
-</kbd>
-<kbd>
-<img src="screenshot/install/4.png"><br>
-  <h3>或是【開始→地區】，找到【地區及語言設定】</h3>
-</kbd>
-<kbd>
-<img src="screenshot/install/2.png"><br>
-  <h3>安裝一個「ENG語系」，點選【語言喜好設定】」，應該可以在控制台找到。</h3>
-</kbd>
-<kbd>
-<img src="screenshot/install/3.png"><br>
-  <h3>
-一、國家與地區，要選「台灣」<br>
-二、新增語言：找到「English (United States)」加入，但【中文(台灣)要設為預設值】<br>
-三、平常打字時，就選「ENG」打起來就會很順手。<br>
-  </h3>
-    17、(待開發)出字模式選擇：<br>
-</kbd>
-  
-<br>
-<h3>開發動機：</h3>
-　　吃飽閒閒覺得人生就是該自己寫一套輸入法，然後就開始寫了。<br>
-　　之前開發是用 python 開發，這次想挑戰看看用 Visual Studio C# 開發，總算也是順利做出來了。<br>
-<br>
-<h3>目前肥米輸入法支援的字碼表如下：</h3>
-　　1、PIME liu.json<br>
-　　2、UCLLIU 肥米轉出來的 liu.json 檔<br>
-<br>      
-<h3>字碼表說明：</h3>
-　　　　由於字碼表的版權問題爭議，就不放 liu.json 了，liu.json 的格式同PIME的架構。<br>
-　　要好的字碼表的話，請買正版，將 tab->cin->json <br>
-　　雖然很麻煩，但沒人想因為實作一套輸入法就被告翻。<br>
-　　<br>
+C# / WinForms 版肥米輸入法。這個分支的目標是保留 2019 年 C# 版輕量、單檔、低依賴的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
 
-<br>
-<br>
-    (2019-12-15) V0.1 版：
-    初步所有功能與 python 版的 UCLLIU 1.25 版相同    
-<br>
-<h3>開發工具：</h3>
-  <ul>
-    <li>Visual Studio 2019</li>
-    <li>參考 與 NUGET：
-      <ul>
-        <li>(額外的參考) System.Web.Extensions</li>
-        <li>(NUGET) System.JSON</li>
-        <li>(NUGET) ini-parser</li>
-        <li>(NUGET) ILMerge</li>
-        <li>(NUGET) MSBuild.ILMerge.Task</li>
-      </ul>
-    </li>
-    <li>字碼表亦可參考PIME裡的liu.json</li>
-</ul>
-<br>
-<h3>檔案說明：</h3>
-  <ul>    
-    <li>(Third party) include.cs 羽山比較熟php，所以在 C# 裡實作很多 php 的函式</li>
-    <li>(Third party) (nuget) System.JSON 將 liu.json 轉成 JsonValue 的方法</li>
-    <li>(Third party) (nuget) ini-parser 處理 UCLLIU.ini 檔案</li>    
-    <li>(Third party) (nuget) ILMerge、MSBuild.ILMerge.Task 目的是將打包後的 uclliu.exe 變成單一檔，才不會帶一堆 dll</li>
-    <li>System.Web.Extensions 處理半形字轉全形字的方法</li>
-    <li>字碼表亦可參考PIME或 python 版 UCLLIU 轉出來的 liu.json</li>
-  </ul>
-<br>
-<h3>自行編譯：</h3>
-  <ul>
-    <li>1、Visual Studio 建議為 2019 (不過當初用 2015 也可以編)</li>
-    <li>2、因為要使用 ILMerge、MSBuild.ILMerge.Task，所以 Framework 使用 4.5 ，如果不使用，Framework 2.0 似乎也可以</li>
-  </ul>
-<br>
-<br>
-<h3>微軟 Windows Defender 誤判與回報：</h3>
-<img src="screenshot/microsoft_scan/uclliu_c_0_1.png">
-<br>
-<h3>微軟 Windows Defender 誤判與回報歷程：</h3>
-2019-12-16 V0.1 版：https://www.microsoft.com/en-us/wdsi/submission/8a9898b7-a105-4ca3-8bdc-eca099d2cbfd<br>
-<br>
+目前 C# 版仍不是 Python 版 v1.67 的完整替代品。它已補上字碼表自動轉換、自定詞庫、Unicode SendInput 出字與核心測試；TSF Bridge、打字音效與更完整的 Windows 11 應用相容清單仍在後續項目。
 
+![UCL_LIU C# screenshot](screenshot/ucl_1.png)
 
-<h3>ToDo：</h3>
-<ul>
-  <li>1、短版模式打字的過程，UI loading有點重，打快一點會當機</li>
-  <li>2、後選字未分頁，如「,z」</li>
-  <li>3、自定詞庫遇到\n沒有正常換行</li>
-  <li>(2020-01-17 Done) 4、遊戲模式、正常模式，顯示錯誤</li>
-  <li>(2020-01-17 Done) 5、執行檔的 icon 調整</li>
-  <li>6、英文全形，無法正確出全形字</li>
-  <li>7、在ptt打字快點，輸入法容易當掉</li>    
-  <li>(2024-09-09 Done) 8、支援 Ctrl + Space 切換輸入法</li>
-</ul>
-<br>
-<h3>參考資料：</h3>
-<ul>
-  <li>1、Allow console：https://stackoverflow.com/questions/4362111/how-do-i-show-a-console-output-window-in-a-forms-application</li>
-  <li>2、C# Global Keyhook：https://stackoverflow.com/questions/577411/how-can-i-find-the-state-of-numlock-capslock-and-scrolllock-in-net</li>
-  <li>3、在其他 class 使用 form widget：https://stackoverflow.com/questions/12983427/accessing-forms-controls-from-another-class</li>
-  <li>4、令 form 可以拖移：https://stackoverflow.com/questions/1592876/make-a-borderless-form-movable</li>
-  <li>5、半形轉全形：黑暗執行序的方法：https://blog.darkthread.net/blog/strconv-half-full-width-notes</li>
-  <li>6、JsonValue 處理 liu.json：https://stackoverflow.com/questions/6620165/how-can-i-parse-json-with-c</li>
-  <li>7、ini-parser：https://github.com/rickyah/ini-parser</li>
-  <li>8、sendkey範例：https://www.itread01.com/content/1548344359.html</li>
-  <li>9、線上語法測試；https://dotnetfiddle.net/</li>       
-</ul>
-<br>
+## 目前狀態
+
+| 項目 | C# 版目前狀態 | Python 版對照 |
+| --- | --- | --- |
+| 核心輸入 | WinForms + low-level keyboard hook | PyHook / PyWin32 |
+| 預設出字 | Unicode `SendInput`，失敗 fallback 舊 `SendKeys` | TSF 可選，失敗 fallback `SendKeysCtypes` / paste |
+| 貼上模式 | 已封裝 retry、timeout、try/finally 還原剪貼簿 | 已有大量 App 特例 |
+| 字碼表 | 支援 `liu.json`、`liu.cin`、`liu-uni.tab` 自動轉換 | 支援來源較多，含 RIME/fcitx/小小輸入法等 |
+| 自定詞庫 | 支援 `custom.json`、右下角選單、`,,,BOX`、單例視窗 | v1.63-v1.65 已完整支援 |
+| UI 效能 | 已降低短版模式與 foreground process 查詢熱路徑負擔 | Python 版後期另有多輪 Win11/位置修正 |
+| TSF Bridge | 尚未移植 | v1.67 實驗性支援 |
+| 打字音效 | 尚未移植 | 已支援音效與音量設定 |
+| 測試 | `tools/UclLiuCoreTests` 可用 .NET SDK 跑核心測試 | Python 版以實機與歷史回報為主 |
+
+## 快速開始
+
+1. 下載或編譯 `uclliu.exe`。
+2. 將字碼表放在 `uclliu.exe` 同一個目錄，三選一即可：
+   - `liu.json`
+   - `liu.cin`
+   - `liu-uni.tab`
+3. 可選：放入 `pinyi.txt` 啟用同音字查詢。
+4. 執行 `uclliu.exe`。
+
+因字碼表版權問題，本專案不提供 `liu.json` / `liu.cin` / `liu-uni.tab`。若使用 `liu.cin` 或 `liu-uni.tab`，C# 版啟動時會自動產生 `liu.json`。
+
+既有發行檔位置：
+
+| 檔案 | 說明 |
+| --- | --- |
+| [dist/uclliu.exe](dist/uclliu.exe) | 倉庫內既有 C# 版執行檔 |
+| [dist/pinyi.txt](dist/pinyi.txt) | 同音字庫，放在 exe 旁 |
+
+目前倉庫內 `dist/uclliu.exe` 不一定包含最新開發分支變更；正式重打包需可完整編譯 .NET Framework 4.5.2 WinForms 專案。
+
+## 常用命令
+
+| 命令 | 功能 |
+| --- | --- |
+| `,,,unlock` | 正常模式 |
+| `,,,lock` | 遊戲模式 |
+| `,,,version` | 查看版本 |
+| `,,,c` / `,,,t` | 簡體 / 繁體切換 |
+| `,,,s` / `,,,l` | UI 縮窄 / 拉寬 |
+| `,,,+` / `,,,-` | UI 放大 / 縮小 |
+| `,,,z` | 將反白文字轉成字根 |
+| `,,,x` | 將反白字根轉回文字 |
+| `,,,BOX` | 開啟自定詞庫 |
+
+## 出字模式
+
+C# 版目前右下角選單提供三種出字模式：
+
+| 模式 | 目前行為 |
+| --- | --- |
+| 正常出字模式（Unicode） | 預設使用 Unicode `SendInput`，避免舊 `SendKeys` 對 `+ ^ % { } ( )` 等字元的語法干擾 |
+| BIG5 模式 | 以 Big5 文字貼上，保留給舊程式與特定環境 |
+| 複製貼上模式 | 使用剪貼簿貼上，適合 PuTTY、PCMan、部分遊戲或特殊文字框 |
+
+貼上流程已改為集中封裝：先備份剪貼簿、設定輸出文字、送出 `Ctrl+V` 或 `Shift+Insert`、最後盡量還原原本剪貼簿。
+
+## 自定詞庫
+
+自定詞庫檔案為 `custom.json`，放在 `uclliu.exe` 同目錄。啟動時會自動合併到 `liu.json` 的 `chardefs`。
+
+支援方式：
+
+- 右下角選單開啟「自定詞庫」
+- 輸入 `,,,BOX`
+- 編輯器儲存後立即重載字根
+- 同一時間只開一個自定詞庫視窗，已開啟時會聚焦
+
+字根規則目前與 Python 版後期一致：允許 `a-z,.]['`，最長 5 碼，會統一轉小寫。
+
+## 設定檔
+
+設定檔位置仍沿用 `UCLLIU.ini`。常用欄位：
+
+```ini
+[DEFAULT]
+short_mode = 0
+zoom = 0.90
+send_kind_1_paste =
+send_kind_2_big5 =
+alpha = 1
+x = 1239
+y = 950
+ctrl_sp = 1
+```
+
+`send_kind_1_paste` 與 `send_kind_2_big5` 可填入額外 process 名稱，用逗號分隔。
+
+## 與 Python 版主要差異
+
+Python 版 UCL_LIU 已演進到 v1.67，功能較完整；C# 版目前是追功能中的現代化版本。
+
+C# 版已追上的重點：
+
+- `liu-uni.tab -> liu.cin -> liu.json`
+- `liu.cin -> liu.json`
+- `custom.json` 自定詞庫
+- `,,,BOX`
+- 自定詞庫單例視窗
+- 預設 Unicode `SendInput` 出字
+- 剪貼簿 paste retry / restore fallback
+- 短版 UI 熱路徑降載
+- foreground process 查詢短暫 cache
+
+Python 版仍領先的重點：
+
+- TSF Bridge 出字模式與註冊/解除註冊管理
+- 更完整的 Chrome / Edge / Brave / Opera / PTT / Notepad / VBA / Neovim 等相容規則
+- 打字音效與音量設定
+- OpenCC 簡繁轉換與更多特殊字修正
+- 更多字碼表來源轉換
+- 管理員權限導引與重啟流程
+- 多年累積的問題回報修正
+
+後續追蹤請看 [GOALS.md](GOALS.md) 與 [history.md](history.md)。
+
+## 開發與驗證
+
+主專案：
+
+- Visual Studio 2019 / 2022
+- .NET Framework 4.5.2 Developer Pack
+- WinForms
+- NuGet: `System.Json`, `ini-parser`, `ILRepack`
+
+核心測試：
+
+```powershell
+dotnet run --project .\tools\UclLiuCoreTests\UclLiuCoreTests.csproj
+```
+
+完整舊專案 build：
+
+```powershell
+dotnet msbuild .\uclliu.sln /p:Configuration=Debug /p:Platform="Any CPU" /v:minimal
+```
+
+目前開發機若缺 `.NETFramework,Version=v4.5.2` reference assemblies，完整 build 會在環境檢查階段失敗；核心測試仍可用 .NET SDK 驗證純邏輯。
+
+## 專案檔案
+
+| 檔案 | 說明 |
+| --- | --- |
+| `uclliu.cs` | 核心輸入法邏輯、字根載入、命令處理 |
+| `Form1.cs` | WinForms UI、tray menu、keyboard hook |
+| `TextOutput.cs` | Unicode SendInput、剪貼簿貼上、出字策略選擇 |
+| `LiuTableConverter.cs` | `liu-uni.tab` / `liu.cin` / `liu.json` 轉換 |
+| `CustomDictionaryStore.cs` | `custom.json` 載入、儲存、合併 |
+| `CustomDictionaryForm.cs` | 自定詞庫編輯器 |
+| `UiLayoutCalculator.cs` | 可測試的 UI 寬度計算 |
+| `tools/UclLiuCoreTests` | 核心測試 harness |
+| `CHANGELOG.md` | C# 版近期變更 |
+| `GOALS.md` | 追 Python 版功能清單 |
+| `history.md` | 開發對話與驗證紀錄 |
+
+## 版權與作者
+
+- 作者：羽山秋人 ([3wa.tw](https://3wa.tw))
+- 信箱：uclliu.3wa@gmail.com
+- 授權：MIT License
