@@ -143,16 +143,19 @@ namespace uclliu
 
 
 
-            ucl.debug_print("nCode:" + nCode.ToString());
-            ucl.debug_print("wParam:" + wParam.ToString());
-            ucl.debug_print("vkCode:" + ea.ToString());
-            ucl.debug_print("vkCode (char):" + ((char)(ea)).ToString());
-            ucl.debug_print("vkCode GetType:" + lParam.GetType());
-            ucl.debug_print("vkCode flags:" + lParam.flags);
-            ucl.debug_print("vkCode GetHashCode:" + lParam.GetHashCode());
-            ucl.debug_print("is_send_ucl:" + ucl.is_send_ucl.ToString());
-            ucl.debug_print("flag_is_capslock_down:" + ucl.flag_is_capslock_down.ToString());
-            ucl.debug_print("flag_is_play_capslock_otherkey:" + ucl.flag_is_play_capslock_otherkey.ToString());
+            if (ucl.is_DEBUG_mode)
+            {
+                ucl.debug_print("nCode:" + nCode.ToString());
+                ucl.debug_print("wParam:" + wParam.ToString());
+                ucl.debug_print("vkCode:" + ea.ToString());
+                ucl.debug_print("vkCode (char):" + ((char)(ea)).ToString());
+                ucl.debug_print("vkCode GetType:" + lParam.GetType());
+                ucl.debug_print("vkCode flags:" + lParam.flags);
+                ucl.debug_print("vkCode GetHashCode:" + lParam.GetHashCode());
+                ucl.debug_print("is_send_ucl:" + ucl.is_send_ucl.ToString());
+                ucl.debug_print("flag_is_capslock_down:" + ucl.flag_is_capslock_down.ToString());
+                ucl.debug_print("flag_is_play_capslock_otherkey:" + ucl.flag_is_play_capslock_otherkey.ToString());
+            }
 
             //如果是需要跳過的 app ，就跳過
             var p_info = ucl.getForegroundWindowProcessInfo();

@@ -22,7 +22,7 @@ namespace uclliu
         //把 chardefs 的字碼，變成對照字根，可以加速 ,,,z、,,,x 反查的速度
         public Dictionary<string, string> uclcode_r = new Dictionary<string, string>();
         public JsonValue uclcode = null;
-        public bool is_DEBUG_mode = true; //除錯模式
+        public bool is_DEBUG_mode = false; //除錯模式
         public string INI_CONFIG_FILE = "C:\\temp\\UCLLIU.ini"; //預設在 此，實際使用的位置同在 uclliu.exe
         public List<string> same_sound_data = new List<string>(); //拚音
         public string DEFAULT_OUTPUT_TYPE = "DEFAULT";
@@ -70,6 +70,10 @@ namespace uclliu
         public Font GUI_FONT_20 = new Font("roman", 20, FontStyle.Bold);
         public Font GUI_FONT_22 = new Font("roman", 22, FontStyle.Bold);
         public Font GUI_FONT_26 = new Font("roman", 26, FontStyle.Bold);
+        private readonly TimeSpan foregroundProcessCacheDuration = TimeSpan.FromMilliseconds(120);
+        private DateTime foregroundProcessCachedAt = DateTime.MinValue;
+        private IntPtr foregroundProcessCachedHandle = IntPtr.Zero;
+        private Dictionary<string, string> foregroundProcessCache = null;
         static Form1 f;
         public uclliu(ref Form1 _f)
         {
@@ -421,6 +425,14 @@ namespace uclliu
         public void loadJsonData()
         {
             string liu_json_path = my.pwd() + "\\liu.json";
+            try
+            {
+                LiuTableConverter.EnsureLiuJson(my.pwd(), debug_print);
+            }
+            catch (Exception ex)
+            {
+                debug_print("字根檔自動轉換失敗：" + ex.Message);
+            }
             if (!my.is_file(liu_json_path))
             {
                 MessageBox.Show("查無 liu.json 檔...");
@@ -644,9 +656,9 @@ namespace uclliu
             f.LP.Height = 10;
             f.LP.RowStyles[0] = new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
             //btn_UCL
-            f.LP.ColumnStyles[0] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+            set_column_width(0, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
             //btn_HALF
-            f.LP.ColumnStyles[1] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+            set_column_width(1, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
 
             //btn_gamemode
             if (config["DEFAULT"]["SHORT_MODE"] == "1")
@@ -654,43 +666,42 @@ namespace uclliu
                 //短
                 //type_label
                 //加入，判斷有多少字，改多長
-                //一字 25
-                int _tape_label_width = Convert.ToInt32(f.type_label.Text.Length * 18 * Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
-                f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, _tape_label_width);
+                int _tape_label_width = get_short_mode_width(f.type_label.Text);
+                set_column_width(2, _tape_label_width);
                 //word_label
                 debug_print("_tape_label_width : " + _tape_label_width.ToString());
-                int _word_label_width = Convert.ToInt32(f.word_label.Text.Length * 18 * Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
-                f.LP.ColumnStyles[3] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, _word_label_width);
+                int _word_label_width = get_short_mode_width(f.word_label.Text);
+                set_column_width(3, _word_label_width);
                 debug_print("_word_label_width : " + _word_label_width.ToString());
                 //btn_gamemode
-                f.LP.ColumnStyles[5] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0);
+                set_column_width(5, 0);
 
             }
             else
             {
                 //tape_label
-                f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(150 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+                set_column_width(2, Convert.ToInt32(150 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
                 //word_label
-                f.LP.ColumnStyles[3] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(350 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+                set_column_width(3, Convert.ToInt32(350 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
                 //btn_gamemode
-                f.LP.ColumnStyles[5] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(120 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+                set_column_width(5, Convert.ToInt32(120 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
             }
 
             //殘/正
             if (is_simple())
             {
                 //殘模式
-                f.LP.ColumnStyles[4] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+                set_column_width(4, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
             }
             else
             {
                 //正模式
-                f.LP.ColumnStyles[4] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0);
+                set_column_width(4, 0);
             }
 
 
             //btn_X
-            f.LP.ColumnStyles[6] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+            set_column_width(6, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
 
             // 肥
             f.btn_UCL.Font = GUI_FONT_16;
@@ -761,6 +772,40 @@ namespace uclliu
             f.Visible = true;
             //f.Refresh();
             f.ResumeLayout();
+        }
+        private void update_short_mode_columns()
+        {
+            if (config["DEFAULT"]["SHORT_MODE"] != "1")
+            {
+                return;
+            }
+
+            f.LP.SuspendLayout();
+            set_column_width(2, get_short_mode_width(f.type_label.Text));
+            set_column_width(3, get_short_mode_width(f.word_label.Text));
+            f.LP.ResumeLayout(false);
+        }
+        private int get_short_mode_width(string text)
+        {
+            int maxWidth = Math.Max(0, Screen.PrimaryScreen.WorkingArea.Width - 160);
+            return UiLayoutCalculator.ShortModeTextWidth(text, Convert.ToDouble(config["DEFAULT"]["ZOOM"]), 28, 0, maxWidth);
+        }
+        private void set_column_width(int index, int width)
+        {
+            if (index < 0 || index >= f.LP.ColumnStyles.Count)
+            {
+                return;
+            }
+
+            System.Windows.Forms.ColumnStyle style = f.LP.ColumnStyles[index];
+            if (style.SizeType != System.Windows.Forms.SizeType.Absolute)
+            {
+                style.SizeType = System.Windows.Forms.SizeType.Absolute;
+            }
+            if (Math.Abs(style.Width - width) > 0.5)
+            {
+                style.Width = width;
+            }
         }
         public void show_sp_to_label(string data)
         {
@@ -1052,37 +1097,7 @@ namespace uclliu
             //如果是短米，自動看幾個字展長
             if (config["DEFAULT"]["SHORT_MODE"] == "1")
             {
-                string _tape_label = f.type_label.Text;
-                int _len_tape_label = _tape_label.Length;
-                //# 一字30
-                if (_len_tape_label == 0)
-                {
-                    //f.type_label.Visible = false;
-                    f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 0 * (int)Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
-                }
-                else
-                {
-                    //f.type_label.Visible = true;
-                }
-                //f.type_label.set_size_request(int(float(config['DEFAULT']['zoom']) * 18 * _len_tape_label), int(float(config['DEFAULT']['zoom']) * 40))                
-                f.LP.ColumnStyles[2] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute,
-                    (int)(28 * _len_tape_label * Convert.ToDouble(config["DEFAULT"]["ZOOM"]))
-                );
-                string _word_label = f.word_label.Text;
-                int _len_word_label = _word_label.Length;
-                //#一字30
-                if (_len_word_label == 0)
-                {
-                    //f.word_label.Visible = false;
-                }
-                else
-                {
-                    // f.word_label.Visible = true;
-                }
-                //f.word_label.set_size_request(int(float(config['DEFAULT']['zoom']) * 15 * _len_word_label), int(float(config['DEFAULT']['zoom']) * 40))
-                f.LP.ColumnStyles[3] = new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute,
-                                    (int)(28 * _len_word_label * Convert.ToDouble(config["DEFAULT"]["ZOOM"]))
-                                );
+                update_short_mode_columns();
             }
             return true;
         }
@@ -1212,15 +1227,7 @@ namespace uclliu
                 int lt = tmp.Length;
                 if (config["DEFAULT"]["SHORT_MODE"] == "1")
                 {
-                    //調整長度
-                    //同 python #1042
-                    string _word_label = f.word_label.Text;
-                    int _len_word_label = _word_label.Length;
-                    if (_len_word_label == 0)
-                    {
-
-                    }
-                    update_UI();
+                    update_short_mode_columns();
                 }
             }
             catch (Exception ex)
@@ -1260,6 +1267,12 @@ namespace uclliu
             //fileStream.
             //Encoding encoding = System.Text.Encoding.GetEncoding(MY_CODE_PAGE);
             IntPtr handle = Form1.GetForegroundWindow();
+            DateTime now = DateTime.UtcNow;
+            if (foregroundProcessCache != null && handle == foregroundProcessCachedHandle && (now - foregroundProcessCachedAt) <= foregroundProcessCacheDuration)
+            {
+                return foregroundProcessCache;
+            }
+
             var intLength = Form1.GetWindowTextLength(handle) + 1;
             StringBuilder Buff = new StringBuilder(intLength);
             if (Form1.GetWindowText(handle, Buff, intLength) > 0)
@@ -1270,12 +1283,20 @@ namespace uclliu
             string Proc_TITLE = Buff.ToString();
             uint Proc_PID;
             Form1.GetWindowThreadProcessId(handle, out Proc_PID);
-            Process p = Process.GetProcessById((int)Proc_PID);
             string Proc_NAME = "";
             try
             {
-                //某些 app 會當，如 skype
-                Proc_NAME = my.mainname(p.MainModule.FileName.ToLower());
+                Process p = Process.GetProcessById((int)Proc_PID);
+                try
+                {
+                    //某些 app 會當，如 skype
+                    Proc_NAME = my.mainname(p.MainModule.FileName.ToLower());
+                }
+                catch (Exception ex)
+                {
+                    Proc_NAME = p.ProcessName.ToLower();
+                    debug_print("Get ProcName fallback:" + ex.Message);
+                }
             }
             catch (Exception ex)
             {
@@ -1289,6 +1310,9 @@ namespace uclliu
             output["PROCESS_TITLE"] = Proc_TITLE;
             output["PROCESS_NAME"] = Proc_NAME;
             output["PROCESS_PID"] = Proc_PID.ToString();
+            foregroundProcessCachedHandle = handle;
+            foregroundProcessCachedAt = now;
+            foregroundProcessCache = output;
             return output;
         }
 
