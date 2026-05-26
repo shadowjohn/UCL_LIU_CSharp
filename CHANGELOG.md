@@ -59,6 +59,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 修正新版 `pinyi.txt` 同音字候選會把注音碼或注音符號混到第 0 候選的問題，並保留舊版 `pinyi.txt` 相容。
 - 補齊新版 `pinyi.txt` 的反向注音表，出字後可依設定顯示讀音。
 - Notepad++ 不列入預設貼上模式，也不再預設走 `WM_CHAR`，先回到逐字 Unicode `SendInput` 驗證 Python-style 出字手感。
+- 補上 Notepad++ 相容註記：自動完成 popup 可能攔截 Scintilla 按鍵/焦點流程，關閉自動完成後逐字 `SendInput` 可正常打字。
 - 修正「顯示短根」只改記憶體狀態、不會寫回 `UCLLIU.ini` 的問題；啟動時也會正確套用 `SP` 設定。
 
 ### Verification

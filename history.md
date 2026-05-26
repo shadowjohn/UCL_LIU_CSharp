@@ -14,6 +14,7 @@
 - Python 版早期無 TSF 時，在 `SendKeysCtypes.SendKeys()` 內會將每個 KeyAction 各自呼叫一次 `SendInput`。
 - C# 版原本把整串文字組成一個大型 `INPUT[]` 後一次送出，與 Python 版節奏不同。
 - `WM_CHAR` 對 Notepad++ 實測效果不佳，因此先撤回 Notepad++ 預設 `WM_CHAR` 規則。
+- 2026-05-27 實機回報：Notepad++ 關閉自動完成後可正常打字，判斷自動完成 popup 會攔截 Scintilla 的按鍵/焦點流程。
 
 ### 實作紀錄
 
@@ -27,6 +28,7 @@
 - 新增核心測試確認 Notepad++ 預設走 `UnicodeSendInput`。
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
 - `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過並更新 `bin\Debug\uclliu.exe`。
+- 實機確認：Notepad++ 關閉自動完成後，逐字 `SendInput` 可正常打字。
 
 ---
 
