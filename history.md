@@ -230,3 +230,29 @@
 - 先新增核心測試並確認紅燈：缺少 `PinyiCandidateSelector`。
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
 - `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過，ILRepack post-build 成功。
+
+---
+
+## 2026-05-26 - `,,,x` / `,,,z` 框選轉換修正
+
+### 問題觀察
+
+- 使用者回報 `,,,x` 與 `,,,z` 目前沒成功。
+- 對照 Python 版後確認：Python 版會先清空剪貼簿，再同步送 `Ctrl+C` 取得目前框選文字，避免複製失敗時讀到舊剪貼簿。
+- 進一步評估後，`Ctrl+C` 應作為最後 fallback；標準文字控制項可先嘗試 UI Automation，傳統 Win32 控制項可再嘗試 `WM_COPY`。
+- C# 版仍使用舊式 `SendKeys.Send("^C")` 搭配固定 `Sleep(500)`，沒有先清剪貼簿；`,,,x/z` 分支也沒有清掉 `last_key` 或回傳 `true` 吃掉尾鍵。
+
+### 實作紀錄
+
+- 新增 `SelectedTextTransformCommand`，集中處理框選文字讀取、剪貼簿備份/還原與 retry。
+- 框選文字來源順序改為 UI Automation `TextPattern.GetSelection()`、`WM_COPY`、安全版 `Ctrl+C`。
+- `,,,z` 改為「框選文字 -> 簡轉繁 -> 最簡字根 -> 出字」。
+- `,,,x` 改為「框選字根 -> 文字 -> 出字」。
+- 兩個指令執行後會清掉 `last_key` 並回傳 `true`，避免尾鍵繼續進入後續 hook 流程。
+- 送 `Ctrl+C` 期間保留 `is_send_ucl` 防護，避免自己的快捷鍵被 hook 當成使用者輸入。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `SelectedTextTransformCommand` / `ISelectedTextSource`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild ...` 的正式輸出被正在執行的 `uclliu.exe` 鎖住；改用臨時 `OutDir` build 通過。

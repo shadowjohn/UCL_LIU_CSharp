@@ -15,6 +15,7 @@ namespace uclliu
         myinclude my = new myinclude();
         private readonly UnicodeSendInputOutput unicodeSendInputOutput = new UnicodeSendInputOutput();
         private readonly ClipboardPasteOutput clipboardPasteOutput = new ClipboardPasteOutput();
+        private readonly SelectedTextTransformCommand selectedTextTransformCommand = new SelectedTextTransformCommand();
         private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
         public string VERSION = UclLiuAppInfo.Version;
         public FileStream lockFileString;
@@ -287,28 +288,30 @@ namespace uclliu
                 ucl_find_data = new List<string>();
                 type_label_set_text();
                 toAlphaOrNonAlpha();
+                last_key = "";
+                string error;
+                is_send_ucl = true;
                 try
                 {
-                    string orin_clip = Clipboard.GetText();
-                    is_send_ucl = true;
-                    SendKeys.Send("^C"); //copy                
-                    is_send_ucl = false;
-                    Thread.Sleep(500);
-                    string selectData = Clipboard.GetText();
-                    Thread.Sleep(500);
-                    //# 簡轉繁
-                    selectData = simple2trad(selectData);
-                    //然後寫回
-                    is_send_ucl = true;
-                    selectData = word_to_sp(selectData);
-                    senddata(selectData);
-                    is_send_ucl = false;
-                    Clipboard.SetText(orin_clip);
+                    if (!selectedTextTransformCommand.TryRun(
+                        delegate(string selectedText)
+                        {
+                            return word_to_sp(simple2trad(selectedText));
+                        },
+                        delegate(string output)
+                        {
+                            senddata(output);
+                        },
+                        out error))
+                    {
+                        debug_print("可能會當 ,,,z: " + error);
+                    }
                 }
-                catch (Exception ex)
+                finally
                 {
-                    debug_print("可能會當 ,,,z: " + ex.Message);
+                    is_send_ucl = false;
                 }
+                return true;
             }
             code = ",,,x";
             if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code && is_ucl())
@@ -318,26 +321,30 @@ namespace uclliu
                 ucl_find_data = new List<string>();
                 type_label_set_text();
                 toAlphaOrNonAlpha();
+                last_key = "";
+                string error;
+                is_send_ucl = true;
                 try
                 {
-                    string orin_clip = Clipboard.GetText();
-                    is_send_ucl = true;
-                    SendKeys.Send("^C"); //copy                
-                    is_send_ucl = false;
-                    Thread.Sleep(500);
-                    string selectData = Clipboard.GetText();
-                    Thread.Sleep(500);
-                    //然後寫回
-                    is_send_ucl = true;
-                    selectData = sp_to_word(selectData);
-                    senddata(selectData);
-                    is_send_ucl = false;
-                    Clipboard.SetText(orin_clip);
+                    if (!selectedTextTransformCommand.TryRun(
+                        delegate(string selectedText)
+                        {
+                            return sp_to_word(selectedText);
+                        },
+                        delegate(string output)
+                        {
+                            senddata(output);
+                        },
+                        out error))
+                    {
+                        debug_print("可能會當 ,,,x: " + error);
+                    }
                 }
-                catch (Exception ex)
+                finally
                 {
-                    debug_print("可能會當 ,,,x: " + ex.Message);
+                    is_send_ucl = false;
                 }
+                return true;
             }
             code = ",,,box";
             if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)

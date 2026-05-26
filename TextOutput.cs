@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Windows.Automation;
+using System.Windows.Automation.Text;
 
 namespace uclliu
 {
@@ -316,6 +319,584 @@ namespace uclliu
         void SendWait(string keys);
     }
 
+    internal interface ISelectedTextSource
+    {
+        string Name { get; }
+        bool TryReadSelectedText(out string selectedText, out string error);
+    }
+
+    internal sealed class WinFormsClipboardGateway : IClipboardGateway
+    {
+        public object GetDataObject()
+        {
+            return Clipboard.GetDataObject();
+        }
+
+        public bool ContainsText()
+        {
+            return Clipboard.ContainsText(TextDataFormat.UnicodeText);
+        }
+
+        public string GetText()
+        {
+            return Clipboard.GetText(TextDataFormat.UnicodeText);
+        }
+
+        public void SetText(string text, ClipboardTextKind textKind)
+        {
+            TextDataFormat format = textKind == ClipboardTextKind.Ansi ? TextDataFormat.Text : TextDataFormat.UnicodeText;
+            Clipboard.SetText(text ?? string.Empty, format);
+        }
+
+        public void Clear()
+        {
+            Clipboard.Clear();
+        }
+
+        public void SetDataObject(object dataObject)
+        {
+            Clipboard.SetDataObject(dataObject, true);
+        }
+    }
+
+    internal sealed class SendKeysKeySender : IKeySender
+    {
+        public void SendWait(string keys)
+        {
+            SendKeys.SendWait(keys);
+        }
+    }
+
+    public sealed class SelectedTextTransformCommand
+    {
+        private readonly ISelectedTextSource[] selectedTextSources;
+        private readonly IClipboardGateway clipboard;
+        private readonly IKeySender keySender;
+        private readonly Action<int> sleep;
+
+        public int RetryCount = 8;
+        public int RetryDelayMs = 25;
+
+        public SelectedTextTransformCommand()
+            : this(new WinFormsClipboardGateway(), new SendKeysKeySender(), Thread.Sleep, true)
+        {
+        }
+
+        internal SelectedTextTransformCommand(IEnumerable<ISelectedTextSource> selectedTextSources)
+        {
+            if (selectedTextSources == null)
+            {
+                throw new ArgumentNullException("selectedTextSources");
+            }
+
+            List<ISelectedTextSource> sources = new List<ISelectedTextSource>();
+            foreach (ISelectedTextSource source in selectedTextSources)
+            {
+                if (source != null)
+                {
+                    sources.Add(source);
+                }
+            }
+            if (sources.Count == 0)
+            {
+                throw new ArgumentException("selectedTextSources must contain at least one source", "selectedTextSources");
+            }
+
+            this.selectedTextSources = sources.ToArray();
+        }
+
+        internal SelectedTextTransformCommand(IClipboardGateway clipboard, IKeySender keySender, Action<int> sleep)
+            : this(clipboard, keySender, sleep, false)
+        {
+        }
+
+        private SelectedTextTransformCommand(IClipboardGateway clipboard, IKeySender keySender, Action<int> sleep, bool usePreferredSources)
+        {
+            if (clipboard == null)
+            {
+                throw new ArgumentNullException("clipboard");
+            }
+            if (keySender == null)
+            {
+                throw new ArgumentNullException("keySender");
+            }
+            if (sleep == null)
+            {
+                throw new ArgumentNullException("sleep");
+            }
+
+            this.clipboard = clipboard;
+            this.keySender = keySender;
+            this.sleep = sleep;
+            if (usePreferredSources)
+            {
+                this.selectedTextSources = new ISelectedTextSource[]
+                {
+                    new UiAutomationSelectedTextSource(),
+                    new WindowMessageCopySelectedTextSource(clipboard, sleep, RetryCount, RetryDelayMs),
+                    new KeyboardCopySelectedTextSource(clipboard, keySender, sleep, RetryCount, RetryDelayMs)
+                };
+            }
+            else
+            {
+                this.selectedTextSources = new ISelectedTextSource[]
+                {
+                    new KeyboardCopySelectedTextSource(clipboard, keySender, sleep, RetryCount, RetryDelayMs)
+                };
+            }
+        }
+
+        public bool TryRun(Func<string, string> transform, Action<string> sendOutput, out string error)
+        {
+            if (transform == null)
+            {
+                throw new ArgumentNullException("transform");
+            }
+            if (sendOutput == null)
+            {
+                throw new ArgumentNullException("sendOutput");
+            }
+
+            ClipboardBackup backup;
+            if (!TryCaptureBackup(out backup, out error))
+            {
+                return false;
+            }
+
+            bool success = false;
+            string operationError = null;
+            try
+            {
+                string selectedText;
+                if (!TryReadSelectedText(out selectedText, out operationError))
+                {
+                    success = false;
+                }
+                else
+                {
+                    string output = transform(selectedText) ?? "";
+                    sendOutput(output);
+                    success = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                operationError = "selected text transform failed: " + ex.Message;
+                success = false;
+            }
+            finally
+            {
+                string restoreError;
+                if (!TryRestoreBackup(backup, out restoreError) && operationError == null)
+                {
+                    operationError = restoreError;
+                    success = false;
+                }
+            }
+
+            error = operationError;
+            return success && error == null;
+        }
+
+        private bool TryReadSelectedText(out string selectedText, out string error)
+        {
+            selectedText = null;
+            List<string> errors = new List<string>();
+
+            foreach (ISelectedTextSource source in selectedTextSources)
+            {
+                string sourceText;
+                string sourceError;
+                if (source.TryReadSelectedText(out sourceText, out sourceError))
+                {
+                    selectedText = sourceText;
+                    error = null;
+                    return true;
+                }
+                errors.Add(source.Name + ": " + sourceError);
+            }
+
+            error = "copy selected text failed: " + String.Join("; ", errors.ToArray());
+            return false;
+        }
+
+        private bool TryCaptureBackup(out ClipboardBackup backup, out string error)
+        {
+            if (clipboard == null)
+            {
+                backup = new ClipboardBackup();
+                error = null;
+                return true;
+            }
+
+            ClipboardBackup captured = new ClipboardBackup();
+            bool ok = TryClipboardAction(
+                delegate
+                {
+                    captured.DataObject = clipboard.GetDataObject();
+                    captured.HasText = clipboard.ContainsText();
+                    captured.Text = captured.HasText ? clipboard.GetText() : null;
+                },
+                "capture clipboard failed",
+                out error);
+
+            backup = captured;
+            return ok;
+        }
+
+        private bool TryRestoreBackup(ClipboardBackup backup, out string error)
+        {
+            if (clipboard == null)
+            {
+                error = null;
+                return true;
+            }
+
+            return TryClipboardAction(
+                delegate
+                {
+                    if (backup.DataObject != null)
+                    {
+                        clipboard.SetDataObject(backup.DataObject);
+                    }
+                    else if (backup.HasText)
+                    {
+                        clipboard.SetText(backup.Text, ClipboardTextKind.Unicode);
+                    }
+                    else
+                    {
+                        clipboard.Clear();
+                    }
+                },
+                "restore clipboard failed",
+                out error);
+        }
+
+        private bool TryClipboardAction(Action action, string errorPrefix, out string error)
+        {
+            return ClipboardActionRunner.Try(action, errorPrefix, RetryCount, RetryDelayMs, sleep, out error);
+        }
+
+        private struct ClipboardBackup
+        {
+            public object DataObject;
+            public bool HasText;
+            public string Text;
+        }
+    }
+
+    internal sealed class UiAutomationSelectedTextSource : ISelectedTextSource
+    {
+        public string Name
+        {
+            get { return "UI Automation"; }
+        }
+
+        public bool TryReadSelectedText(out string selectedText, out string error)
+        {
+            selectedText = null;
+            error = null;
+            try
+            {
+                AutomationElement focused = AutomationElement.FocusedElement;
+                if (focused == null)
+                {
+                    error = "focused element unavailable";
+                    return false;
+                }
+
+                object patternObject;
+                if (!focused.TryGetCurrentPattern(TextPattern.Pattern, out patternObject))
+                {
+                    error = "TextPattern unavailable";
+                    return false;
+                }
+
+                TextPattern textPattern = (TextPattern)patternObject;
+                TextPatternRange[] ranges = textPattern.GetSelection();
+                if (ranges == null || ranges.Length == 0)
+                {
+                    error = "selection unavailable";
+                    return false;
+                }
+
+                StringBuilder builder = new StringBuilder();
+                foreach (TextPatternRange range in ranges)
+                {
+                    if (range == null)
+                    {
+                        continue;
+                    }
+                    string text = range.GetText(-1);
+                    if (!String.IsNullOrEmpty(text))
+                    {
+                        builder.Append(text);
+                    }
+                }
+
+                if (builder.Length == 0)
+                {
+                    error = "selection is empty";
+                    return false;
+                }
+
+                selectedText = builder.ToString();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+    }
+
+    internal abstract class ClipboardSelectedTextSourceBase : ISelectedTextSource
+    {
+        private readonly IClipboardGateway clipboard;
+        private readonly Action<int> sleep;
+        private readonly int retryCount;
+        private readonly int retryDelayMs;
+
+        protected ClipboardSelectedTextSourceBase(IClipboardGateway clipboard, Action<int> sleep, int retryCount, int retryDelayMs)
+        {
+            if (clipboard == null)
+            {
+                throw new ArgumentNullException("clipboard");
+            }
+            if (sleep == null)
+            {
+                throw new ArgumentNullException("sleep");
+            }
+
+            this.clipboard = clipboard;
+            this.sleep = sleep;
+            this.retryCount = retryCount;
+            this.retryDelayMs = retryDelayMs;
+        }
+
+        public abstract string Name { get; }
+
+        public bool TryReadSelectedText(out string selectedText, out string error)
+        {
+            selectedText = null;
+            string actionError;
+            if (!ClipboardActionRunner.Try(delegate { clipboard.Clear(); }, "clear clipboard failed", retryCount, retryDelayMs, sleep, out actionError))
+            {
+                error = actionError;
+                return false;
+            }
+
+            if (!TryCopyToClipboard(out actionError))
+            {
+                error = actionError;
+                return false;
+            }
+
+            int attempts = Math.Max(1, retryCount);
+            for (int i = 0; i < attempts; i++)
+            {
+                string copiedText = null;
+                string readError;
+                bool ok = ClipboardActionRunner.Try(
+                    delegate
+                    {
+                        if (clipboard.ContainsText())
+                        {
+                            copiedText = clipboard.GetText();
+                        }
+                    },
+                    "read copied text failed",
+                    retryCount,
+                    retryDelayMs,
+                    sleep,
+                    out readError);
+
+                if (!ok)
+                {
+                    error = readError;
+                    return false;
+                }
+
+                if (copiedText != null)
+                {
+                    selectedText = copiedText;
+                    error = null;
+                    return true;
+                }
+
+                if (i + 1 < attempts && retryDelayMs > 0)
+                {
+                    sleep(retryDelayMs);
+                }
+            }
+
+            error = "copy selected text failed: clipboard has no unicode text";
+            return false;
+        }
+
+        protected abstract bool TryCopyToClipboard(out string error);
+    }
+
+    internal sealed class KeyboardCopySelectedTextSource : ClipboardSelectedTextSourceBase
+    {
+        private readonly IKeySender keySender;
+
+        public KeyboardCopySelectedTextSource(IClipboardGateway clipboard, IKeySender keySender, Action<int> sleep, int retryCount, int retryDelayMs)
+            : base(clipboard, sleep, retryCount, retryDelayMs)
+        {
+            if (keySender == null)
+            {
+                throw new ArgumentNullException("keySender");
+            }
+            this.keySender = keySender;
+        }
+
+        public override string Name
+        {
+            get { return "Ctrl+C"; }
+        }
+
+        protected override bool TryCopyToClipboard(out string error)
+        {
+            try
+            {
+                keySender.SendWait("^{c}");
+                error = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = "send Ctrl+C failed: " + ex.Message;
+                return false;
+            }
+        }
+    }
+
+    internal sealed class WindowMessageCopySelectedTextSource : ClipboardSelectedTextSourceBase
+    {
+        private const uint WmCopy = 0x0301;
+        private const uint SmtoAbortIfHung = 0x0002;
+        private const uint CopyTimeoutMs = 250;
+
+        public WindowMessageCopySelectedTextSource(IClipboardGateway clipboard, Action<int> sleep, int retryCount, int retryDelayMs)
+            : base(clipboard, sleep, retryCount, retryDelayMs)
+        {
+        }
+
+        public override string Name
+        {
+            get { return "WM_COPY"; }
+        }
+
+        protected override bool TryCopyToClipboard(out string error)
+        {
+            IntPtr target = GetFocusedWindowOrForegroundWindow();
+            if (target == IntPtr.Zero)
+            {
+                error = "focused window unavailable";
+                return false;
+            }
+
+            IntPtr result;
+            IntPtr sendResult = SendMessageTimeout(target, WmCopy, IntPtr.Zero, IntPtr.Zero, SmtoAbortIfHung, CopyTimeoutMs, out result);
+            if (sendResult == IntPtr.Zero)
+            {
+                int lastError = Marshal.GetLastWin32Error();
+                error = "WM_COPY failed";
+                if (lastError != 0)
+                {
+                    error += ": " + new Win32Exception(lastError).Message;
+                }
+                return false;
+            }
+
+            error = null;
+            return true;
+        }
+
+        private static IntPtr GetFocusedWindowOrForegroundWindow()
+        {
+            IntPtr foreground = GetForegroundWindow();
+            if (foreground == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+
+            uint currentThreadId = GetCurrentThreadId();
+            uint targetThreadId = GetWindowThreadProcessId(foreground, IntPtr.Zero);
+            bool attached = false;
+            try
+            {
+                if (targetThreadId != 0 && targetThreadId != currentThreadId)
+                {
+                    attached = AttachThreadInput(currentThreadId, targetThreadId, true);
+                }
+
+                IntPtr focused = GetFocus();
+                return focused == IntPtr.Zero ? foreground : focused;
+            }
+            finally
+            {
+                if (attached)
+                {
+                    AttachThreadInput(currentThreadId, targetThreadId, false);
+                }
+            }
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
+
+        [DllImport("user32.dll")]
+        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetFocus();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeout, out IntPtr result);
+    }
+
+    internal static class ClipboardActionRunner
+    {
+        public static bool Try(Action action, string errorPrefix, int retryCount, int retryDelayMs, Action<int> sleep, out string error)
+        {
+            Exception lastException = null;
+            int attempts = Math.Max(1, retryCount);
+            for (int i = 0; i < attempts; i++)
+            {
+                try
+                {
+                    action();
+                    error = null;
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    if (i + 1 < attempts && retryDelayMs > 0)
+                    {
+                        sleep(retryDelayMs);
+                    }
+                }
+            }
+
+            error = errorPrefix;
+            if (lastException != null)
+            {
+                error += ": " + lastException.Message;
+            }
+            return false;
+        }
+    }
+
     public sealed class ClipboardPasteOutput
     {
         private readonly IClipboardGateway clipboard;
@@ -492,46 +1073,5 @@ namespace uclliu
             public string Text;
         }
 
-        private sealed class WinFormsClipboardGateway : IClipboardGateway
-        {
-            public object GetDataObject()
-            {
-                return Clipboard.GetDataObject();
-            }
-
-            public bool ContainsText()
-            {
-                return Clipboard.ContainsText(TextDataFormat.UnicodeText);
-            }
-
-            public string GetText()
-            {
-                return Clipboard.GetText(TextDataFormat.UnicodeText);
-            }
-
-            public void SetText(string text, ClipboardTextKind textKind)
-            {
-                TextDataFormat format = textKind == ClipboardTextKind.Ansi ? TextDataFormat.Text : TextDataFormat.UnicodeText;
-                Clipboard.SetText(text ?? string.Empty, format);
-            }
-
-            public void Clear()
-            {
-                Clipboard.Clear();
-            }
-
-            public void SetDataObject(object dataObject)
-            {
-                Clipboard.SetDataObject(dataObject, true);
-            }
-        }
-
-        private sealed class SendKeysKeySender : IKeySender
-        {
-            public void SendWait(string keys)
-            {
-                SendKeys.SendWait(keys);
-            }
-        }
     }
 }

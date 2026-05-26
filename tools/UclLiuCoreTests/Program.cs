@@ -24,6 +24,10 @@ internal static class Program
         failed += Run("unicode sendinput preserves surrogate pairs", TestUnicodeSendInputPreservesSurrogatePairs);
         failed += Run("clipboard paste restores original text after send failure", TestClipboardPasteRestoresOriginalTextAfterSendFailure);
         failed += Run("clipboard paste reports set clipboard failure before send", TestClipboardPasteReportsSetClipboardFailureBeforeSend);
+        failed += Run("selected text transform copies selection and restores clipboard", TestSelectedTextTransformCopiesSelectionAndRestoresClipboard);
+        failed += Run("selected text transform does not use stale clipboard", TestSelectedTextTransformDoesNotUseStaleClipboard);
+        failed += Run("selected text transform prefers first successful source", TestSelectedTextTransformPrefersFirstSuccessfulSource);
+        failed += Run("selected text transform falls back through sources in order", TestSelectedTextTransformFallsBackThroughSourcesInOrder);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
         failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
         failed += Run("output router forces paste for PTT browser titles", TestOutputRouterForcesPasteForPttBrowserTitles);
@@ -296,6 +300,94 @@ internal static class Program
         AssertContains(error, "set clipboard failed");
         AssertEqual("原剪貼簿", clipboard.Text);
         AssertEqual(0, keySender.SendCount);
+    }
+
+    private static void TestSelectedTextTransformCopiesSelectionAndRestoresClipboard()
+    {
+        FakeClipboardGateway clipboard = new FakeClipboardGateway("原剪貼簿");
+        FakeKeySender keySender = new FakeKeySender();
+        keySender.OnSend = delegate(string keys)
+        {
+            AssertEqual("^{c}", keys);
+            AssertEqual(null, clipboard.Text);
+            clipboard.SetText("ucl d gz", ClipboardTextKind.Unicode);
+        };
+        SelectedTextTransformCommand command = new SelectedTextTransformCommand(clipboard, keySender, delegate(int ms) { });
+        string sent = null;
+
+        string error;
+        bool ok = command.TryRun(
+            delegate(string selected) { return selected.Replace("ucl d gz", "肥的好"); },
+            delegate(string output) { sent = output; },
+            out error);
+
+        AssertTrue(ok, "selected text transform should succeed");
+        AssertEqual(null, error);
+        AssertEqual("肥的好", sent);
+        AssertEqual("原剪貼簿", clipboard.Text);
+        AssertEqual(1, keySender.SendCount);
+    }
+
+    private static void TestSelectedTextTransformDoesNotUseStaleClipboard()
+    {
+        FakeClipboardGateway clipboard = new FakeClipboardGateway("舊資料");
+        FakeKeySender keySender = new FakeKeySender();
+        SelectedTextTransformCommand command = new SelectedTextTransformCommand(clipboard, keySender, delegate(int ms) { });
+        bool outputCalled = false;
+
+        string error;
+        bool ok = command.TryRun(
+            delegate(string selected) { return "不應該送出"; },
+            delegate(string output) { outputCalled = true; },
+            out error);
+
+        AssertTrue(!ok, "selected text transform should fail when copy returns no text");
+        AssertContains(error, "copy selected text failed");
+        AssertTrue(!outputCalled, "stale clipboard text should not be transformed");
+        AssertEqual("舊資料", clipboard.Text);
+        AssertEqual(1, keySender.SendCount);
+    }
+
+    private static void TestSelectedTextTransformPrefersFirstSuccessfulSource()
+    {
+        FakeSelectedTextSource uiaSource = new FakeSelectedTextSource("uia", true, "肥米");
+        FakeSelectedTextSource fallbackSource = new FakeSelectedTextSource("ctrlc", true, "不應使用");
+        SelectedTextTransformCommand command = new SelectedTextTransformCommand(new ISelectedTextSource[] { uiaSource, fallbackSource });
+        string sent = null;
+
+        string error;
+        bool ok = command.TryRun(
+            delegate(string selected) { return selected + "輸入法"; },
+            delegate(string output) { sent = output; },
+            out error);
+
+        AssertTrue(ok, "selected text transform should use first successful source");
+        AssertEqual("肥米輸入法", sent);
+        AssertEqual(1, uiaSource.ReadCount);
+        AssertEqual(0, fallbackSource.ReadCount);
+    }
+
+    private static void TestSelectedTextTransformFallsBackThroughSourcesInOrder()
+    {
+        List<string> calls = new List<string>();
+        FakeSelectedTextSource uiaSource = new FakeSelectedTextSource("uia", false, "");
+        FakeSelectedTextSource wmCopySource = new FakeSelectedTextSource("wm_copy", false, "");
+        FakeSelectedTextSource ctrlCSource = new FakeSelectedTextSource("ctrl_c", true, "ucl");
+        uiaSource.Calls = calls;
+        wmCopySource.Calls = calls;
+        ctrlCSource.Calls = calls;
+        SelectedTextTransformCommand command = new SelectedTextTransformCommand(new ISelectedTextSource[] { uiaSource, wmCopySource, ctrlCSource });
+        string sent = null;
+
+        string error;
+        bool ok = command.TryRun(
+            delegate(string selected) { return selected.ToUpperInvariant(); },
+            delegate(string output) { sent = output; },
+            out error);
+
+        AssertTrue(ok, "selected text transform should fall back to ctrl+c source");
+        AssertEqual("UCL", sent);
+        AssertSequence(new string[] { "uia", "wm_copy", "ctrl_c" }, calls.ToArray());
     }
 
     private static void TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste()
@@ -750,6 +842,7 @@ internal static class Program
     {
         public bool ThrowOnSend { get; set; }
         public int SendCount { get; private set; }
+        public Action<string> OnSend { get; set; }
 
         public void SendWait(string keys)
         {
@@ -758,6 +851,45 @@ internal static class Program
             {
                 throw new InvalidOperationException("fake send failure");
             }
+            if (OnSend != null)
+            {
+                OnSend(keys);
+            }
+        }
+    }
+
+    private sealed class FakeSelectedTextSource : ISelectedTextSource
+    {
+        private readonly string name;
+        private readonly bool success;
+        private readonly string text;
+
+        public FakeSelectedTextSource(string name, bool success, string text)
+        {
+            this.name = name;
+            this.success = success;
+            this.text = text;
+        }
+
+        public List<string> Calls { get; set; }
+        public int ReadCount { get; private set; }
+
+        public string Name
+        {
+            get { return name; }
+        }
+
+        public bool TryReadSelectedText(out string selectedText, out string error)
+        {
+            ReadCount++;
+            if (Calls != null)
+            {
+                Calls.Add(name);
+            }
+
+            selectedText = success ? text : null;
+            error = success ? null : name + " failed";
+            return success;
         }
     }
 
