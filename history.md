@@ -16,6 +16,7 @@
 - README 成熟度評分與發行資訊更新到 v0.12。
 - CHANGELOG 將本輪 TSF Bridge 外掛 fallback 整理為 v0.12。
 - 產出 `RELEASE/0.12/uclliu.exe` 與包含 `tsf_bridge` 外掛的 `RELEASE/0.12/uclliu.zip`。
+- README 補上 v0.12 Microsoft WDSI 病毒碼掃描提交連結。
 
 ### 驗證紀錄
 

@@ -77,7 +77,9 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 | [RELEASE/0.11/uclliu.zip](RELEASE/0.11/uclliu.zip) | v0.11 壓縮版 |
 | [RELEASE/0.1/uclliu.exe](RELEASE/0.1/uclliu.exe) | 2019 初版備份 |
 
-v0.12 發行日期：2026-05-27。v0.11 病毒碼掃描已提交 Microsoft WDSI：[submission 2a365b04-dea0-496f-937f-9051b163a968](https://www.microsoft.com/en-us/wdsi/submission/2a365b04-dea0-496f-937f-9051b163a968)。
+v0.12 發行日期：2026-05-27。v0.12 病毒碼掃描已提交 Microsoft WDSI：[submission a42546c1-4432-40f2-8cc6-6e226617cf19](https://www.microsoft.com/en-us/wdsi/submission/a42546c1-4432-40f2-8cc6-6e226617cf19)。
+
+v0.11 病毒碼掃描紀錄：[submission 2a365b04-dea0-496f-937f-9051b163a968](https://www.microsoft.com/en-us/wdsi/submission/2a365b04-dea0-496f-937f-9051b163a968)。
 
 若自行編譯，請使用 .NET Framework 4.5.2 WinForms 專案重建。C# 版開發輸出以 `bin\Debug\uclliu.exe` 或 `bin\Release\uclliu.exe` 為準，不另外維護 `dist` 目錄；請確認 `pinyi.txt`、`wavs`、`tsf_bridge`、`liu.json` 或可轉換字碼表與 exe 放在同一目錄。
 
