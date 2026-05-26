@@ -325,6 +325,11 @@ namespace uclliu
         bool TryReadSelectedText(out string selectedText, out string error);
     }
 
+    internal interface ISelectedTextTransformCommand
+    {
+        bool TryRun(Func<string, string> transform, Action<string> sendOutput, out string error);
+    }
+
     internal sealed class WinFormsClipboardGateway : IClipboardGateway
     {
         public object GetDataObject()
@@ -367,7 +372,67 @@ namespace uclliu
         }
     }
 
-    public sealed class SelectedTextTransformCommand
+    internal sealed class SelectedTextTransformDispatcher
+    {
+        private readonly Action<Action> post;
+        private readonly Action<bool> setSending;
+        private readonly Action<string> log;
+
+        public SelectedTextTransformDispatcher(Action<Action> post, Action<bool> setSending, Action<string> log)
+        {
+            if (post == null)
+            {
+                throw new ArgumentNullException("post");
+            }
+            if (setSending == null)
+            {
+                throw new ArgumentNullException("setSending");
+            }
+            if (log == null)
+            {
+                throw new ArgumentNullException("log");
+            }
+
+            this.post = post;
+            this.setSending = setSending;
+            this.log = log;
+        }
+
+        public void Queue(ISelectedTextTransformCommand command, string commandName, Func<string, string> transform, Action<string> sendOutput)
+        {
+            if (command == null)
+            {
+                throw new ArgumentNullException("command");
+            }
+            if (transform == null)
+            {
+                throw new ArgumentNullException("transform");
+            }
+            if (sendOutput == null)
+            {
+                throw new ArgumentNullException("sendOutput");
+            }
+
+            post(delegate
+            {
+                string error;
+                setSending(true);
+                try
+                {
+                    if (!command.TryRun(transform, sendOutput, out error))
+                    {
+                        log("可能會當 " + commandName + ": " + error);
+                    }
+                }
+                finally
+                {
+                    setSending(false);
+                }
+            });
+        }
+    }
+
+    public sealed class SelectedTextTransformCommand : ISelectedTextTransformCommand
     {
         private readonly ISelectedTextSource[] selectedTextSources;
         private readonly IClipboardGateway clipboard;

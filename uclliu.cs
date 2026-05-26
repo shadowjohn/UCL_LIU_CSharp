@@ -16,6 +16,7 @@ namespace uclliu
         private readonly UnicodeSendInputOutput unicodeSendInputOutput = new UnicodeSendInputOutput();
         private readonly ClipboardPasteOutput clipboardPasteOutput = new ClipboardPasteOutput();
         private readonly SelectedTextTransformCommand selectedTextTransformCommand = new SelectedTextTransformCommand();
+        private readonly SelectedTextTransformDispatcher selectedTextTransformDispatcher;
         private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
         public string VERSION = UclLiuAppInfo.Version;
         public FileStream lockFileString;
@@ -86,6 +87,7 @@ namespace uclliu
         public uclliu(ref Form1 _f)
         {
             f = _f;
+            selectedTextTransformDispatcher = new SelectedTextTransformDispatcher(post_ui_action, set_is_send_ucl, debug_print);
         }
         //感謝台灣碼農
         public string simple2trad(string data)
@@ -289,28 +291,17 @@ namespace uclliu
                 type_label_set_text();
                 toAlphaOrNonAlpha();
                 last_key = "";
-                string error;
-                is_send_ucl = true;
-                try
-                {
-                    if (!selectedTextTransformCommand.TryRun(
-                        delegate(string selectedText)
-                        {
-                            return word_to_sp(simple2trad(selectedText));
-                        },
-                        delegate(string output)
-                        {
-                            senddata(output);
-                        },
-                        out error))
+                selectedTextTransformDispatcher.Queue(
+                    selectedTextTransformCommand,
+                    ",,,z",
+                    delegate(string selectedText)
                     {
-                        debug_print("可能會當 ,,,z: " + error);
-                    }
-                }
-                finally
-                {
-                    is_send_ucl = false;
-                }
+                        return word_to_sp(simple2trad(selectedText));
+                    },
+                    delegate(string output)
+                    {
+                        senddata(output);
+                    });
                 return true;
             }
             code = ",,,x";
@@ -322,28 +313,17 @@ namespace uclliu
                 type_label_set_text();
                 toAlphaOrNonAlpha();
                 last_key = "";
-                string error;
-                is_send_ucl = true;
-                try
-                {
-                    if (!selectedTextTransformCommand.TryRun(
-                        delegate(string selectedText)
-                        {
-                            return sp_to_word(selectedText);
-                        },
-                        delegate(string output)
-                        {
-                            senddata(output);
-                        },
-                        out error))
+                selectedTextTransformDispatcher.Queue(
+                    selectedTextTransformCommand,
+                    ",,,x",
+                    delegate(string selectedText)
                     {
-                        debug_print("可能會當 ,,,x: " + error);
-                    }
-                }
-                finally
-                {
-                    is_send_ucl = false;
-                }
+                        return sp_to_word(selectedText);
+                    },
+                    delegate(string output)
+                    {
+                        senddata(output);
+                    });
                 return true;
             }
             code = ",,,box";
@@ -362,6 +342,38 @@ namespace uclliu
         public void run_toggle_sp()
         {
             is_display_sp = (is_display_sp == false) ? true : false;
+        }
+        private void post_ui_action(Action action)
+        {
+            if (action == null)
+            {
+                return;
+            }
+
+            try
+            {
+                if (f != null && !f.IsDisposed && f.IsHandleCreated)
+                {
+                    f.BeginInvoke(action);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                debug_print("post ui action fallback: " + ex.Message);
+            }
+
+            Thread thread = new Thread(delegate()
+            {
+                action();
+            });
+            thread.IsBackground = true;
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+        }
+        private void set_is_send_ucl(bool value)
+        {
+            is_send_ucl = value;
         }
         public bool start_phone_mode()
         {

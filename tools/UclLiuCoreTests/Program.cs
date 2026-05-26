@@ -28,6 +28,7 @@ internal static class Program
         failed += Run("selected text transform does not use stale clipboard", TestSelectedTextTransformDoesNotUseStaleClipboard);
         failed += Run("selected text transform prefers first successful source", TestSelectedTextTransformPrefersFirstSuccessfulSource);
         failed += Run("selected text transform falls back through sources in order", TestSelectedTextTransformFallsBackThroughSourcesInOrder);
+        failed += Run("selected text transform dispatcher posts work outside hook", TestSelectedTextTransformDispatcherPostsWorkOutsideHook);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
         failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
         failed += Run("output router forces paste for PTT browser titles", TestOutputRouterForcesPasteForPttBrowserTitles);
@@ -388,6 +389,49 @@ internal static class Program
         AssertTrue(ok, "selected text transform should fall back to ctrl+c source");
         AssertEqual("UCL", sent);
         AssertSequence(new string[] { "uia", "wm_copy", "ctrl_c" }, calls.ToArray());
+    }
+
+    private static void TestSelectedTextTransformDispatcherPostsWorkOutsideHook()
+    {
+        List<Action> postedActions = new List<Action>();
+        List<string> events = new List<string>();
+        FakeSelectedTextTransformCommand command = new FakeSelectedTextTransformCommand("ucl");
+        SelectedTextTransformDispatcher dispatcher = new SelectedTextTransformDispatcher(
+            delegate(Action action)
+            {
+                events.Add("post");
+                postedActions.Add(action);
+            },
+            delegate(bool isSending)
+            {
+                events.Add("send=" + isSending.ToString());
+            },
+            delegate(string message)
+            {
+                events.Add("log:" + message);
+            });
+
+        dispatcher.Queue(
+            command,
+            ",,,x",
+            delegate(string selected)
+            {
+                events.Add("transform");
+                return selected.ToUpperInvariant();
+            },
+            delegate(string output)
+            {
+                events.Add("output:" + output);
+            });
+
+        AssertEqual(0, command.RunCount);
+        AssertSequence(new string[] { "post" }, events.ToArray());
+        AssertEqual(1, postedActions.Count);
+
+        postedActions[0]();
+
+        AssertEqual(1, command.RunCount);
+        AssertSequence(new string[] { "post", "send=True", "transform", "output:UCL", "send=False" }, events.ToArray());
     }
 
     private static void TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste()
@@ -890,6 +934,26 @@ internal static class Program
             selectedText = success ? text : null;
             error = success ? null : name + " failed";
             return success;
+        }
+    }
+
+    private sealed class FakeSelectedTextTransformCommand : ISelectedTextTransformCommand
+    {
+        private readonly string selectedText;
+
+        public FakeSelectedTextTransformCommand(string selectedText)
+        {
+            this.selectedText = selectedText;
+        }
+
+        public int RunCount { get; private set; }
+
+        public bool TryRun(Func<string, string> transform, Action<string> sendOutput, out string error)
+        {
+            RunCount++;
+            sendOutput(transform(selectedText));
+            error = null;
+            return true;
         }
     }
 

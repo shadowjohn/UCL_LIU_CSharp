@@ -241,6 +241,7 @@
 - 對照 Python 版後確認：Python 版會先清空剪貼簿，再同步送 `Ctrl+C` 取得目前框選文字，避免複製失敗時讀到舊剪貼簿。
 - 進一步評估後，`Ctrl+C` 應作為最後 fallback；標準文字控制項可先嘗試 UI Automation，傳統 Win32 控制項可再嘗試 `WM_COPY`。
 - C# 版仍使用舊式 `SendKeys.Send("^C")` 搭配固定 `Sleep(500)`，沒有先清剪貼簿；`,,,x/z` 分支也沒有清掉 `last_key` 或回傳 `true` 吃掉尾鍵。
+- Notepad++ 的編輯區是 Scintilla，實測仍不穩，推測原因是 C# 版在 low-level keyboard hook callback 內同步做取字、複製與出字，目標 App 還沒機會處理 copy 訊息。
 
 ### 實作紀錄
 
@@ -249,10 +250,11 @@
 - `,,,z` 改為「框選文字 -> 簡轉繁 -> 最簡字根 -> 出字」。
 - `,,,x` 改為「框選字根 -> 文字 -> 出字」。
 - 兩個指令執行後會清掉 `last_key` 並回傳 `true`，避免尾鍵繼續進入後續 hook 流程。
-- 送 `Ctrl+C` 期間保留 `is_send_ucl` 防護，避免自己的快捷鍵被 hook 當成使用者輸入。
+- `,,,x/z` 只在 hook 內排程工作，真正取字、轉換與出字改由 WinForms `BeginInvoke` 延後到 hook 回傳後執行。
+- 取字與出字期間保留 `is_send_ucl` 防護，避免自己的快捷鍵與 `SendInput` 被 hook 當成使用者輸入。
 
 ### 驗證紀錄
 
-- 先新增核心測試並確認紅燈：缺少 `SelectedTextTransformCommand` / `ISelectedTextSource`。
+- 先新增核心測試並確認紅燈：缺少 `SelectedTextTransformCommand` / `ISelectedTextSource` / hook 外排程 dispatcher。
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
 - `MSBuild.exe uclliu.sln /t:Rebuild ...` 的正式輸出被正在執行的 `uclliu.exe` 鎖住；改用臨時 `OutDir` build 通過。
