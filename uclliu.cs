@@ -16,12 +16,14 @@ namespace uclliu
         private readonly UnicodeSendInputOutput unicodeSendInputOutput = new UnicodeSendInputOutput();
         private readonly WindowMessageCharOutput windowMessageCharOutput = new WindowMessageCharOutput();
         private readonly ClipboardPasteOutput clipboardPasteOutput = new ClipboardPasteOutput();
+        private readonly TsfBridgeOutput tsfBridgeOutput = new TsfBridgeOutput();
         private readonly SelectedTextTransformCommand selectedTextTransformCommand = new SelectedTextTransformCommand();
         private readonly SelectedTextTransformDispatcher selectedTextTransformDispatcher;
         private readonly DeferredTextOutputDispatcher deferredTextOutputDispatcher;
         private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
         private readonly KeyboardHookLatencyMonitor keyboardHookLatencyMonitor = new KeyboardHookLatencyMonitor(KeyboardHookPerformancePolicy.SlowHookThresholdMilliseconds, KeyboardHookPerformancePolicy.SlowHookLogIntervalMilliseconds);
         private readonly AsyncPerformanceLogger performanceLogger;
+        public readonly TsfBridgeManager tsfBridgeManager;
         public string VERSION = UclLiuAppInfo.Version;
         public FileStream lockFileString;
         public string CUSTOM_JSON_FILE
@@ -95,6 +97,7 @@ namespace uclliu
         public uclliu(ref Form1 _f)
         {
             f = _f;
+            tsfBridgeManager = new TsfBridgeManager(my.pwd());
             selectedTextTransformDispatcher = new SelectedTextTransformDispatcher(post_ui_action, set_is_send_ucl, debug_print);
             deferredTextOutputDispatcher = new DeferredTextOutputDispatcher(post_ui_action);
             performanceLogger = new AsyncPerformanceLogger(my.pwd() + "\\UCLLIU_performance.log");
@@ -594,6 +597,7 @@ namespace uclliu
             config["DEFAULT"]["PLAY_SOUND_ENABLE"] = "0"; //#打字音
             config["DEFAULT"]["STARTUP_DEFAULT_UCL"] = "1"; //#啟動時，預設為 肥，改為 0 則為 英
             config["DEFAULT"]["ENABLE_HALF_FULL"] = "1"; //#允許切換 全形半形
+            config["DEFAULT"]["TSF_BRIDGE_TIMEOUT_MS"] = TsfBridgeConstants.DefaultTimeoutMilliseconds.ToString(); //#TSF Bridge pipe timeout
 
             debug_print(INI_CONFIG_FILE);
             if (my.is_file(INI_CONFIG_FILE))
@@ -694,6 +698,7 @@ namespace uclliu
             {
                 config["DEFAULT"]["ENABLE_HALF_FULL"] = "1";
             }
+            config["DEFAULT"]["TSF_BRIDGE_TIMEOUT_MS"] = TsfBridgeSettings.NormalizeTimeout(config["DEFAULT"]["TSF_BRIDGE_TIMEOUT_MS"], TsfBridgeConstants.DefaultTimeoutMilliseconds).ToString();
             config["DEFAULT"]["SEND_KIND_1_PASTE"] = config["DEFAULT"]["SEND_KIND_1_PASTE"].Trim();
             config["DEFAULT"]["SEND_KIND_1_PASTE"] = config["DEFAULT"]["SEND_KIND_1_PASTE"].Replace("\"", "");
             config["DEFAULT"]["SEND_KIND_2_BIG5"] = config["DEFAULT"]["SEND_KIND_2_BIG5"].Trim();
@@ -1715,7 +1720,7 @@ namespace uclliu
             return foregroundProcessNameCache;
         }
 
-        private bool try_send_output(TextOutputMode outputMode, string data, out string error)
+        private bool try_send_output(TextOutputMode outputMode, string data, int foregroundProcessId, out string error)
         {
             error = null;
             is_send_ucl = true;
@@ -1733,6 +1738,8 @@ namespace uclliu
                         return clipboardPasteOutput.TryPasteText(data, "^{v}", out error);
                     case TextOutputMode.PasteBig5:
                         return clipboardPasteOutput.TryPasteAnsiText(my.UTF8toBig5(data), "^{v}", out error);
+                    case TextOutputMode.TsfBridge:
+                        return tsfBridgeOutput.TryCommitText(data, foregroundProcessId, get_tsf_bridge_timeout_ms(), out error);
                     default:
                         error = "unknown output mode: " + outputMode;
                         return false;
@@ -1771,6 +1778,11 @@ namespace uclliu
                 isWindows11OrLaterCache = WindowsVersionDetector.IsWindows11OrLater();
             }
             return isWindows11OrLaterCache.Value;
+        }
+
+        private int get_tsf_bridge_timeout_ms()
+        {
+            return TsfBridgeSettings.NormalizeTimeout(config["DEFAULT"]["TSF_BRIDGE_TIMEOUT_MS"], TsfBridgeConstants.DefaultTimeoutMilliseconds);
         }
 
         private string prepare_senddata_text(string data)
@@ -1844,9 +1856,11 @@ namespace uclliu
             TextOutputContext outputContext = new TextOutputContext(p_info["PROCESS_NAME"], p_info["PROCESS_TITLE"], is_windows11_or_later());
             TextOutputMode outputMode = TextOutputRouter.Select(DEFAULT_OUTPUT_TYPE, outputContext, sendkey_paste_shift_ins_apps, sendkey_paste_ctrl_v_apps, sendkey_paste_big5_apps);
             debug_print("senddata output mode:" + outputMode.ToString());
+            int foregroundProcessId = 0;
+            Int32.TryParse(p_info["PROCESS_PID"], out foregroundProcessId);
 
             string outputError;
-            if (try_send_output(outputMode, data, out outputError))
+            if (try_send_output(outputMode, data, foregroundProcessId, out outputError))
             {
                 return;
             }
@@ -1854,7 +1868,7 @@ namespace uclliu
             debug_print("senddata primary output failed:" + outputError);
             if (outputMode != TextOutputMode.UnicodeSendInput && outputMode != TextOutputMode.PasteBig5)
             {
-                if (try_send_output(TextOutputMode.UnicodeSendInput, data, out outputError))
+                if (try_send_output(TextOutputMode.UnicodeSendInput, data, foregroundProcessId, out outputError))
                 {
                     return;
                 }

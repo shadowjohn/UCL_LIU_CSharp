@@ -29,6 +29,16 @@ namespace uclliu
             return "【" + Mark(IsOutputType(outputType, "PASTE")) + "】複製貼上模式";
         }
 
+        public static string OutputModeTsf(string outputType)
+        {
+            return "【" + Mark(IsOutputType(outputType, "TSF")) + "】TSF出字模式";
+        }
+
+        public static string TsfBridgeStatus(bool isRegistered)
+        {
+            return isRegistered ? "TSF Bridge 已註冊" : "TSF Bridge 未註冊";
+        }
+
         private static bool IsOutputType(string outputType, string expected)
         {
             return (outputType ?? "DEFAULT").Trim().ToUpperInvariant() == expected;

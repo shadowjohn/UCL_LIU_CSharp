@@ -4,10 +4,18 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ---
 
-## [Unreleased] - 2026-05-26
+## [Unreleased] - 2026-05-27
 
 ### Added
 
+- 新增 `TsfBridge.cs`，以外掛式方式移植 Python 版 TSF Bridge：
+  - 定位 `tsf_bridge` assets 與架構對應 DLL
+  - 檢查 CLSID 註冊狀態與目前權限
+  - 透過 UAC 啟動註冊/解除註冊腳本
+  - 以 named pipe 呼叫 `commit_text`，失敗時 fallback 回 Unicode `SendInput`
+- 專案加入 Python 版 TSF Bridge DLL 與 `register_tsf_bridge.bat` / `unregister_tsf_bridge.bat` / `unlock_tsf_bridge.ps1`，build 時複製到輸出目錄。
+- 右下角選單新增「TSF Bridge 管理」，支援狀態檢查、註冊、解除註冊、解除 DLL 封鎖與開啟 Windows 輸入法設定。
+- 右下角出字模式新增「TSF出字模式」，此模式為手動選用，不會自動改變預設出字流程。
 - 新增 `TypingSound.cs`，支援：
   - `wavs\*.wav` 音效掃描
   - Enter / Delete / Backspace / Space 特殊鍵音效
@@ -37,6 +45,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - tray menu 改在 `ContextMenu.Popup` 前即時重建，避免右下角選單狀態慢半拍才更新。
 - tray icon 左鍵也可打開同一份選單，右鍵維持既有托盤選單行為。
 - Unicode `SendInput` 由整串一次送出改為逐字送出，貼近 Python 版 `SendKeysCtypes` 的出字節奏。
+- 低依賴說明改為「主程式無 NuGet / 無 DLL 合併；TSF Bridge 為選配外掛 DLL」。
 
 ### Fixed
 
@@ -61,6 +70,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - Notepad++ 不列入預設貼上模式，也不再預設走 `WM_CHAR`，先回到逐字 Unicode `SendInput` 驗證 Python-style 出字手感。
 - 補上 Notepad++ 相容註記：自動完成 popup 可能攔截 Scintilla 按鍵/焦點流程，關閉自動完成後逐字 `SendInput` 可正常打字。
 - 修正「顯示短根」只改記憶體狀態、不會寫回 `UCLLIU.ini` 的問題；啟動時也會正確套用 `SP` 設定。
+- TSF Bridge pipe 會先嘗試 foreground PID 專用 pipe，再退回全域 pipe；預設 timeout 80ms，避免 TSF context 不存在時拖住一般出字。
 
 ### Verification
 

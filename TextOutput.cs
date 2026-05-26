@@ -14,7 +14,8 @@ namespace uclliu
         WindowMessageChar,
         PasteShiftInsert,
         PasteCtrlV,
-        PasteBig5
+        PasteBig5,
+        TsfBridge
     }
 
     public sealed class TextOutputContext
@@ -63,6 +64,11 @@ namespace uclliu
             if (outputType == "PASTE")
             {
                 return TextOutputMode.PasteShiftInsert;
+            }
+
+            if (outputType == "TSF")
+            {
+                return TextOutputMode.TsfBridge;
             }
 
             if (IsPttWindow(context.WindowTitle))

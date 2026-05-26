@@ -18,6 +18,8 @@ internal static class Program
         failed += Run("tray menu text marks current output mode", TestTrayMenuTextMarksCurrentOutputMode);
         failed += Run("tray menu text marks boolean settings", TestTrayMenuTextMarksBooleanSettings);
         failed += Run("tray menu opens on left and right click", TestTrayMenuOpensOnLeftAndRightClick);
+        failed += Run("tsf bridge assets prefer architecture subfolder", TestTsfBridgeAssetsPreferArchitectureSubfolder);
+        failed += Run("tsf bridge command text is stable", TestTsfBridgeCommandText);
         failed += Run("short root setting toggles and persists SP", TestShortRootSettingTogglesAndPersistsSp);
         failed += Run("short root setting reads normalized config", TestShortRootSettingReadsNormalizedConfig);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
@@ -44,8 +46,12 @@ internal static class Program
         failed += Run("deferred text output dispatcher prepares before posting", TestDeferredTextOutputDispatcherPreparesBeforePosting);
         failed += Run("deferred text output dispatcher preserves label update order", TestDeferredTextOutputDispatcherPreservesLabelUpdateOrder);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
+        failed += Run("output router supports manual tsf mode", TestOutputRouterSupportsManualTsfMode);
         failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
         failed += Run("default compatibility keeps Notepad++ on unicode sendinput", TestDefaultCompatibilityKeepsNotepadPlusPlusOnUnicodeSendInput);
+        failed += Run("tsf bridge protocol escapes json and parses ok", TestTsfBridgeProtocolEscapesJsonAndParsesOk);
+        failed += Run("tsf bridge output tries pid pipe before global pipe", TestTsfBridgeOutputTriesPidPipeBeforeGlobalPipe);
+        failed += Run("tsf bridge output does not try global pipe after commit failure", TestTsfBridgeOutputDoesNotTryGlobalPipeAfterCommitFailure);
         failed += Run("window message char output posts each character to focused control", TestWindowMessageCharOutputPostsToFocusedControl);
         failed += Run("output router forces paste for PTT browser titles", TestOutputRouterForcesPasteForPttBrowserTitles);
         failed += Run("output router forces paste for Windows 11 Notepad", TestOutputRouterForcesPasteForWindows11Notepad);
@@ -189,6 +195,8 @@ internal static class Program
         AssertEqual("【　】正常出字模式（Unicode）", TrayMenuText.OutputModeDefault("PASTE"));
         AssertEqual("【●】BIG5模式", TrayMenuText.OutputModeBig5("BIG5"));
         AssertEqual("【●】複製貼上模式", TrayMenuText.OutputModePaste("PASTE"));
+        AssertEqual("【●】TSF出字模式", TrayMenuText.OutputModeTsf("TSF"));
+        AssertEqual("【　】TSF出字模式", TrayMenuText.OutputModeTsf("DEFAULT"));
     }
 
     private static void TestTrayMenuTextMarksBooleanSettings()
@@ -202,6 +210,40 @@ internal static class Program
         AssertTrue(TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Left), "left click should open tray menu");
         AssertTrue(TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Right), "right click should open tray menu");
         AssertTrue(!TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Middle), "middle click should not open tray menu");
+    }
+
+    private static void TestTsfBridgeAssetsPreferArchitectureSubfolder()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "uclliu-tsf-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(dir, "tsf_bridge", "x64"));
+        Directory.CreateDirectory(Path.Combine(dir, "tsf_bridge", "x86"));
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "tsf_bridge", "UclTsfBridge.dll"), "root");
+            File.WriteAllText(Path.Combine(dir, "tsf_bridge", "x64", "UclTsfBridge.dll"), "x64");
+            File.WriteAllText(Path.Combine(dir, "tsf_bridge", "x86", "UclTsfBridge.dll"), "x86");
+            File.WriteAllText(Path.Combine(dir, "tsf_bridge", "register_tsf_bridge.bat"), "");
+            File.WriteAllText(Path.Combine(dir, "tsf_bridge", "unregister_tsf_bridge.bat"), "");
+            File.WriteAllText(Path.Combine(dir, "tsf_bridge", "unlock_tsf_bridge.ps1"), "");
+
+            TsfBridgeAssets assets = TsfBridgeAssetLocator.Locate(dir, true);
+
+            AssertTrue(assets.HasBridgeDll, "bridge dll should be found");
+            AssertTrue(assets.BridgeDllPath.EndsWith(Path.Combine("tsf_bridge", "x64", "UclTsfBridge.dll"), StringComparison.OrdinalIgnoreCase), "x64 dll should be preferred");
+            AssertTrue(assets.HasRegisterScript, "register script should be found");
+            AssertTrue(assets.HasUnregisterScript, "unregister script should be found");
+            AssertTrue(assets.HasUnlockScript, "unlock script should be found");
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    private static void TestTsfBridgeCommandText()
+    {
+        AssertEqual("TSF Bridge 已註冊", TrayMenuText.TsfBridgeStatus(true));
+        AssertEqual("TSF Bridge 未註冊", TrayMenuText.TsfBridgeStatus(false));
     }
 
     private static void TestShortRootSettingTogglesAndPersistsSp()
@@ -637,6 +679,13 @@ internal static class Program
         AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("PASTE", "notepad.exe", shiftInsertApps, ctrlVApps, big5Apps));
     }
 
+    private static void TestOutputRouterSupportsManualTsfMode()
+    {
+        List<string> empty = new List<string>();
+
+        AssertEqual((int)TextOutputMode.TsfBridge, (int)TextOutputRouter.Select("TSF", "notepad.exe", empty, empty, empty));
+    }
+
     private static void TestOutputRouterMatchesAppNamesWithOptionalExeSuffix()
     {
         List<string> shiftInsertApps = new List<string>() { "rimworldwin64.exe" };
@@ -667,6 +716,47 @@ internal static class Program
         AssertTrue(ok, "window message char output should report success");
         AssertEqual(null, error);
         AssertSequence(new string[] { "42:肥", "42:A" }, gateway.PostedMessages.ToArray());
+    }
+
+    private static void TestTsfBridgeProtocolEscapesJsonAndParsesOk()
+    {
+        string request = TsfBridgeProtocol.BuildCommitTextRequest("肥\"\\\n米");
+
+        AssertEqual("{\"cmd\":\"commit_text\",\"text\":\"肥\\\"\\\\\\n米\"}\n", request);
+        AssertTrue(TsfBridgeProtocol.IsOkResponse("{\"ok\":true,\"queued\":true}\n"), "ok true response should be accepted");
+        AssertTrue(!TsfBridgeProtocol.IsOkResponse("{\"ok\":false,\"error\":\"COMMIT_FAILED\"}\n"), "ok false response should be rejected");
+        AssertEqual("COMMIT_FAILED", TsfBridgeProtocol.GetErrorCode("{\"ok\":false,\"error\":\"COMMIT_FAILED\"}\n"));
+    }
+
+    private static void TestTsfBridgeOutputTriesPidPipeBeforeGlobalPipe()
+    {
+        FakeTsfBridgePipeClientFactory factory = new FakeTsfBridgePipeClientFactory();
+        factory.Responses["uclliu_tsf_bridge_123"] = "{\"ok\":false,\"error\":\"PIPE_ERROR\"}\n";
+        factory.Responses["uclliu_tsf_bridge"] = "{\"ok\":true}\n";
+        TsfBridgeOutput output = new TsfBridgeOutput(factory);
+
+        string error;
+        bool ok = output.TryCommitText("肥", 123, 80, out error);
+
+        AssertTrue(ok, "global pipe fallback should succeed");
+        AssertEqual(null, error);
+        AssertSequence(new string[] { "uclliu_tsf_bridge_123", "uclliu_tsf_bridge" }, factory.CreatedPipes.ToArray());
+        AssertEqual("{\"cmd\":\"commit_text\",\"text\":\"肥\"}\n", factory.LastRequest);
+    }
+
+    private static void TestTsfBridgeOutputDoesNotTryGlobalPipeAfterCommitFailure()
+    {
+        FakeTsfBridgePipeClientFactory factory = new FakeTsfBridgePipeClientFactory();
+        factory.Responses["uclliu_tsf_bridge_123"] = "{\"ok\":false,\"error\":\"COMMIT_FAILED\"}\n";
+        factory.Responses["uclliu_tsf_bridge"] = "{\"ok\":true}\n";
+        TsfBridgeOutput output = new TsfBridgeOutput(factory);
+
+        string error;
+        bool ok = output.TryCommitText("肥", 123, 80, out error);
+
+        AssertTrue(!ok, "commit failure should not fall through to global pipe");
+        AssertContains(error, "COMMIT_FAILED");
+        AssertSequence(new string[] { "uclliu_tsf_bridge_123" }, factory.CreatedPipes.ToArray());
     }
 
     private static void TestOutputRouterForcesPasteForPttBrowserTitles()
@@ -1177,6 +1267,54 @@ internal static class Program
         {
             PostedMessages.Add(windowHandle.ToInt64().ToString() + ":" + textChar);
             return true;
+        }
+    }
+
+    private sealed class FakeTsfBridgePipeClientFactory : ITsfBridgePipeClientFactory
+    {
+        public readonly Dictionary<string, string> Responses = new Dictionary<string, string>(StringComparer.Ordinal);
+        public readonly List<string> CreatedPipes = new List<string>();
+        public string LastRequest;
+
+        public ITsfBridgePipeClient Create(string pipeName)
+        {
+            CreatedPipes.Add(pipeName);
+            string response;
+            if (!Responses.TryGetValue(pipeName, out response))
+            {
+                response = "{\"ok\":false,\"error\":\"PIPE_ERROR\"}\n";
+            }
+            return new FakeTsfBridgePipeClient(this, response);
+        }
+
+        private sealed class FakeTsfBridgePipeClient : ITsfBridgePipeClient
+        {
+            private readonly FakeTsfBridgePipeClientFactory owner;
+            private readonly string response;
+
+            public FakeTsfBridgePipeClient(FakeTsfBridgePipeClientFactory owner, string response)
+            {
+                this.owner = owner;
+                this.response = response;
+            }
+
+            public void Connect(int timeoutMilliseconds)
+            {
+            }
+
+            public void WriteRequest(string request)
+            {
+                owner.LastRequest = request;
+            }
+
+            public string ReadResponse()
+            {
+                return response;
+            }
+
+            public void Dispose()
+            {
+            }
         }
     }
 

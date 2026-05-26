@@ -1318,10 +1318,65 @@ namespace uclliu
                 case "【　】複製貼上模式":
                     ucl.DEFAULT_OUTPUT_TYPE = "PASTE";
                     break;
+                case "【●】TSF出字模式":
+                case "【　】TSF出字模式":
+                    ucl.DEFAULT_OUTPUT_TYPE = "TSF";
+                    break;
             }
 
             //Console.WriteLine(ucl.DEFAULT_OUTPUT_TYPE);
             //Console.WriteLine(((MenuItem)sender).Text);
+        }
+        private void menu_tsf_bridge_status(object sender, EventArgs e)
+        {
+            TsfBridgeStatus status = ucl.tsfBridgeManager.GetStatus();
+            MessageBox.Show(this, status.ToDisplayText(), "TSF Bridge 狀態", MessageBoxButtons.OK, status.IsReady ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+        private void menu_tsf_bridge_register(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show(
+                this,
+                "將開啟 UAC 註冊 UCLLIU TSF Bridge。\n\n註冊完成後，請到 Windows 輸入法設定加入 UCLLIU TSF Bridge，再從肥米選單切到 TSF出字模式。",
+                "註冊 TSF Bridge",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Information);
+            if (result != DialogResult.OK)
+            {
+                return;
+            }
+
+            string message;
+            bool ok = ucl.tsfBridgeManager.TryRegister(out message);
+            MessageBox.Show(this, message, "註冊 TSF Bridge", MessageBoxButtons.OK, ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+        private void menu_tsf_bridge_unregister(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show(
+                this,
+                "將開啟 UAC 解除註冊 UCLLIU TSF Bridge。\n\n若正在使用 TSF 輸入法，請先切回其他 Windows 輸入法。",
+                "解除註冊 TSF Bridge",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Warning);
+            if (result != DialogResult.OK)
+            {
+                return;
+            }
+
+            string message;
+            bool ok = ucl.tsfBridgeManager.TryUnregister(out message);
+            MessageBox.Show(this, message, "解除註冊 TSF Bridge", MessageBoxButtons.OK, ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+        private void menu_tsf_bridge_unlock(object sender, EventArgs e)
+        {
+            string message;
+            bool ok = ucl.tsfBridgeManager.TryUnlock(out message);
+            MessageBox.Show(this, message, "解除 TSF Bridge DLL 封鎖", MessageBoxButtons.OK, ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+        private void menu_tsf_bridge_settings(object sender, EventArgs e)
+        {
+            string message;
+            bool ok = ucl.tsfBridgeManager.TryOpenInputMethodSettings(out message);
+            MessageBox.Show(this, message, "Windows 輸入設定", MessageBoxButtons.OK, ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
         }
         private void m_ctrlsp_switch(object sender, EventArgs e)
         {
@@ -1485,7 +1540,19 @@ namespace uclliu
             cSubMenu.MenuItems.Add(TrayMenuText.OutputModeDefault(ucl.DEFAULT_OUTPUT_TYPE), this.menu_change_senddata_kind);
             cSubMenu.MenuItems.Add(TrayMenuText.OutputModeBig5(ucl.DEFAULT_OUTPUT_TYPE), this.menu_change_senddata_kind);
             cSubMenu.MenuItems.Add(TrayMenuText.OutputModePaste(ucl.DEFAULT_OUTPUT_TYPE), this.menu_change_senddata_kind);
+            cSubMenu.MenuItems.Add(TrayMenuText.OutputModeTsf(ucl.DEFAULT_OUTPUT_TYPE), this.menu_change_senddata_kind);
             cMenu.MenuItems.Add(cSubMenu);
+
+            TsfBridgeStatus tsfStatus = ucl.tsfBridgeManager.GetStatus();
+            bool isTsfRegistered = tsfStatus.Registry != null && tsfStatus.Registry.IsRegistered;
+            MenuItem tsfMenu = new MenuItem();
+            tsfMenu.Text = "4.TSF Bridge 管理";
+            tsfMenu.MenuItems.Add(TrayMenuText.TsfBridgeStatus(isTsfRegistered), this.menu_tsf_bridge_status);
+            tsfMenu.MenuItems.Add("註冊 TSF Bridge", this.menu_tsf_bridge_register);
+            tsfMenu.MenuItems.Add("解除註冊 TSF Bridge", this.menu_tsf_bridge_unregister);
+            tsfMenu.MenuItems.Add("解除 DLL 封鎖", this.menu_tsf_bridge_unlock);
+            tsfMenu.MenuItems.Add("開啟 Windows 輸入法設定", this.menu_tsf_bridge_settings);
+            cMenu.MenuItems.Add(tsfMenu);
 
             cMenu.MenuItems.Add(TrayMenuText.ToggleItem("5.", ucl.config["DEFAULT"]["CTRL_SP"] == "1", "使用 CTRL+SPACE 切換輸入法"), this.m_ctrlsp_switch);
 

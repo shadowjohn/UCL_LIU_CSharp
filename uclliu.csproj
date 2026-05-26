@@ -138,6 +138,7 @@
     <Compile Include="ShortRootDisplaySetting.cs" />
     <Compile Include="TextOutput.cs" />
     <Compile Include="TrayMenuText.cs" />
+    <Compile Include="TsfBridge.cs" />
     <Compile Include="TypingSound.cs" />
     <Compile Include="UclLiuAppInfo.cs" />
     <Compile Include="uclliu.cs" />
@@ -186,6 +187,9 @@
   <ItemGroup>
     <Content Include="uclliu_logo.ico" />
     <Content Include="wavs\*.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="tsf_bridge\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

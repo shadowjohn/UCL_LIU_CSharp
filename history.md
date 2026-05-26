@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-05-27 - TSF Bridge 外掛式 fallback 移植
+
+### 任務目標
+
+1. 參考 Python 版 TSF Bridge，但 C# 版先採外掛式 fallback，不把 TSF 打進預設核心出字流程。
+2. 補右下角 TSF Bridge 狀態檢查、註冊、解除註冊與管理員權限導引。
+3. 讓 C# 版可自行攜帶 TSF Bridge DLL 與腳本，build 後複製到 `bin\Debug\tsf_bridge`。
+
+### 實作紀錄
+
+- 新增 `TsfBridge.cs`，集中處理 `tsf_bridge` assets 定位、CLSID 註冊狀態、UAC 腳本啟動、named pipe protocol 與 `commit_text` fallback。
+- 新增手動 `TSF出字模式`；只有使用者切到 TSF 模式時才嘗試 pipe，失敗後退回 Unicode `SendInput`。
+- 右下角選單新增「TSF Bridge 管理」，可檢查狀態、註冊、解除註冊、解除 DLL 封鎖與開啟 Windows 輸入法設定。
+- 加入 Python 版 `UclTsfBridge.dll`、x64/x86 DLL 與註冊/解除註冊腳本，作為 C# 版可選外掛。
+- README/CHANGELOG/GOALS 更新目前狀態：主程式仍無 NuGet 與 DLL 合併，TSF Bridge 是選配外掛 DLL。
+
+### 驗證紀錄
+
+- 先新增 TSF Bridge assets、tray text、router、protocol 與 pipe fallback 核心測試並確認紅燈。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 第一次因既有 `uclliu.exe` 鎖住輸出檔失敗；停止執行中的肥米後重跑通過，僅保留既有 `Form1.lParam` 未使用警告。
+
+---
+
 ## 2026-05-27 - Notepad++ hook 內同步送字實驗撤回
 
 ### 任務目標

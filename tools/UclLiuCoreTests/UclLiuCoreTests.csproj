@@ -21,6 +21,7 @@
     <Compile Include="..\..\ShortRootDisplaySetting.cs" Link="ShortRootDisplaySetting.cs" />
     <Compile Include="..\..\TextOutput.cs" Link="TextOutput.cs" />
     <Compile Include="..\..\TrayMenuText.cs" Link="TrayMenuText.cs" />
+    <Compile Include="..\..\TsfBridge.cs" Link="TsfBridge.cs" />
     <Compile Include="..\..\TypingSound.cs" Link="TypingSound.cs" />
     <Compile Include="..\..\UclLiuAppInfo.cs" Link="UclLiuAppInfo.cs" />
     <Compile Include="..\..\UiLayoutCalculator.cs" Link="UiLayoutCalculator.cs" />

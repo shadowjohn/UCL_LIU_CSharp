@@ -353,3 +353,9 @@ bin/*
 UCLLIU.ini
 UCLLIU.lock
 dist/
+
+!tsf_bridge/
+!tsf_bridge/x64/
+!tsf_bridge/x86/
+!tsf_bridge/x64/UclTsfBridge.dll
+!tsf_bridge/x86/UclTsfBridge.dll
