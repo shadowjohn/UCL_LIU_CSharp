@@ -17,6 +17,7 @@
     <Compile Include="..\..\PinyiCandidateSelector.cs" Link="PinyiCandidateSelector.cs" />
     <Compile Include="..\..\PhoneCodeTable.cs" Link="PhoneCodeTable.cs" />
     <Compile Include="..\..\SimpleIni.cs" Link="SimpleIni.cs" />
+    <Compile Include="..\..\ShortRootDisplaySetting.cs" Link="ShortRootDisplaySetting.cs" />
     <Compile Include="..\..\TextOutput.cs" Link="TextOutput.cs" />
     <Compile Include="..\..\TrayMenuText.cs" Link="TrayMenuText.cs" />
     <Compile Include="..\..\TypingSound.cs" Link="TypingSound.cs" />

@@ -18,6 +18,8 @@ internal static class Program
         failed += Run("tray menu text marks current output mode", TestTrayMenuTextMarksCurrentOutputMode);
         failed += Run("tray menu text marks boolean settings", TestTrayMenuTextMarksBooleanSettings);
         failed += Run("tray menu opens on left and right click", TestTrayMenuOpensOnLeftAndRightClick);
+        failed += Run("short root setting toggles and persists SP", TestShortRootSettingTogglesAndPersistsSp);
+        failed += Run("short root setting reads normalized config", TestShortRootSettingReadsNormalizedConfig);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
@@ -195,6 +197,35 @@ internal static class Program
         AssertTrue(TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Left), "left click should open tray menu");
         AssertTrue(TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Right), "right click should open tray menu");
         AssertTrue(!TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Middle), "middle click should not open tray menu");
+    }
+
+    private static void TestShortRootSettingTogglesAndPersistsSp()
+    {
+        SimpleIniData config = new SimpleIniData();
+        config["DEFAULT"]["SP"] = "0";
+        int saveCount = 0;
+
+        bool enabled = ShortRootDisplaySetting.Toggle(config, false, delegate { saveCount++; });
+
+        AssertTrue(enabled, "toggle should enable short root display");
+        AssertEqual("1", config["DEFAULT"]["SP"]);
+        AssertEqual(1, saveCount);
+
+        enabled = ShortRootDisplaySetting.Toggle(config, enabled, delegate { saveCount++; });
+
+        AssertTrue(!enabled, "toggle should disable short root display");
+        AssertEqual("0", config["DEFAULT"]["SP"]);
+        AssertEqual(2, saveCount);
+    }
+
+    private static void TestShortRootSettingReadsNormalizedConfig()
+    {
+        AssertTrue(!ShortRootDisplaySetting.IsEnabled("0"), "0 should disable short root display");
+        AssertTrue(ShortRootDisplaySetting.IsEnabled("1"), "1 should enable short root display");
+        AssertTrue(ShortRootDisplaySetting.IsEnabled("9"), "positive values should enable short root display");
+        AssertEqual("0", ShortRootDisplaySetting.Normalize("-1"));
+        AssertEqual("0", ShortRootDisplaySetting.Normalize("bad"));
+        AssertEqual("1", ShortRootDisplaySetting.Normalize("9"));
     }
 
     private static void TestShortModeWidth()

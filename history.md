@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-05-26 - 顯示短根設定寫回 INI
+
+### 任務目標
+
+1. 修正 tray menu 點選「顯示短根」後沒有寫回 `UCLLIU.ini` 的問題。
+2. 啟動時依照 INI 的 `SP` 值還原短根顯示狀態。
+
+### 根因判斷
+
+- `run_toggle_sp()` 只切換 `is_display_sp` 記憶體旗標，沒有同步更新 `config["DEFAULT"]["SP"]`，也沒有呼叫 `saveConfig()`。
+- `loadConfig()` 只正規化 `SP` 字串，沒有把值套回 `is_display_sp`。
+
+### 實作紀錄
+
+- 新增 `ShortRootDisplaySetting`，集中處理 `SP` 正規化、讀取與切換儲存。
+- `run_toggle_sp()` 改為同步更新 `SP=0/1` 並立即 `saveConfig()`。
+- `loadConfig()` 改為正規化 `SP` 後套回 `is_display_sp`。
+
+### 驗證紀錄
+
+- 新增核心測試確認短根切換會更新 `SP` 並呼叫 save callback。
+- 新增核心測試確認 `SP` 正規化與讀取規則。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-26 - tray icon 左右鍵開啟選單
 
 ### 任務目標

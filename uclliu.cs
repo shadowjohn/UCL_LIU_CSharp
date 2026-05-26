@@ -338,7 +338,7 @@ namespace uclliu
         }
         public void run_toggle_sp()
         {
-            is_display_sp = (is_display_sp == false) ? true : false;
+            is_display_sp = ShortRootDisplaySetting.Toggle(config, is_display_sp, saveConfig);
         }
         private void post_ui_action(Action action)
         {
@@ -643,7 +643,8 @@ namespace uclliu
             config["DEFAULT"]["SEND_KIND_1_PASTE"] = config["DEFAULT"]["SEND_KIND_1_PASTE"].ToString().Trim();
             config["DEFAULT"]["SEND_KIND_2_BIG5"] = config["DEFAULT"]["SEND_KIND_2_BIG5"].ToString().Trim();
             config["DEFAULT"]["KEYBOARD_VOLUME"] = TypingSoundVolume.Normalize(config["DEFAULT"]["KEYBOARD_VOLUME"], 30).ToString();
-            config["DEFAULT"]["SP"] = Convert.ToInt32(config["DEFAULT"]["SP"]).ToString();
+            config["DEFAULT"]["SP"] = ShortRootDisplaySetting.Normalize(config["DEFAULT"]["SP"]);
+            is_display_sp = ShortRootDisplaySetting.IsEnabled(config["DEFAULT"]["SP"]);
             config["DEFAULT"]["SHOW_PHONE_CODE"] = Convert.ToInt32(config["DEFAULT"]["SHOW_PHONE_CODE"]).ToString();
             if (Convert.ToInt32(config["DEFAULT"]["SHOW_PHONE_CODE"]) <= 0)
             {
