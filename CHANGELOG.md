@@ -47,6 +47,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 延後送字時改為先同步清候選與輸入狀態，只延後真正輸出，避免快速接第二字時被上一字送出流程清掉狀態。
 - Unicode `SendInput` 加上肥米專用 `dwExtraInfo` 標記，hook 只放行肥米自己的 injected event；送字期間的真人按鍵不再穿透成英文。
 - keyboard hook 超過 20ms 會節流寫入 `UCLLIU_performance.log`，方便追 CPU high loading 下的卡頓來源。
+- 輸入中的 label repaint 與短模式欄寬調整改排到 UI queue，hook 內只保留候選狀態計算，降低 Notepad++ 高負載漏字根的機率。
 - 打字音效的 wav 音量快取與檔案準備移到背景執行緒，降低第一次按鍵或切換時卡 UI 的機會。
 - 打字音效改為預載 wav 到記憶體並重用播放 handle，熱路徑不再每鍵建立 `SoundPlayer`、`PlaySync()` 或查檔案 timestamp。
 - 打字音效播放改用 `winmm.dll` 的 `waveOut` one-shot，每次按鍵使用獨立播放 handle，避免連打時前一個聲音被截斷。

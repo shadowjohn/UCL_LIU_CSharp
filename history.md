@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-05-26 - hook 內 UI label 更新延後
+
+### 任務目標
+
+1. 針對 Notepad++ 在 CPU high loading 下字根漏進編輯區的情況，先把 hook 內同步 UI repaint 移出熱路徑。
+2. 保留候選查表在 hook 內同步完成，避免空白選字或下一鍵判斷拿不到最新候選狀態。
+
+### 根因判斷
+
+- slow hook log 已抓到 Notepad++ 回呼超過 20ms。
+- `type_label_set_text()` / `word_label_set_text()` 在 hook 內同步改 WinForms label 與短模式欄寬，會增加 UI thread callback 時間。
+
+### 實作紀錄
+
+- 新增 `queue_type_label_update()` / `queue_word_label_update()`，把 label text/color 與短模式欄寬調整排到 `BeginInvoke` 後執行。
+- `show_search()` 仍在 hook 內同步更新 `ucl_find_data`，只把實際 label 顯示延後。
+- 避免使用舊 label text 覆蓋新候選，候選文字與顏色改一次排入同一個 UI update。
+
+### 驗證紀錄
+
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-26 - CPU high loading 下的 hook 快修與量測
 
 ### 任務目標

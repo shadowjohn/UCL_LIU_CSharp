@@ -924,6 +924,68 @@ namespace uclliu
             set_column_width(3, get_short_mode_width(f.word_label.Text));
             f.LP.ResumeLayout(false);
         }
+        private void queue_type_label_update(string text, Color foreColor)
+        {
+            post_form_ui_action(delegate
+            {
+                f.type_label.Text = text;
+                f.type_label.ForeColor = foreColor;
+                update_short_mode_columns();
+            });
+        }
+        private void queue_word_label_update(string text)
+        {
+            queue_word_label_update(text, null);
+        }
+        private void queue_word_label_update(string text, Color? foreColor)
+        {
+            post_form_ui_action(delegate
+            {
+                f.word_label.Text = text;
+                if (foreColor.HasValue)
+                {
+                    f.word_label.ForeColor = foreColor.Value;
+                }
+                update_short_mode_columns();
+            });
+        }
+        private void post_form_ui_action(Action action)
+        {
+            if (action == null || f == null || f.IsDisposed)
+            {
+                return;
+            }
+
+            MethodInvoker invoker = delegate
+            {
+                try
+                {
+                    if (f != null && !f.IsDisposed)
+                    {
+                        action();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    debug_print("post form ui action failed: " + ex.Message);
+                }
+            };
+
+            try
+            {
+                if (f.IsHandleCreated)
+                {
+                    f.BeginInvoke(invoker);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                debug_print("begin invoke label update failed: " + ex.Message);
+            }
+
+            invoker();
+        }
         private int get_short_mode_width(string text)
         {
             int maxWidth = Math.Max(0, Screen.PrimaryScreen.WorkingArea.Width - 160);
@@ -1309,7 +1371,9 @@ namespace uclliu
         }
         public bool type_label_set_text(string last_word_label_txt, bool showOnly)
         {
-            f.type_label.Text = play_ucl_label;
+            Color normalColor = Color.Black;
+            Color hintColor = Color.FromArgb(0, 127, 255);
+            queue_type_label_update(play_ucl_label, is_need_use_phone ? hintColor : normalColor);
             if (play_ucl_label.Length > 0)
             {
                 debug_print("ShowSearch");
@@ -1321,10 +1385,8 @@ namespace uclliu
                     }
                     else
                     {
-                        f.word_label.Text = "注:";
-                        f.word_label.ForeColor = Color.FromArgb(0, 127, 255);
+                        queue_word_label_update("注:", hintColor);
                     }
-                    f.type_label.ForeColor = Color.FromArgb(0, 127, 255);
                 }
                 else
                 {
@@ -1335,33 +1397,19 @@ namespace uclliu
             {
                 if (is_need_use_phone)
                 {
-                    f.word_label.Text = "注:";
-                    f.word_label.ForeColor = Color.FromArgb(0, 127, 255);
-                    f.type_label.ForeColor = Color.FromArgb(0, 127, 255);
+                    queue_word_label_update("注:", hintColor);
                 }
                 else
                 {
-                    f.word_label.Text = "";
-                    f.word_label.ForeColor = Color.Black;
-                    f.type_label.ForeColor = Color.Black;
+                    queue_word_label_update("", normalColor);
                 }
             }
             // 如果 last_word_label_txt 不是空值，代表有簡根或其他用字
             //word_label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
-            if (!is_need_use_phone)
-            {
-                f.word_label.ForeColor = Color.Black;
-            }
             if (last_word_label_txt != "")
             {
-                f.word_label.Text = last_word_label_txt;
-                f.word_label.ForeColor = Color.FromArgb(0, 127, 255);
+                queue_word_label_update(last_word_label_txt, hintColor);
                 //word_label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.Color("#007fff"));
-            }
-            //如果是短米，自動看幾個字展長
-            if (config["DEFAULT"]["SHORT_MODE"] == "1")
-            {
-                update_short_mode_columns();
             }
             return true;
         }
@@ -1536,12 +1584,11 @@ namespace uclliu
             {
                 if (is_need_use_phone)
                 {
-                    f.word_label.Text = "注:";
-                    f.word_label.ForeColor = Color.FromArgb(0, 127, 255);
+                    queue_word_label_update("注:", Color.FromArgb(0, 127, 255));
                 }
                 else
                 {
-                    f.word_label.Text = "";
+                    queue_word_label_update("");
                 }
                 //word_label.modify_font(pango.FontDescription(GUI_FONT_18))
                 return true;
@@ -1564,13 +1611,9 @@ namespace uclliu
                 {
                     tmp = string.Format("{0} ...", tmp);
                 }
-                f.word_label.Text = tmp;
+                queue_word_label_update(tmp, is_need_use_phone ? Color.FromArgb(0, 127, 255) : Color.Black);
                 debug_print(string.Format("word_label lens: {0} ", tmp.Length));
                 int lt = tmp.Length;
-                if (config["DEFAULT"]["SHORT_MODE"] == "1")
-                {
-                    update_short_mode_columns();
-                }
             }
             catch (Exception ex)
             {
