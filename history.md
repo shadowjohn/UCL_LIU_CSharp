@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-05-27 - Notepad++ 改試 Python-style 逐字 SendInput
+
+### 任務目標
+
+1. 回應實機測試：Notepad++ 走 `WM_CHAR` 後仍無法穩定出字。
+2. 先不混入 TSF，改只驗證 Python 版舊路徑的關鍵差異：逐字送出。
+
+### 根因判斷
+
+- Python 版早期無 TSF 時，在 `SendKeysCtypes.SendKeys()` 內會將每個 KeyAction 各自呼叫一次 `SendInput`。
+- C# 版原本把整串文字組成一個大型 `INPUT[]` 後一次送出，與 Python 版節奏不同。
+- `WM_CHAR` 對 Notepad++ 實測效果不佳，因此先撤回 Notepad++ 預設 `WM_CHAR` 規則。
+
+### 實作紀錄
+
+- `UnicodeSendInputOutput.TrySendText()` 改為每個字各自建立 down/up events 並呼叫一次 `SendInput`。
+- Notepad++ 預設相容規則回到 `UnicodeSendInput`，不使用剪貼簿。
+- 保留 `WindowMessageCharOutput` 類別供後續實驗，但目前不設為 Notepad++ 預設路徑。
+
+### 驗證紀錄
+
+- 新增核心測試確認 `UnicodeSendInputOutput` 會逐字分批送出。
+- 新增核心測試確認 Notepad++ 預設走 `UnicodeSendInput`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過並更新 `bin\Debug\uclliu.exe`。
+
+---
+
 ## 2026-05-26 - Notepad++ Scintilla 出字改走 WM_CHAR
 
 ### 任務目標

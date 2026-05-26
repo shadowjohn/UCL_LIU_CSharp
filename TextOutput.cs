@@ -36,7 +36,7 @@ namespace uclliu
         public static readonly string[] PasteShiftInsertApps = new string[] { "putty", "pietty", "pcman", "xyplorer", "kinza.exe", "iedit.exe", "rimworldwin64.exe", "windowsterminal.exe", "wt.exe", "mintty.exe" };
         public static readonly string[] PasteCtrlVApps = new string[] { "oxygennotincluded.exe", "iedit_.exe" };
         public static readonly string[] PasteBig5Apps = new string[] { "zip32w", "daqkingcon.exe", "EWinner.exe" };
-        public static readonly string[] WindowMessageCharApps = new string[] { "notepad++" };
+        public static readonly string[] WindowMessageCharApps = new string[] { };
         public static readonly string[] NoUclApps = new string[] { "mstsc.exe", "cyberpunk2077.exe", "vncviewer.exe" };
     }
 
@@ -248,31 +248,54 @@ namespace uclliu
         public const uint KeyEventUnicode = 0x0004;
         public static readonly IntPtr UclExtraInfo = new IntPtr(0x55434C49);
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+        private readonly IUnicodeInputSender inputSender;
+
+        public UnicodeSendInputOutput()
+            : this(new Win32UnicodeInputSender())
+        {
+        }
+
+        internal UnicodeSendInputOutput(IUnicodeInputSender inputSender)
+        {
+            if (inputSender == null)
+            {
+                throw new ArgumentNullException("inputSender");
+            }
+
+            this.inputSender = inputSender;
+        }
 
         public bool TrySendText(string text, out string error)
         {
             error = null;
-            INPUT[] inputs = BuildInputsForText(text);
-            if (inputs.Length == 0)
+            if (text == null)
+            {
+                throw new ArgumentNullException("text");
+            }
+            if (text.Length == 0)
             {
                 return true;
             }
 
-            uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
-            if (sent == inputs.Length)
+            for (int i = 0; i < text.Length; i++)
             {
-                return true;
+                INPUT[] inputs = BuildInputsForText(text[i].ToString());
+                uint sent = inputSender.Send(inputs);
+                if (sent == inputs.Length)
+                {
+                    continue;
+                }
+
+                int lastError = inputSender.GetLastError();
+                error = "SendInput inserted " + sent + "/" + inputs.Length + " events at char " + i;
+                if (lastError != 0)
+                {
+                    error += ": " + new Win32Exception(lastError).Message;
+                }
+                return false;
             }
 
-            int lastError = Marshal.GetLastWin32Error();
-            error = "SendInput inserted " + sent + "/" + inputs.Length + " events";
-            if (lastError != 0)
-            {
-                error += ": " + new Win32Exception(lastError).Message;
-            }
-            return false;
+            return true;
         }
 
         public static INPUT[] BuildInputsForText(string text)
@@ -351,6 +374,28 @@ namespace uclliu
             public uint uMsg;
             public ushort wParamL;
             public ushort wParamH;
+        }
+    }
+
+    internal interface IUnicodeInputSender
+    {
+        uint Send(UnicodeSendInputOutput.INPUT[] inputs);
+        int GetLastError();
+    }
+
+    internal sealed class Win32UnicodeInputSender : IUnicodeInputSender
+    {
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint nInputs, UnicodeSendInputOutput.INPUT[] pInputs, int cbSize);
+
+        public uint Send(UnicodeSendInputOutput.INPUT[] inputs)
+        {
+            return SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(UnicodeSendInputOutput.INPUT)));
+        }
+
+        public int GetLastError()
+        {
+            return Marshal.GetLastWin32Error();
         }
     }
 

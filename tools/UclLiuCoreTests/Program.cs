@@ -31,6 +31,7 @@ internal static class Program
         failed += Run("unicode sendinput builds literal down/up events", TestUnicodeSendInputBuildsLiteralEvents);
         failed += Run("unicode sendinput preserves surrogate pairs", TestUnicodeSendInputPreservesSurrogatePairs);
         failed += Run("unicode sendinput marks injected events", TestUnicodeSendInputMarksInjectedEvents);
+        failed += Run("unicode sendinput sends each character as separate action", TestUnicodeSendInputSendsEachCharacterAsSeparateAction);
         failed += Run("keyboard hook only treats marked injected keys as UCL output", TestKeyboardHookOnlyTreatsMarkedInjectedKeysAsUclOutput);
         failed += Run("keyboard hook performance policy raises priority and cache duration", TestKeyboardHookPerformancePolicy);
         failed += Run("keyboard hook latency monitor logs slow callbacks with throttle", TestKeyboardHookLatencyMonitor);
@@ -44,7 +45,7 @@ internal static class Program
         failed += Run("deferred text output dispatcher preserves label update order", TestDeferredTextOutputDispatcherPreservesLabelUpdateOrder);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
         failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
-        failed += Run("default compatibility routes Notepad++ to window message char", TestDefaultCompatibilityRoutesNotepadPlusPlusToWindowMessageChar);
+        failed += Run("default compatibility keeps Notepad++ on unicode sendinput", TestDefaultCompatibilityKeepsNotepadPlusPlusOnUnicodeSendInput);
         failed += Run("window message char output posts each character to focused control", TestWindowMessageCharOutputPostsToFocusedControl);
         failed += Run("output router forces paste for PTT browser titles", TestOutputRouterForcesPasteForPttBrowserTitles);
         failed += Run("output router forces paste for Windows 11 Notepad", TestOutputRouterForcesPasteForWindows11Notepad);
@@ -381,6 +382,21 @@ internal static class Program
         AssertEqual(UnicodeSendInputOutput.UclExtraInfo, inputs[1].u.ki.dwExtraInfo);
     }
 
+    private static void TestUnicodeSendInputSendsEachCharacterAsSeparateAction()
+    {
+        FakeUnicodeInputSender sender = new FakeUnicodeInputSender();
+        UnicodeSendInputOutput output = new UnicodeSendInputOutput(sender);
+
+        string error;
+        bool ok = output.TrySendText("肥A", out error);
+
+        AssertTrue(ok, "unicode sendinput should succeed");
+        AssertEqual(null, error);
+        AssertEqual(2, sender.Batches.Count);
+        AssertEqual("肥", sender.BatchText(0));
+        AssertEqual("A", sender.BatchText(1));
+    }
+
     private static void TestKeyboardHookOnlyTreatsMarkedInjectedKeysAsUclOutput()
     {
         AssertTrue(KeyboardHookMessage.IsInjected(KeyboardHookMessage.LowLevelInjectedFlag), "injected flag should be detected");
@@ -632,11 +648,11 @@ internal static class Program
         AssertEqual((int)TextOutputMode.PasteBig5, (int)TextOutputRouter.Select("DEFAULT", "ewinner", shiftInsertApps, ctrlVApps, big5Apps));
     }
 
-    private static void TestDefaultCompatibilityRoutesNotepadPlusPlusToWindowMessageChar()
+    private static void TestDefaultCompatibilityKeepsNotepadPlusPlusOnUnicodeSendInput()
     {
         List<string> empty = new List<string>();
 
-        AssertEqual((int)TextOutputMode.WindowMessageChar, (int)TextOutputRouter.Select("DEFAULT", "notepad++.exe", empty, TextOutputCompatibilityDefaults.PasteCtrlVApps, empty));
+        AssertEqual((int)TextOutputMode.UnicodeSendInput, (int)TextOutputRouter.Select("DEFAULT", "notepad++.exe", empty, TextOutputCompatibilityDefaults.PasteCtrlVApps, empty));
         AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("PASTE", "notepad++.exe", empty, TextOutputCompatibilityDefaults.PasteCtrlVApps, empty));
     }
 
@@ -1110,6 +1126,35 @@ internal static class Program
             {
                 OnSend(keys);
             }
+        }
+    }
+
+    private sealed class FakeUnicodeInputSender : IUnicodeInputSender
+    {
+        public readonly List<UnicodeSendInputOutput.INPUT[]> Batches = new List<UnicodeSendInputOutput.INPUT[]>();
+        public uint NextResult = 0;
+        public int LastError = 0;
+
+        public uint Send(UnicodeSendInputOutput.INPUT[] inputs)
+        {
+            Batches.Add(inputs);
+            return NextResult == 0 ? (uint)inputs.Length : NextResult;
+        }
+
+        public int GetLastError()
+        {
+            return LastError;
+        }
+
+        public string BatchText(int index)
+        {
+            UnicodeSendInputOutput.INPUT[] inputs = Batches[index];
+            StringBuilder text = new StringBuilder();
+            for (int i = 0; i < inputs.Length; i += 2)
+            {
+                text.Append((char)inputs[i].u.ki.wScan);
+            }
+            return text.ToString();
         }
     }
 

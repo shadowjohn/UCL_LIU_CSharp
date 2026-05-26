@@ -18,7 +18,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是
 | 項目 | C# 版目前狀態 | Python 版對照 |
 | --- | --- | --- |
 | 核心輸入 | WinForms + low-level keyboard hook | PyHook / PyWin32 |
-| 預設出字 | Unicode `SendInput`，失敗 fallback 舊 `SendKeys` | TSF 可選，失敗 fallback `SendKeysCtypes` / paste |
+| 預設出字 | Python-style 逐字 Unicode `SendInput`，失敗 fallback 舊 `SendKeys` | TSF 可選，失敗 fallback `SendKeysCtypes` / paste |
 | 貼上模式 | 已封裝 retry、timeout、try/finally 還原剪貼簿 | 已有大量 App 特例 |
 | 字碼表 | 支援 `liu.json`、`liu.cin`、`liu-uni.tab` 自動轉換 | 支援來源較多，含 RIME/fcitx/小小輸入法等 |
 | 自定詞庫 | 支援 `custom.json`、右下角選單、`,,,BOX`、單例視窗 | v1.63-v1.65 已完整支援 |
@@ -74,7 +74,7 @@ C# 版目前右下角選單提供三種出字模式：
 
 | 模式 | 目前行為 |
 | --- | --- |
-| 正常出字模式（Unicode） | 預設使用 Unicode `SendInput`，避免舊 `SendKeys` 對 `+ ^ % { } ( )` 等字元的語法干擾 |
+| 正常出字模式（Unicode） | 預設使用逐字 Unicode `SendInput`，貼近 Python 版 `SendKeysCtypes` 每字送出的節奏，並避免舊 `SendKeys` 對 `+ ^ % { } ( )` 等字元的語法干擾 |
 | BIG5 模式 | 以 Big5 文字貼上，保留給舊程式與特定環境 |
 | 複製貼上模式 | 使用剪貼簿貼上，適合 PuTTY、PCMan、部分遊戲或特殊文字框 |
 
@@ -86,7 +86,7 @@ C# 版目前右下角選單提供三種出字模式：
 | --- | --- | --- |
 | Chrome / Edge / Brave / Firefox / Opera 開 PTT | 視窗標題包含 `批踢踢實業坊`、`term.ptt.cc` 或 `ws.ptt.cc` | `Ctrl+V` 貼上 |
 | Win11 Notepad | Windows build >= 22000 且 process 為 `notepad` / `notepad.exe` | `Ctrl+V` 貼上 |
-| Notepad++ | process 為 `notepad++` / `notepad++.exe`，焦點控制項通常為 Scintilla | `WM_CHAR` 視窗訊息，不使用剪貼簿 |
+| Notepad++ | process 為 `notepad++` / `notepad++.exe`，焦點控制項通常為 Scintilla | 逐字 Unicode `SendInput`，不使用剪貼簿 |
 | PuTTY / PCMan / Pietty / Windows Terminal / mintty / RimWorld 等 | process 相容清單 | `Shift+Insert` 貼上 |
 | Oxygen Not Included / PhotoImpact `iedit_` | process 相容清單 | `Ctrl+V` 貼上 |
 | zip32w / DaqKing / EWinner | process 相容清單 | Big5 `Ctrl+V` 貼上 |
@@ -142,7 +142,7 @@ C# 版已追上的重點：
 - `custom.json` 自定詞庫
 - `,,,BOX`
 - 自定詞庫單例視窗
-- 預設 Unicode `SendInput` 出字
+- 預設逐字 Unicode `SendInput` 出字
 - 剪貼簿 paste retry / restore fallback
 - Win11 Notepad、Chrome/Edge/Brave/PTT 標題規則與常見終端相容清單
 - 打字音效、音量設定、特殊鍵音效

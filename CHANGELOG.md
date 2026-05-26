@@ -36,6 +36,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 移除 C# 版不需要的 `dist` 目錄，開發輸出改以 `bin\Debug` / `bin\Release` 為準。
 - tray menu 改在 `ContextMenu.Popup` 前即時重建，避免右下角選單狀態慢半拍才更新。
 - tray icon 左鍵也可打開同一份選單，右鍵維持既有托盤選單行為。
+- Unicode `SendInput` 由整串一次送出改為逐字送出，貼近 Python 版 `SendKeysCtypes` 的出字節奏。
 
 ### Fixed
 
@@ -57,8 +58,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 補回 Python 版後期 `uclcode_rr` 字根反查 hash，`,,,x` 解算數字候選碼時可直接 O(1) 查表。
 - 修正新版 `pinyi.txt` 同音字候選會把注音碼或注音符號混到第 0 候選的問題，並保留舊版 `pinyi.txt` 相容。
 - 補齊新版 `pinyi.txt` 的反向注音表，出字後可依設定顯示讀音。
-- Notepad++ 不列入預設貼上模式，避免正常打字流程動到剪貼簿。
-- Notepad++ 預設改走焦點控制項 `WM_CHAR` 視窗訊息出字，避開 Scintilla 對 Unicode `SendInput` 在高負載下吃字或漏字根的問題，且不使用剪貼簿。
+- Notepad++ 不列入預設貼上模式，也不再預設走 `WM_CHAR`，先回到逐字 Unicode `SendInput` 驗證 Python-style 出字手感。
 - 修正「顯示短根」只改記憶體狀態、不會寫回 `UCLLIU.ini` 的問題；啟動時也會正確套用 `SP` 設定。
 
 ### Verification
