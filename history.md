@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-05-27 - Notepad++ 改試 hook 內同步送字
+
+### 任務目標
+
+1. 回應實機觀察：Python 版不會觸發 Notepad++ 自動完成，但 C# 版延後送字時較容易觸發。
+2. 只針對 Notepad++ 的 `DEFAULT` 模式測試 Python-style 時序，不影響其他 App 的延後送字降載策略。
+
+### 根因判斷
+
+- Python 版在 `OnKeyboardEvent()` 內直接呼叫 `senddata()`，hook callback 尚未回傳就完成出字。
+- C# 版近期為降低 hook 內卡頓，改成 `BeginInvoke` 延後送字；Notepad++ 自動完成 popup 可能在 keyup / Scintilla 狀態更新後先介入。
+- Notepad++ 關閉自動完成後逐字 `SendInput` 可正常打字，表示出字 API 本身可用，問題更像是時序。
+
+### 實作紀錄
+
+- 新增 `TextOutputDispatchPolicy.ShouldSendSynchronously()`，目前只讓 `DEFAULT + notepad++` 回傳 true。
+- `queue_senddata()` / `queue_senddata_with_labels()` 在 Notepad++ `DEFAULT` 模式下直接 `senddata()`，不經 `DeferredTextOutputDispatcher`。
+- `PASTE` / `BIG5` 與其他 App 維持既有 deferred 路徑。
+
+### 驗證紀錄
+
+- 新增核心測試確認 Notepad++ `DEFAULT` 走同步送字，手動 `PASTE` / `BIG5` 不被覆蓋。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過並更新 `bin\Debug\uclliu.exe`。
+
+---
+
 ## 2026-05-27 - Notepad++ 改試 Python-style 逐字 SendInput
 
 ### 任務目標

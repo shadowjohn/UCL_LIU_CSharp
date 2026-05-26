@@ -37,6 +37,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - tray menu 改在 `ContextMenu.Popup` 前即時重建，避免右下角選單狀態慢半拍才更新。
 - tray icon 左鍵也可打開同一份選單，右鍵維持既有托盤選單行為。
 - Unicode `SendInput` 由整串一次送出改為逐字送出，貼近 Python 版 `SendKeysCtypes` 的出字節奏。
+- Notepad++ 在 `DEFAULT` 模式下改走 hook 內同步送字，貼近 Python 版時序，降低自動完成 popup 搶在送字前處理 keyup 的機率。
 
 ### Fixed
 
