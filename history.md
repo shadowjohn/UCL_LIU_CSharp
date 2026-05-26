@@ -162,6 +162,29 @@
 
 ---
 
+## 2026-05-26 - C# 打字音延遲修正
+
+### 問題觀察
+
+- 使用者回報 C# 版打字音比 Python 版 lag，打起來不爽。
+- 對照 Python 版後確認：Python 會把 wav 讀成 `o_song[s]["data"]` 並重用 PyAudio stream。
+- C# 版原本每次按鍵都進 ThreadPool，可能查檔案 timestamp、準備縮放檔、建立 `SoundPlayer`，再用 `PlaySync()` 播放，聲音自然會晚一拍。
+
+### 實作紀錄
+
+- `TypingSoundPlayer` 改為預載 wav bytes，建立並快取 `ITypingSoundHandle`。
+- 熱路徑只挑音效與呼叫 `Play()`，缺快取時背景補載，不等待音效準備。
+- `Form1_Load`、開啟打字音、切換音量時會預熱目前音量的音效。
+- cache key 使用掃描 wav 時記下的檔案時間，不再每次按鍵查檔案 metadata。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `ITypingSoundPlaybackEngine` / `ITypingSoundHandle`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過。
+
+---
+
 ## 2026-05-26 - 新版 pinyi.txt 同音字候選修正
 
 ### 問題觀察

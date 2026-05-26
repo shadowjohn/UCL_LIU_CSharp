@@ -1137,6 +1137,7 @@ namespace uclliu
             }
             //載入 UCLLIU.ini
             ucl.loadConfig();
+            ucl.preload_typing_sound();
             //載入字根檔     
             ucl.loadJsonData();
             //如果有拚音，載入拚音功能
@@ -1319,6 +1320,7 @@ namespace uclliu
             if (ucl.config["DEFAULT"]["PLAY_SOUND_ENABLE"] == "0")
             {
                 ucl.config["DEFAULT"]["PLAY_SOUND_ENABLE"] = "1";
+                ucl.preload_typing_sound();
                 ucl.preview_typing_sound();
             }
             else
@@ -1333,6 +1335,7 @@ namespace uclliu
             int volume = get_volume_from_menu_text(((MenuItem)sender).Text);
             ucl.config["DEFAULT"]["KEYBOARD_VOLUME"] = TypingSoundVolume.Clamp(volume).ToString();
             ucl.saveConfig();
+            ucl.preload_typing_sound();
             ucl.preview_typing_sound();
             cMenu.MenuItems.Clear();
         }

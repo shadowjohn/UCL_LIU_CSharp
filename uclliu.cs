@@ -710,11 +710,18 @@ namespace uclliu
         }
         public void preview_typing_sound()
         {
-            typingSoundPlayer.PlayForKey(0, get_keyboard_volume());
+            typingSoundPlayer.PreviewForKey(0, get_keyboard_volume());
         }
         public void reload_typing_sound()
         {
             typingSoundPlayer.Reload();
+        }
+        public void preload_typing_sound()
+        {
+            if (config["DEFAULT"]["PLAY_SOUND_ENABLE"] == "1")
+            {
+                typingSoundPlayer.WarmUp(get_keyboard_volume());
+            }
         }
         public bool is_simple()
         {

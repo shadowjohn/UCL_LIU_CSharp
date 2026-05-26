@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Media;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 
@@ -128,6 +127,24 @@ namespace uclliu
         public static bool TryScalePcm16WavFile(string sourcePath, string targetPath, int volume)
         {
             byte[] wav = File.ReadAllBytes(sourcePath);
+            byte[] scaledWav;
+            if (!TryScalePcm16WavBytes(wav, volume, out scaledWav))
+            {
+                return false;
+            }
+
+            string directory = Path.GetDirectoryName(targetPath);
+            if (!String.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            File.WriteAllBytes(targetPath, scaledWav);
+            return true;
+        }
+
+        public static bool TryScalePcm16WavBytes(byte[] wav, int volume, out byte[] scaledWav)
+        {
+            scaledWav = null;
             int fmtOffset;
             int fmtSize;
             int dataOffset;
@@ -151,17 +168,12 @@ namespace uclliu
                 return false;
             }
 
+            scaledWav = new byte[wav.Length];
+            Buffer.BlockCopy(wav, 0, scaledWav, 0, wav.Length);
             byte[] pcm = new byte[dataSize];
-            Buffer.BlockCopy(wav, dataOffset, pcm, 0, dataSize);
+            Buffer.BlockCopy(scaledWav, dataOffset, pcm, 0, dataSize);
             byte[] scaled = ScalePcm16Data(pcm, volume);
-            Buffer.BlockCopy(scaled, 0, wav, dataOffset, scaled.Length);
-
-            string directory = Path.GetDirectoryName(targetPath);
-            if (!String.IsNullOrEmpty(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-            File.WriteAllBytes(targetPath, wav);
+            Buffer.BlockCopy(scaled, 0, scaledWav, dataOffset, scaled.Length);
             return true;
         }
 
@@ -212,6 +224,55 @@ namespace uclliu
         }
     }
 
+    public interface ITypingSoundHandle : IDisposable
+    {
+        void Play();
+    }
+
+    public interface ITypingSoundPlaybackEngine
+    {
+        ITypingSoundHandle Create(byte[] wavData);
+    }
+
+    public sealed class SoundPlayerPlaybackEngine : ITypingSoundPlaybackEngine
+    {
+        public ITypingSoundHandle Create(byte[] wavData)
+        {
+            return new SoundPlayerTypingSoundHandle(wavData);
+        }
+    }
+
+    internal sealed class SoundPlayerTypingSoundHandle : ITypingSoundHandle
+    {
+        private readonly object syncRoot = new object();
+        private readonly byte[] wavData;
+        private readonly MemoryStream stream;
+        private readonly SoundPlayer player;
+
+        public SoundPlayerTypingSoundHandle(byte[] wavData)
+        {
+            this.wavData = wavData;
+            stream = new MemoryStream(this.wavData, false);
+            player = new SoundPlayer(stream);
+            player.Load();
+        }
+
+        public void Play()
+        {
+            lock (syncRoot)
+            {
+                stream.Position = 0;
+                player.Play();
+            }
+        }
+
+        public void Dispose()
+        {
+            player.Dispose();
+            stream.Dispose();
+        }
+    }
+
     public sealed class TypingSoundPlayer
     {
         private readonly object syncRoot = new object();
@@ -219,11 +280,11 @@ namespace uclliu
         private readonly TypingSoundKeyState keyState = new TypingSoundKeyState();
         private readonly List<string> normalSounds = new List<string>();
         private readonly Dictionary<int, string> specialSounds = new Dictionary<int, string>();
-        private readonly Dictionary<string, string> scaledSoundCache = new Dictionary<string, string>();
+        private readonly Dictionary<string, long> soundVersions = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, ITypingSoundHandle> playbackCache = new Dictionary<string, ITypingSoundHandle>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> pendingCacheKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly ITypingSoundPlaybackEngine playbackEngine;
         private readonly string baseDirectory;
-        private readonly string cacheDirectory;
-        private int activePlayCount;
-        private const int MaxActivePlayCount = 3;
 
         public TypingSoundPlayer()
             : this(AppDomain.CurrentDomain.BaseDirectory)
@@ -231,9 +292,14 @@ namespace uclliu
         }
 
         public TypingSoundPlayer(string baseDirectory)
+            : this(baseDirectory, new SoundPlayerPlaybackEngine())
+        {
+        }
+
+        public TypingSoundPlayer(string baseDirectory, ITypingSoundPlaybackEngine playbackEngine)
         {
             this.baseDirectory = baseDirectory;
-            cacheDirectory = Path.Combine(Path.GetTempPath(), "UCL_LIU_CSharp", "typing-sound");
+            this.playbackEngine = playbackEngine ?? new SoundPlayerPlaybackEngine();
             Reload();
         }
 
@@ -243,6 +309,8 @@ namespace uclliu
             {
                 normalSounds.Clear();
                 specialSounds.Clear();
+                soundVersions.Clear();
+                ClearPlaybackCache();
 
                 HashSet<string> seenFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (string directory in GetSoundDirectories())
@@ -260,6 +328,7 @@ namespace uclliu
                             continue;
                         }
 
+                        soundVersions[fullPath] = File.GetLastWriteTimeUtc(fullPath).Ticks;
                         int? specialKey = TypingSoundCatalog.GetSpecialKeyCode(fullPath);
                         if (specialKey.HasValue)
                         {
@@ -271,6 +340,21 @@ namespace uclliu
                         }
                     }
                 }
+            }
+        }
+
+        public void WarmUp(int volume)
+        {
+            int safeVolume = TypingSoundVolume.Clamp(volume);
+            if (safeVolume <= 0)
+            {
+                return;
+            }
+
+            List<string> soundPaths = GetAllSoundPathsSnapshot();
+            for (int i = 0; i < soundPaths.Count; i++)
+            {
+                QueuePrepare(soundPaths[i], safeVolume);
             }
         }
 
@@ -292,6 +376,16 @@ namespace uclliu
 
         public void PlayForKey(int keyCode, int volume)
         {
+            PlayForKey(keyCode, volume, false);
+        }
+
+        public void PreviewForKey(int keyCode, int volume)
+        {
+            PlayForKey(keyCode, volume, true);
+        }
+
+        private void PlayForKey(int keyCode, int volume, bool allowSynchronousPrepare)
+        {
             int safeVolume = TypingSoundVolume.Clamp(volume);
             if (safeVolume <= 0)
             {
@@ -304,45 +398,27 @@ namespace uclliu
                 return;
             }
 
-            lock (syncRoot)
+            ITypingSoundHandle handle = GetPreparedHandle(soundPath, safeVolume);
+
+            if (handle == null && allowSynchronousPrepare)
             {
-                if (activePlayCount >= MaxActivePlayCount)
-                {
-                    return;
-                }
-                activePlayCount++;
+                handle = PrepareAndCache(soundPath, safeVolume);
             }
 
-            ThreadPool.QueueUserWorkItem(delegate
+            if (handle == null)
             {
-                try
-                {
-                    string playPath = PrepareSoundPath(soundPath, safeVolume);
-                    if (String.IsNullOrEmpty(playPath))
-                    {
-                        return;
-                    }
+                QueuePrepare(soundPath, safeVolume);
+                return;
+            }
 
-                    using (SoundPlayer player = new SoundPlayer(playPath))
-                    {
-                        player.PlaySync();
-                    }
-                }
-                catch
-                {
-                    // 音效只是 UX 補助，播放失敗不可影響輸入法主流程。
-                }
-                finally
-                {
-                    lock (syncRoot)
-                    {
-                        if (activePlayCount > 0)
-                        {
-                            activePlayCount--;
-                        }
-                    }
-                }
-            });
+            try
+            {
+                handle.Play();
+            }
+            catch
+            {
+                // 音效只是 UX 補助，播放失敗不可影響輸入法主流程。
+            }
         }
 
         private string ChooseSoundPath(int keyCode)
@@ -364,62 +440,128 @@ namespace uclliu
             }
         }
 
-        private string PrepareSoundPath(string sourcePath, int volume)
+        private ITypingSoundHandle GetPreparedHandle(string sourcePath, int volume)
         {
-            if (volume >= 100)
-            {
-                return sourcePath;
-            }
-
-            string cacheKey = sourcePath + "|" + volume.ToString() + "|" + File.GetLastWriteTimeUtc(sourcePath).Ticks.ToString();
+            string cacheKey = BuildCacheKey(sourcePath, volume);
             lock (syncRoot)
             {
-                string cachedPath;
-                if (scaledSoundCache.TryGetValue(cacheKey, out cachedPath) && File.Exists(cachedPath))
+                ITypingSoundHandle handle;
+                if (playbackCache.TryGetValue(cacheKey, out handle))
                 {
-                    return cachedPath;
+                    return handle;
                 }
             }
 
-            string targetPath = Path.Combine(cacheDirectory, BuildCacheFileName(sourcePath, volume));
+            return null;
+        }
+
+        private void QueuePrepare(string sourcePath, int volume)
+        {
+            string cacheKey = BuildCacheKey(sourcePath, volume);
+            lock (syncRoot)
+            {
+                if (playbackCache.ContainsKey(cacheKey) || pendingCacheKeys.Contains(cacheKey))
+                {
+                    return;
+                }
+                pendingCacheKeys.Add(cacheKey);
+            }
+
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                try
+                {
+                    PrepareAndCache(sourcePath, volume);
+                }
+                finally
+                {
+                    lock (syncRoot)
+                    {
+                        pendingCacheKeys.Remove(cacheKey);
+                    }
+                }
+            });
+        }
+
+        private ITypingSoundHandle PrepareAndCache(string sourcePath, int volume)
+        {
+            string cacheKey = BuildCacheKey(sourcePath, volume);
+            lock (syncRoot)
+            {
+                ITypingSoundHandle existingHandle;
+                if (playbackCache.TryGetValue(cacheKey, out existingHandle))
+                {
+                    return existingHandle;
+                }
+            }
+
             try
             {
-                if (!File.Exists(targetPath))
+                byte[] wavData = File.ReadAllBytes(sourcePath);
+                if (volume < 100)
                 {
-                    if (!WavPcmVolumeScaler.TryScalePcm16WavFile(sourcePath, targetPath, volume))
+                    byte[] scaledData;
+                    if (WavPcmVolumeScaler.TryScalePcm16WavBytes(wavData, volume, out scaledData))
                     {
-                        return sourcePath;
+                        wavData = scaledData;
                     }
                 }
 
+                ITypingSoundHandle newHandle = playbackEngine.Create(wavData);
                 lock (syncRoot)
                 {
-                    scaledSoundCache[cacheKey] = targetPath;
+                    ITypingSoundHandle existingHandle;
+                    if (playbackCache.TryGetValue(cacheKey, out existingHandle))
+                    {
+                        newHandle.Dispose();
+                        return existingHandle;
+                    }
+
+                    playbackCache[cacheKey] = newHandle;
+                    return newHandle;
                 }
-                return targetPath;
             }
             catch
             {
-                return sourcePath;
+                return null;
             }
         }
 
-        private string BuildCacheFileName(string sourcePath, int volume)
+        private string BuildCacheKey(string sourcePath, int volume)
         {
-            string name = Path.GetFileNameWithoutExtension(sourcePath);
-            foreach (char invalid in Path.GetInvalidFileNameChars())
+            long lastWriteTicks = 0;
+            lock (syncRoot)
             {
-                name = name.Replace(invalid, '_');
+                soundVersions.TryGetValue(sourcePath, out lastWriteTicks);
             }
+            return sourcePath + "|" + volume.ToString() + "|" + lastWriteTicks.ToString();
+        }
 
-            string hash;
-            using (MD5 md5 = MD5.Create())
+        private List<string> GetAllSoundPathsSnapshot()
+        {
+            lock (syncRoot)
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(sourcePath + "|" + File.GetLastWriteTimeUtc(sourcePath).Ticks.ToString());
-                hash = BitConverter.ToString(md5.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
+                List<string> paths = new List<string>();
+                for (int i = 0; i < normalSounds.Count; i++)
+                {
+                    paths.Add(normalSounds[i]);
+                }
+                foreach (string path in specialSounds.Values)
+                {
+                    paths.Add(path);
+                }
+                return paths;
             }
+        }
 
-            return name + "-" + volume.ToString() + "-" + hash + ".wav";
+        private void ClearPlaybackCache()
+        {
+            foreach (ITypingSoundHandle handle in playbackCache.Values)
+            {
+                handle.Dispose();
+            }
+            playbackCache.Clear();
+            pendingCacheKeys.Clear();
         }
 
         private IEnumerable<string> GetSoundDirectories()

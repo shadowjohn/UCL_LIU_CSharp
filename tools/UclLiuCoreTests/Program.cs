@@ -32,6 +32,7 @@ internal static class Program
         failed += Run("typing sound suppresses repeated keydown until keyup", TestTypingSoundKeyState);
         failed += Run("typing sound catalog maps special wav names", TestTypingSoundCatalogSpecialNames);
         failed += Run("typing sound volume scaler adjusts pcm16 samples", TestTypingSoundVolumeScalerPcm16);
+        failed += Run("typing sound reuses loaded handle on hot playback", TestTypingSoundReusesLoadedHandleOnHotPlayback);
         failed += Run("keyboard hook treats system key messages as key transitions", TestKeyboardHookSystemMessages);
         failed += Run("shift release clears state even when ctrl space is enabled", TestShiftReleaseClearsStateWithCtrlSpace);
         failed += Run("shift release toggles input only for standalone shift mode", TestShiftReleaseToggleRules);
@@ -390,6 +391,28 @@ internal static class Program
         AssertEqual(-16384, ReadInt16(scaled, 6));
     }
 
+    private static void TestTypingSoundReusesLoadedHandleOnHotPlayback()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "uclliu-sound-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllBytes(Path.Combine(dir, "enter.wav"), BuildPcm16WavBytes());
+            FakeTypingSoundPlaybackEngine engine = new FakeTypingSoundPlaybackEngine();
+            TypingSoundPlayer player = new TypingSoundPlayer(dir, engine);
+
+            player.PreviewForKey(13, 100);
+            player.PlayForKey(13, 100);
+
+            AssertEqual(1, engine.CreateCount);
+            AssertEqual(2, engine.TotalPlayCount);
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
     private static void TestKeyboardHookSystemMessages()
     {
         AssertTrue(KeyboardHookMessage.IsKeyDown(0x0100), "WM_KEYDOWN should be keydown");
@@ -555,6 +578,42 @@ internal static class Program
         return index;
     }
 
+    private static byte[] BuildPcm16WavBytes()
+    {
+        byte[] wav = new byte[48];
+        WriteAscii(wav, 0, "RIFF");
+        WriteInt32(wav, 4, 40);
+        WriteAscii(wav, 8, "WAVE");
+        WriteAscii(wav, 12, "fmt ");
+        WriteInt32(wav, 16, 16);
+        WriteInt16(wav, 20, 1);
+        WriteInt16(wav, 22, 1);
+        WriteInt32(wav, 24, 8000);
+        WriteInt32(wav, 28, 16000);
+        WriteInt16(wav, 32, 2);
+        WriteInt16(wav, 34, 16);
+        WriteAscii(wav, 36, "data");
+        WriteInt32(wav, 40, 4);
+        WriteInt16(wav, 44, 1000);
+        WriteInt16(wav, 46, -1000);
+        return wav;
+    }
+
+    private static void WriteAscii(byte[] buffer, int offset, string value)
+    {
+        byte[] data = Encoding.ASCII.GetBytes(value);
+        Buffer.BlockCopy(data, 0, buffer, offset, data.Length);
+    }
+
+    private static void WriteInt32(byte[] buffer, int offset, int value)
+    {
+        byte[] data = BitConverter.GetBytes(value);
+        buffer[offset] = data[0];
+        buffer[offset + 1] = data[1];
+        buffer[offset + 2] = data[2];
+        buffer[offset + 3] = data[3];
+    }
+
     private static void AssertContains(string haystack, string needle)
     {
         if (haystack.IndexOf(needle, StringComparison.Ordinal) < 0)
@@ -685,6 +744,50 @@ internal static class Program
             {
                 throw new InvalidOperationException("fake send failure");
             }
+        }
+    }
+
+    private sealed class FakeTypingSoundPlaybackEngine : ITypingSoundPlaybackEngine
+    {
+        private readonly List<FakeTypingSoundHandle> handles = new List<FakeTypingSoundHandle>();
+
+        public int CreateCount { get; private set; }
+
+        public int TotalPlayCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < handles.Count; i++)
+                {
+                    count += handles[i].PlayCount;
+                }
+                return count;
+            }
+        }
+
+        public ITypingSoundHandle Create(byte[] wavData)
+        {
+            CreateCount++;
+            FakeTypingSoundHandle handle = new FakeTypingSoundHandle();
+            handles.Add(handle);
+            return handle;
+        }
+    }
+
+    private sealed class FakeTypingSoundHandle : ITypingSoundHandle
+    {
+        public int PlayCount { get; private set; }
+        public bool IsDisposed { get; private set; }
+
+        public void Play()
+        {
+            PlayCount++;
+        }
+
+        public void Dispose()
+        {
+            IsDisposed = true;
         }
     }
 }
