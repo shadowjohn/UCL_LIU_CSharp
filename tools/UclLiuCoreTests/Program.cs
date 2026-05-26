@@ -15,6 +15,8 @@ internal static class Program
         failed += Run("app info exposes version and author message", TestAppInfoExposesVersionAndAuthorMessage);
         failed += Run("alt tab window style hides tool window from switcher", TestAltTabWindowStyleHidesToolWindowFromSwitcher);
         failed += Run("foreground process snapshot normalizes process name", TestForegroundProcessSnapshotNormalizesProcessName);
+        failed += Run("tray menu text marks current output mode", TestTrayMenuTextMarksCurrentOutputMode);
+        failed += Run("tray menu text marks boolean settings", TestTrayMenuTextMarksBooleanSettings);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
@@ -168,6 +170,20 @@ internal static class Program
         AssertEqual("測試 - Notepad++", snapshot["PROCESS_TITLE"]);
         AssertEqual("notepad++", snapshot["PROCESS_NAME"]);
         AssertEqual("42", snapshot["PROCESS_PID"]);
+    }
+
+    private static void TestTrayMenuTextMarksCurrentOutputMode()
+    {
+        AssertEqual("【●】正常出字模式（Unicode）", TrayMenuText.OutputModeDefault("DEFAULT"));
+        AssertEqual("【　】正常出字模式（Unicode）", TrayMenuText.OutputModeDefault("PASTE"));
+        AssertEqual("【●】BIG5模式", TrayMenuText.OutputModeBig5("BIG5"));
+        AssertEqual("【●】複製貼上模式", TrayMenuText.OutputModePaste("PASTE"));
+    }
+
+    private static void TestTrayMenuTextMarksBooleanSettings()
+    {
+        AssertEqual("5.【●】使用 CTRL+SPACE 切換輸入法", TrayMenuText.ToggleItem("5.", true, "使用 CTRL+SPACE 切換輸入法"));
+        AssertEqual("5.【　】使用 CTRL+SPACE 切換輸入法", TrayMenuText.ToggleItem("5.", false, "使用 CTRL+SPACE 切換輸入法"));
     }
 
     private static void TestShortModeWidth()

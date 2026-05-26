@@ -1091,11 +1091,13 @@ namespace uclliu
         //}
         uclliu ucl;
         private static Form1 form = null;
-        static ContextMenu cMenu = new ContextMenu();
+        private readonly ContextMenu cMenu = new ContextMenu();
         private CustomDictionaryForm customDictionaryForm = null;
         public Form1()
         {
             InitializeComponent();
+            cMenu.Popup += cMenu_Popup;
+            notifyIcon1.ContextMenu = cMenu;
             //https://stackoverflow.com/questions/12983427/accessing-forms-controls-from-another-class
             form = this;
             ucl = new uclliu(ref form);
@@ -1301,7 +1303,6 @@ namespace uclliu
                     break;
             }
 
-            cMenu.MenuItems.Clear();
             //Console.WriteLine(ucl.DEFAULT_OUTPUT_TYPE);
             //Console.WriteLine(((MenuItem)sender).Text);
         }
@@ -1317,7 +1318,6 @@ namespace uclliu
                     ucl.config["DEFAULT"]["CTRL_SP"] = "1";
                     break;
             }
-            cMenu.MenuItems.Clear();
             ucl.saveConfig();
 
         }
@@ -1334,7 +1334,6 @@ namespace uclliu
                 ucl.config["DEFAULT"]["PLAY_SOUND_ENABLE"] = "0";
             }
             ucl.saveConfig();
-            cMenu.MenuItems.Clear();
         }
         private void menu_change_keyboard_volume(object sender, EventArgs e)
         {
@@ -1343,7 +1342,6 @@ namespace uclliu
             ucl.saveConfig();
             ucl.preload_typing_sound();
             ucl.preview_typing_sound();
-            cMenu.MenuItems.Clear();
         }
         private int get_volume_from_menu_text(string text)
         {
@@ -1374,7 +1372,6 @@ namespace uclliu
                 ucl.config["DEFAULT"]["STARTUP_DEFAULT_UCL"] = "0";
             }
             ucl.saveConfig();
-            cMenu.MenuItems.Clear();
         }
         private void menu_toggle_half_full(object sender, EventArgs e)
         {
@@ -1387,7 +1384,6 @@ namespace uclliu
                 ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] = "0";
             }
             ucl.saveConfig();
-            cMenu.MenuItems.Clear();
         }
         private void menu_run_exit(object sender, EventArgs e)
         {
@@ -1409,7 +1405,6 @@ namespace uclliu
                 ucl.config["DEFAULT"]["SHOW_PHONE_CODE"] = "1";
             }
             ucl.saveConfig();
-            cMenu.MenuItems.Clear();
         }
         private void menu_open_custom_dict(object sender, EventArgs e)
         {
@@ -1436,9 +1431,15 @@ namespace uclliu
         {
             customDictionaryForm = null;
         }
+        private void cMenu_Popup(object sender, EventArgs e)
+        {
+            rebuild_tray_menu();
+        }
         private void NotifyIcon1_MouseClick(object sender, MouseEventArgs e)
         {
-            //加入右下表單
+        }
+        private void rebuild_tray_menu()
+        {
             cMenu.MenuItems.Clear();
             cMenu.MenuItems.Add("1.關於肥米輸入法", this.menu_about_UCL_Click);
 
@@ -1454,107 +1455,35 @@ namespace uclliu
 
             MenuItem cSubMenu = new MenuItem();
             cSubMenu.Text = "3.選擇出字模式";
-            string is_o = "　";
-            if (ucl.DEFAULT_OUTPUT_TYPE == "DEFAULT")
-            {
-                is_o = "●";
-            }
-            else
-            {
-                is_o = "　";
-            }
-            cSubMenu.MenuItems.Add("【" + is_o + "】正常出字模式（Unicode）", this.menu_change_senddata_kind);
-            is_o = "　";
-            if (ucl.DEFAULT_OUTPUT_TYPE == "BIG5")
-            {
-                is_o = "●";
-            }
-            else
-            {
-                is_o = "　";
-            }
-            cSubMenu.MenuItems.Add("【" + is_o + "】BIG5模式", this.menu_change_senddata_kind);
-            is_o = "　";
-            if (ucl.DEFAULT_OUTPUT_TYPE == "PASTE")
-            {
-                is_o = "●";
-            }
-            else
-            {
-                is_o = "　";
-            }
-            cSubMenu.MenuItems.Add("【" + is_o + "】複製貼上模式", this.menu_change_senddata_kind);
+            cSubMenu.MenuItems.Add(TrayMenuText.OutputModeDefault(ucl.DEFAULT_OUTPUT_TYPE), this.menu_change_senddata_kind);
+            cSubMenu.MenuItems.Add(TrayMenuText.OutputModeBig5(ucl.DEFAULT_OUTPUT_TYPE), this.menu_change_senddata_kind);
+            cSubMenu.MenuItems.Add(TrayMenuText.OutputModePaste(ucl.DEFAULT_OUTPUT_TYPE), this.menu_change_senddata_kind);
             cMenu.MenuItems.Add(cSubMenu);
 
-            is_o = "　";
-            if (ucl.config["DEFAULT"]["CTRL_SP"] == "1")
-            {
-                is_o = "●";
-            }
-            else
-            {
-                is_o = "　";
-            }
-            cMenu.MenuItems.Add("5.【" + is_o + "】使用 CTRL+SPACE 切換輸入法", this.m_ctrlsp_switch);
+            cMenu.MenuItems.Add(TrayMenuText.ToggleItem("5.", ucl.config["DEFAULT"]["CTRL_SP"] == "1", "使用 CTRL+SPACE 切換輸入法"), this.m_ctrlsp_switch);
 
-            is_o = "　";
-            if (ucl.is_display_sp == true)
-            {
-                is_o = "●";
-            }
-            else
-            {
-                is_o = "　";
-            }
-            cMenu.MenuItems.Add("6.【" + is_o + "】顯示短根", this.menu_change_sp);
+            cMenu.MenuItems.Add(TrayMenuText.ToggleItem("6.", ucl.is_display_sp, "顯示短根"), this.menu_change_sp);
 
-            is_o = "　";
-            if (ucl.config["DEFAULT"]["SHOW_PHONE_CODE"] == "1")
-            {
-                is_o = "●";
-            }
-            cMenu.MenuItems.Add("7.【" + is_o + "】顯示提示注音", this.menu_change_phone_code);
+            cMenu.MenuItems.Add(TrayMenuText.ToggleItem("7.", ucl.config["DEFAULT"]["SHOW_PHONE_CODE"] == "1", "顯示提示注音"), this.menu_change_phone_code);
 
             MenuItem soundMenu = new MenuItem();
             soundMenu.Text = "8.打字音";
-            is_o = "　";
-            if (ucl.config["DEFAULT"]["PLAY_SOUND_ENABLE"] == "1")
-            {
-                is_o = "●";
-            }
-            soundMenu.MenuItems.Add("【" + is_o + "】打字音啟動", this.menu_toggle_play_sound);
+            soundMenu.MenuItems.Add("【" + TrayMenuText.Mark(ucl.config["DEFAULT"]["PLAY_SOUND_ENABLE"] == "1") + "】打字音啟動", this.menu_toggle_play_sound);
 
             int keyboardVolume = ucl.get_keyboard_volume();
             for (int i = 1; i <= 10; i++)
             {
                 int volume = i * 10;
-                is_o = "　";
-                if (keyboardVolume == volume)
-                {
-                    is_o = "●";
-                }
-                soundMenu.MenuItems.Add("【" + is_o + "】" + volume.ToString() + " %", this.menu_change_keyboard_volume);
+                soundMenu.MenuItems.Add("【" + TrayMenuText.Mark(keyboardVolume == volume) + "】" + volume.ToString() + " %", this.menu_change_keyboard_volume);
             }
             cMenu.MenuItems.Add(soundMenu);
 
-            is_o = "　";
-            if (ucl.config["DEFAULT"]["STARTUP_DEFAULT_UCL"] == "1")
-            {
-                is_o = "●";
-            }
-            cMenu.MenuItems.Add("9.【" + is_o + "】啟動預設為「肥」模式", this.menu_toggle_startup_default_ucl);
+            cMenu.MenuItems.Add(TrayMenuText.ToggleItem("9.", ucl.config["DEFAULT"]["STARTUP_DEFAULT_UCL"] == "1", "啟動預設為「肥」模式"), this.menu_toggle_startup_default_ucl);
 
-            is_o = "　";
-            if (ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] == "1")
-            {
-                is_o = "●";
-            }
-            cMenu.MenuItems.Add("10.【" + is_o + "】允許(Shift+Space)切換 全形/半形", this.menu_toggle_half_full);
+            cMenu.MenuItems.Add(TrayMenuText.ToggleItem("10.", ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] == "1", "允許(Shift+Space)切換 全形/半形"), this.menu_toggle_half_full);
 
             cMenu.MenuItems.Add("11. 自定詞庫", this.menu_open_custom_dict);
             cMenu.MenuItems.Add("12. 離開(Quit)", this.menu_run_exit);
-            notifyIcon1.ContextMenu = cMenu;
-
         }
     }
 }

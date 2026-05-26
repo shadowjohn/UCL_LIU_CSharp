@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-05-26 - tray menu 狀態即時更新
+
+### 任務目標
+
+1. 修正右下角 tray 選單狀態慢半拍才更新的問題。
+2. 避免點選項目後手動清空 menu 造成下一次開啟時短暫空白或舊狀態。
+
+### 實作紀錄
+
+- 將 `NotifyIcon.ContextMenu` 在表單建構時就指向同一份 `ContextMenu`。
+- 選單內容改在 `ContextMenu.Popup` 事件觸發時即時重建，確保 Windows 顯示前已是最新狀態。
+- 移除各 menu handler 裡的 `cMenu.MenuItems.Clear()`，統一只在 `rebuild_tray_menu()` 裡清空重建。
+- 新增 `TrayMenuText`，集中處理 `●` / 全形空白標記與常用選單文字。
+
+### 驗證紀錄
+
+- 先新增 tray menu 標記測試，確認缺少 `TrayMenuText` 時測試紅燈。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.csproj /t:Rebuild /p:Configuration=Debug /p:Platform=AnyCPU` 通過。
+
+---
+
 ## 2026-05-26 - Notepad++ 打字手感追查與 hook 出字延後
 
 ### 任務目標
