@@ -86,6 +86,7 @@ C# 版目前右下角選單提供三種出字模式：
 | --- | --- | --- |
 | Chrome / Edge / Brave / Firefox / Opera 開 PTT | 視窗標題包含 `批踢踢實業坊`、`term.ptt.cc` 或 `ws.ptt.cc` | `Ctrl+V` 貼上 |
 | Win11 Notepad | Windows build >= 22000 且 process 為 `notepad` / `notepad.exe` | `Ctrl+V` 貼上 |
+| Notepad++ | process 為 `notepad++` / `notepad++.exe`，焦點控制項通常為 Scintilla | `WM_CHAR` 視窗訊息，不使用剪貼簿 |
 | PuTTY / PCMan / Pietty / Windows Terminal / mintty / RimWorld 等 | process 相容清單 | `Shift+Insert` 貼上 |
 | Oxygen Not Included / PhotoImpact `iedit_` | process 相容清單 | `Ctrl+V` 貼上 |
 | zip32w / DaqKing / EWinner | process 相容清單 | Big5 `Ctrl+V` 貼上 |

@@ -44,7 +44,8 @@ internal static class Program
         failed += Run("deferred text output dispatcher preserves label update order", TestDeferredTextOutputDispatcherPreservesLabelUpdateOrder);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
         failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
-        failed += Run("default compatibility keeps Notepad++ on unicode sendinput", TestDefaultCompatibilityKeepsNotepadPlusPlusOnUnicodeSendInput);
+        failed += Run("default compatibility routes Notepad++ to window message char", TestDefaultCompatibilityRoutesNotepadPlusPlusToWindowMessageChar);
+        failed += Run("window message char output posts each character to focused control", TestWindowMessageCharOutputPostsToFocusedControl);
         failed += Run("output router forces paste for PTT browser titles", TestOutputRouterForcesPasteForPttBrowserTitles);
         failed += Run("output router forces paste for Windows 11 Notepad", TestOutputRouterForcesPasteForWindows11Notepad);
         failed += Run("typing sound volume clamps to supported range", TestTypingSoundVolumeClamp);
@@ -631,11 +632,25 @@ internal static class Program
         AssertEqual((int)TextOutputMode.PasteBig5, (int)TextOutputRouter.Select("DEFAULT", "ewinner", shiftInsertApps, ctrlVApps, big5Apps));
     }
 
-    private static void TestDefaultCompatibilityKeepsNotepadPlusPlusOnUnicodeSendInput()
+    private static void TestDefaultCompatibilityRoutesNotepadPlusPlusToWindowMessageChar()
     {
         List<string> empty = new List<string>();
 
-        AssertEqual((int)TextOutputMode.UnicodeSendInput, (int)TextOutputRouter.Select("DEFAULT", "notepad++.exe", empty, TextOutputCompatibilityDefaults.PasteCtrlVApps, empty));
+        AssertEqual((int)TextOutputMode.WindowMessageChar, (int)TextOutputRouter.Select("DEFAULT", "notepad++.exe", empty, TextOutputCompatibilityDefaults.PasteCtrlVApps, empty));
+        AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("PASTE", "notepad++.exe", empty, TextOutputCompatibilityDefaults.PasteCtrlVApps, empty));
+    }
+
+    private static void TestWindowMessageCharOutputPostsToFocusedControl()
+    {
+        FakeFocusedTextWindowGateway gateway = new FakeFocusedTextWindowGateway(new IntPtr(42));
+        WindowMessageCharOutput output = new WindowMessageCharOutput(gateway);
+
+        string error;
+        bool ok = output.TrySendText("肥A", out error);
+
+        AssertTrue(ok, "window message char output should report success");
+        AssertEqual(null, error);
+        AssertSequence(new string[] { "42:肥", "42:A" }, gateway.PostedMessages.ToArray());
     }
 
     private static void TestOutputRouterForcesPasteForPttBrowserTitles()
@@ -1095,6 +1110,28 @@ internal static class Program
             {
                 OnSend(keys);
             }
+        }
+    }
+
+    private sealed class FakeFocusedTextWindowGateway : IFocusedTextWindowGateway
+    {
+        private readonly IntPtr focusedWindow;
+        public readonly List<string> PostedMessages = new List<string>();
+
+        public FakeFocusedTextWindowGateway(IntPtr focusedWindow)
+        {
+            this.focusedWindow = focusedWindow;
+        }
+
+        public IntPtr GetFocusedWindow()
+        {
+            return focusedWindow;
+        }
+
+        public bool PostChar(IntPtr windowHandle, char textChar)
+        {
+            PostedMessages.Add(windowHandle.ToInt64().ToString() + ":" + textChar);
+            return true;
         }
     }
 

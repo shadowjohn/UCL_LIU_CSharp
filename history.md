@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-05-26 - Notepad++ Scintilla 出字改走 WM_CHAR
+
+### 任務目標
+
+1. 修正只有 Notepad++ 打不出字或字根漏進編輯區的問題。
+2. 保持使用者要求：Notepad++ 不回退到剪貼簿貼上。
+
+### 根因判斷
+
+- Notepad++ 與肥米都是 Medium integrity / 非管理員，排除 UIPI 權限阻擋。
+- 前景焦點控制項為 `Scintilla`，且 slow hook log 顯示 Notepad++ 能進 hook，但 Unicode `SendInput` 在高負載下仍有吃字或漏字根風險。
+- 因此問題偏向 Scintilla 對 `KEYEVENTF_UNICODE` 的接收路徑不穩，而不是肥米整體 hook 失效。
+
+### 實作紀錄
+
+- 新增 `WindowMessageCharOutput`，將文字逐字 `PostMessage(WM_CHAR)` 到目前 foreground thread 的 focused control。
+- `TextOutputCompatibilityDefaults.WindowMessageCharApps` 將 Notepad++ 預設導到 `WM_CHAR` 出字模式。
+- `PASTE` / `BIG5` / 既有相容清單仍維持原優先順序，使用者手動切貼上模式時不被 Notepad++ 規則覆蓋。
+
+### 驗證紀錄
+
+- 新增核心測試確認 Notepad++ 預設走 `WindowMessageChar`，且 `PASTE` 模式仍維持貼上。
+- 新增核心測試確認 `WindowMessageCharOutput` 會把每個字送到 focused control。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過並更新 `bin\Debug\uclliu.exe`。
+
+---
+
 ## 2026-05-26 - Shift 高負載誤切英模式保護
 
 ### 任務目標

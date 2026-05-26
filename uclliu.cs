@@ -14,6 +14,7 @@ namespace uclliu
     {
         myinclude my = new myinclude();
         private readonly UnicodeSendInputOutput unicodeSendInputOutput = new UnicodeSendInputOutput();
+        private readonly WindowMessageCharOutput windowMessageCharOutput = new WindowMessageCharOutput();
         private readonly ClipboardPasteOutput clipboardPasteOutput = new ClipboardPasteOutput();
         private readonly SelectedTextTransformCommand selectedTextTransformCommand = new SelectedTextTransformCommand();
         private readonly SelectedTextTransformDispatcher selectedTextTransformDispatcher;
@@ -1724,6 +1725,8 @@ namespace uclliu
                 {
                     case TextOutputMode.UnicodeSendInput:
                         return unicodeSendInputOutput.TrySendText(data, out error);
+                    case TextOutputMode.WindowMessageChar:
+                        return windowMessageCharOutput.TrySendText(data, out error);
                     case TextOutputMode.PasteShiftInsert:
                         return clipboardPasteOutput.TryPasteText(data, "+{INSERT}", out error);
                     case TextOutputMode.PasteCtrlV:

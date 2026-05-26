@@ -11,6 +11,7 @@ namespace uclliu
     public enum TextOutputMode
     {
         UnicodeSendInput,
+        WindowMessageChar,
         PasteShiftInsert,
         PasteCtrlV,
         PasteBig5
@@ -35,6 +36,7 @@ namespace uclliu
         public static readonly string[] PasteShiftInsertApps = new string[] { "putty", "pietty", "pcman", "xyplorer", "kinza.exe", "iedit.exe", "rimworldwin64.exe", "windowsterminal.exe", "wt.exe", "mintty.exe" };
         public static readonly string[] PasteCtrlVApps = new string[] { "oxygennotincluded.exe", "iedit_.exe" };
         public static readonly string[] PasteBig5Apps = new string[] { "zip32w", "daqkingcon.exe", "EWinner.exe" };
+        public static readonly string[] WindowMessageCharApps = new string[] { "notepad++" };
         public static readonly string[] NoUclApps = new string[] { "mstsc.exe", "cyberpunk2077.exe", "vncviewer.exe" };
     }
 
@@ -86,6 +88,11 @@ namespace uclliu
             if (MatchesProcess(context.ProcessName, big5Apps))
             {
                 return TextOutputMode.PasteBig5;
+            }
+
+            if (MatchesProcess(context.ProcessName, TextOutputCompatibilityDefaults.WindowMessageCharApps))
+            {
+                return TextOutputMode.WindowMessageChar;
             }
 
             return TextOutputMode.UnicodeSendInput;
@@ -347,10 +354,68 @@ namespace uclliu
         }
     }
 
+    public sealed class WindowMessageCharOutput
+    {
+        private readonly IFocusedTextWindowGateway gateway;
+
+        public WindowMessageCharOutput()
+            : this(new Win32FocusedTextWindowGateway())
+        {
+        }
+
+        internal WindowMessageCharOutput(IFocusedTextWindowGateway gateway)
+        {
+            if (gateway == null)
+            {
+                throw new ArgumentNullException("gateway");
+            }
+
+            this.gateway = gateway;
+        }
+
+        public bool TrySendText(string text, out string error)
+        {
+            if (text == null)
+            {
+                throw new ArgumentNullException("text");
+            }
+
+            error = null;
+            if (text.Length == 0)
+            {
+                return true;
+            }
+
+            IntPtr focusedWindow = gateway.GetFocusedWindow();
+            if (focusedWindow == IntPtr.Zero)
+            {
+                error = "focused window unavailable";
+                return false;
+            }
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (!gateway.PostChar(focusedWindow, text[i]))
+                {
+                    error = "PostMessage WM_CHAR failed at char " + i;
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+
     internal enum ClipboardTextKind
     {
         Unicode,
         Ansi
+    }
+
+    internal interface IFocusedTextWindowGateway
+    {
+        IntPtr GetFocusedWindow();
+        bool PostChar(IntPtr windowHandle, char textChar);
     }
 
     internal interface IClipboardGateway
@@ -412,6 +477,71 @@ namespace uclliu
         public void SendWait(string keys)
         {
             SendKeys.SendWait(keys);
+        }
+    }
+
+    internal sealed class Win32FocusedTextWindowGateway : IFocusedTextWindowGateway
+    {
+        private const uint WmChar = 0x0102;
+
+        public IntPtr GetFocusedWindow()
+        {
+            IntPtr foregroundWindow = GetForegroundWindow();
+            if (foregroundWindow == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+
+            uint processId;
+            uint threadId = GetWindowThreadProcessId(foregroundWindow, out processId);
+            GuiThreadInfo info = new GuiThreadInfo();
+            info.cbSize = Marshal.SizeOf(typeof(GuiThreadInfo));
+            if (threadId != 0 && GetGUIThreadInfo(threadId, ref info) && info.hwndFocus != IntPtr.Zero)
+            {
+                return info.hwndFocus;
+            }
+
+            return foregroundWindow;
+        }
+
+        public bool PostChar(IntPtr windowHandle, char textChar)
+        {
+            return PostMessage(windowHandle, WmChar, new IntPtr((int)textChar), IntPtr.Zero);
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool GetGUIThreadInfo(uint idThread, ref GuiThreadInfo lpgui);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct GuiThreadInfo
+        {
+            public int cbSize;
+            public int flags;
+            public IntPtr hwndActive;
+            public IntPtr hwndFocus;
+            public IntPtr hwndCapture;
+            public IntPtr hwndMenuOwner;
+            public IntPtr hwndMoveSize;
+            public IntPtr hwndCaret;
+            public Rect rcCaret;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Rect
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
         }
     }
 
