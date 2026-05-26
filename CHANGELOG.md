@@ -31,6 +31,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - `KEYBOARD_VOLUME` 會限制在 0-100，避免錯誤設定造成音量邏輯異常。
 - `ENABLE_HALF_FULL=0` 時，`Shift+Space` 不再觸發半全形切換。
 - `STARTUP_DEFAULT_UCL=0` 時，啟動後會套用英模式。
+- 移除 C# 版不需要的 `dist` 目錄，開發輸出改以 `bin\Debug` / `bin\Release` 為準。
 
 ### Fixed
 

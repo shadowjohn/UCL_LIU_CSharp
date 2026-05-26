@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-05-26 - 移除 C# 版 dist 目錄
+
+### 任務目標
+
+1. C# 版產物回歸 Visual Studio/MSBuild 的 `bin\Debug` / `bin\Release`。
+2. 移除容易與 Python 版打包習慣混淆的 `dist` 目錄。
+
+### 實作紀錄
+
+- 刪除 tracked `dist/uclliu.exe` 與 `dist/pinyi.txt`。
+- README 發行檔清單移除 `dist` 項目，改註明自行編譯輸出位置。
+- `.gitignore` 改為忽略整個 `dist/`，避免之後手動測試產物又被簽入。
+- CHANGELOG 補上 C# 版不維護 `dist` 的說明。
+
+### 驗證紀錄
+
+- `rg -n "\bdist\b" README.md CHANGELOG.md history.md .gitignore`
+
+---
+
 ## 2026-05-26 - Notepad++ 貼上模式回退
 
 ### 任務目標
