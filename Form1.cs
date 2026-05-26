@@ -182,8 +182,8 @@ namespace uclliu
                 return OK;
             }
             //如果是需要跳過的 app ，就跳過
-            var p_info = ucl.getForegroundWindowProcessInfo();
-            if (TextOutputRouter.MatchesProcess(p_info["PROCESS_NAME"].ToString(), ucl.sendkey_not_use_ucl_apps))
+            string foregroundProcessName = ucl.getForegroundWindowProcessName();
+            if (TextOutputRouter.MatchesProcess(foregroundProcessName, ucl.sendkey_not_use_ucl_apps))
             {
                 if (ucl.is_ucl())
                 {

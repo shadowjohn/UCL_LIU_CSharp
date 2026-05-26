@@ -14,6 +14,7 @@ internal static class Program
         failed += Run("ensure json converts cin in working directory", TestEnsureJsonConvertsCin);
         failed += Run("app info exposes version and author message", TestAppInfoExposesVersionAndAuthorMessage);
         failed += Run("alt tab window style hides tool window from switcher", TestAltTabWindowStyleHidesToolWindowFromSwitcher);
+        failed += Run("foreground process snapshot normalizes process name", TestForegroundProcessSnapshotNormalizesProcessName);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
@@ -155,6 +156,15 @@ internal static class Program
 
         AssertEqual(0, adjusted & AltTabWindowStyle.WsExAppWindow);
         AssertEqual(AltTabWindowStyle.WsExToolWindow, adjusted & AltTabWindowStyle.WsExToolWindow);
+    }
+
+    private static void TestForegroundProcessSnapshotNormalizesProcessName()
+    {
+        Dictionary<string, string> snapshot = ForegroundProcessSnapshot.Create("測試 - Notepad++", "Notepad++", 42);
+
+        AssertEqual("測試 - Notepad++", snapshot["PROCESS_TITLE"]);
+        AssertEqual("notepad++", snapshot["PROCESS_NAME"]);
+        AssertEqual("42", snapshot["PROCESS_PID"]);
     }
 
     private static void TestShortModeWidth()

@@ -83,6 +83,9 @@ namespace uclliu
         private DateTime foregroundProcessCachedAt = DateTime.MinValue;
         private IntPtr foregroundProcessCachedHandle = IntPtr.Zero;
         private Dictionary<string, string> foregroundProcessCache = null;
+        private DateTime foregroundProcessNameCachedAt = DateTime.MinValue;
+        private IntPtr foregroundProcessNameCachedHandle = IntPtr.Zero;
+        private string foregroundProcessNameCache = "";
         private bool? isWindows11OrLaterCache = null;
         static Form1 f;
         public uclliu(ref Form1 _f)
@@ -1579,33 +1582,46 @@ namespace uclliu
             try
             {
                 Process p = Process.GetProcessById((int)Proc_PID);
-                try
-                {
-                    //某些 app 會當，如 skype
-                    Proc_NAME = my.mainname(p.MainModule.FileName.ToLower());
-                }
-                catch (Exception ex)
-                {
-                    Proc_NAME = p.ProcessName.ToLower();
-                    debug_print("Get ProcName fallback:" + ex.Message);
-                }
+                Proc_NAME = p.ProcessName;
             }
             catch (Exception ex)
             {
 
                 debug_print("Get ProcName failure:" + ex.Message);
             }
-            Dictionary<string, string> output = new Dictionary<string, string>();
-            //PROCESS_TITLE 標題
-            //PROCESS_NAME 檔名
-            //PROCESS_PID 編號
-            output["PROCESS_TITLE"] = Proc_TITLE;
-            output["PROCESS_NAME"] = Proc_NAME;
-            output["PROCESS_PID"] = Proc_PID.ToString();
+            Dictionary<string, string> output = ForegroundProcessSnapshot.Create(Proc_TITLE, Proc_NAME, Proc_PID);
             foregroundProcessCachedHandle = handle;
             foregroundProcessCachedAt = now;
             foregroundProcessCache = output;
             return output;
+        }
+
+        public string getForegroundWindowProcessName()
+        {
+            IntPtr handle = Form1.GetForegroundWindow();
+            DateTime now = DateTime.UtcNow;
+            if (handle == foregroundProcessNameCachedHandle && (now - foregroundProcessNameCachedAt) <= foregroundProcessCacheDuration)
+            {
+                return foregroundProcessNameCache;
+            }
+
+            uint Proc_PID;
+            Form1.GetWindowThreadProcessId(handle, out Proc_PID);
+            string processName = "";
+            try
+            {
+                Process p = Process.GetProcessById((int)Proc_PID);
+                processName = p.ProcessName;
+            }
+            catch (Exception ex)
+            {
+                debug_print("Get foreground process name failure:" + ex.Message);
+            }
+
+            foregroundProcessNameCachedHandle = handle;
+            foregroundProcessNameCachedAt = now;
+            foregroundProcessNameCache = ForegroundProcessSnapshot.NormalizeProcessName(processName);
+            return foregroundProcessNameCache;
         }
 
         private bool try_send_output(TextOutputMode outputMode, string data, out string error)

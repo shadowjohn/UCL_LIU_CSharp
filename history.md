@@ -322,3 +322,24 @@
 
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
 - `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 搭配臨時 `OutDir` 通過，僅保留既有 `Form1.lParam` 未使用警告。
+
+---
+
+## 2026-05-26 - Notepad++ 切入時 hook 熱路徑降載
+
+### 問題觀察
+
+- 使用者回報剛進 Notepad++ 時有時像 crash，短時間無法切換，過一會又恢復。
+- 追查 `LowLevelKeyboardProc` 後發現每個 key event 一開始都呼叫 `getForegroundWindowProcessInfo()`。
+- 該流程會同步讀 foreground title、PID，且原本會碰 `Process.MainModule.FileName`；在 low-level keyboard hook 內做這些跨 process 查詢，切換到剛載入的 App 時容易造成短暫卡住。
+
+### 實作紀錄
+
+- 新增 `ForegroundProcessSnapshot`，集中 normalize process name 與 snapshot dictionary。
+- hook 前段 no-ucl app 判斷改呼叫 `getForegroundWindowProcessName()`，只查 foreground PID 與 `Process.ProcessName`，不讀視窗標題、不碰 `MainModule`。
+- `getForegroundWindowProcessInfo()` 仍保留完整 title 給出字路由使用，但 process name 也改用 `ProcessName`，避免 `MainModule` 在特殊 App 上卡住或丟權限例外。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `ForegroundProcessSnapshot`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
