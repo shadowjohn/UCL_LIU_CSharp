@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-05-26 - Shift 高負載誤切英模式保護
+
+### 任務目標
+
+1. 修正 CPU high loading / Notepad++ 下，Shift 事件延遲造成肥米誤跳英模式，導致字根直接漏進編輯區的問題。
+2. 保留原本快速單擊 Shift 切換英肥的操作。
+
+### 根因判斷
+
+- 新截圖顯示 UI 已在「英」模式，且 performance log 同時出現 Notepad++ slow hook 與 Shift key 相關延遲。
+- 既有規則只看 `flag_is_play_otherkey`，高負載時其他鍵事件可能延遲或漏判，導致 Shift keyup 被視為乾淨單擊而切到英模式。
+
+### 實作紀錄
+
+- `KeyboardHookStateRules` 新增 `MaxStandaloneShiftToggleMilliseconds=350`。
+- Shift keydown 記錄 `Stopwatch` ticks，keyup 時計算按住時間。
+- 只有 `CTRL_SP=0`、沒有搭配其他鍵、且 Shift 按住時間未超過 350ms 時才允許切換英肥。
+
+### 驗證紀錄
+
+- 新增核心測試確認長時間/延遲的單獨 Shift 不會切英肥。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-26 - hook 內 UI label 更新延後
 
 ### 任務目標

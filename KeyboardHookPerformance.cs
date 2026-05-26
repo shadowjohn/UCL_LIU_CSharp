@@ -68,7 +68,7 @@ namespace uclliu
             return true;
         }
 
-        private static int TicksToMilliseconds(long ticks)
+        public static int TicksToMilliseconds(long ticks)
         {
             return (int)((ticks * 1000.0) / Stopwatch.Frequency);
         }

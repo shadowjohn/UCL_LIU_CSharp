@@ -45,9 +45,20 @@ namespace uclliu
 
     public static class KeyboardHookStateRules
     {
+        public const int MaxStandaloneShiftToggleMilliseconds = 350;
+
         public static ShiftKeyReleaseDecision EvaluateShiftRelease(bool ctrlSpaceEnabled, bool shiftWasUsedWithOtherKey)
         {
-            return new ShiftKeyReleaseDecision(true, !ctrlSpaceEnabled && !shiftWasUsedWithOtherKey);
+            return EvaluateShiftRelease(ctrlSpaceEnabled, shiftWasUsedWithOtherKey, 0);
+        }
+
+        public static ShiftKeyReleaseDecision EvaluateShiftRelease(bool ctrlSpaceEnabled, bool shiftWasUsedWithOtherKey, int shiftHeldMilliseconds)
+        {
+            bool shouldToggle = !ctrlSpaceEnabled
+                && !shiftWasUsedWithOtherKey
+                && shiftHeldMilliseconds >= 0
+                && shiftHeldMilliseconds <= MaxStandaloneShiftToggleMilliseconds;
+            return new ShiftKeyReleaseDecision(true, shouldToggle);
         }
     }
 }

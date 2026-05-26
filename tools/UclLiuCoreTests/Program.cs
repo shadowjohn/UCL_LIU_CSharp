@@ -56,6 +56,7 @@ internal static class Program
         failed += Run("keyboard hook treats system key messages as key transitions", TestKeyboardHookSystemMessages);
         failed += Run("shift release clears state even when ctrl space is enabled", TestShiftReleaseClearsStateWithCtrlSpace);
         failed += Run("shift release toggles input only for standalone shift mode", TestShiftReleaseToggleRules);
+        failed += Run("shift release ignores stale standalone shift", TestShiftReleaseIgnoresStaleStandaloneShift);
         failed += Run("pinyi v001 same sound skips phonetic code and bopomofo tokens", TestPinyiV001SkipsPhoneCodeAndBopomofo);
         failed += Run("pinyi v001 same sound sorts by closest token index", TestPinyiV001SortsByClosestTokenIndex);
         failed += Run("pinyi legacy same sound keeps whole matching lines", TestPinyiLegacyKeepsWholeMatchingLines);
@@ -761,13 +762,21 @@ internal static class Program
 
     private static void TestShiftReleaseToggleRules()
     {
-        ShiftKeyReleaseDecision standaloneShift = KeyboardHookStateRules.EvaluateShiftRelease(false, false);
-        ShiftKeyReleaseDecision shiftWithOtherKey = KeyboardHookStateRules.EvaluateShiftRelease(false, true);
+        ShiftKeyReleaseDecision standaloneShift = KeyboardHookStateRules.EvaluateShiftRelease(false, false, 120);
+        ShiftKeyReleaseDecision shiftWithOtherKey = KeyboardHookStateRules.EvaluateShiftRelease(false, true, 120);
 
         AssertTrue(standaloneShift.ShouldClearShiftState, "standalone shift release should clear state");
         AssertTrue(standaloneShift.ShouldToggleInputMode, "standalone shift release should toggle input when CTRL+SPACE is disabled");
         AssertTrue(shiftWithOtherKey.ShouldClearShiftState, "shift release after another key should clear state");
         AssertTrue(!shiftWithOtherKey.ShouldToggleInputMode, "shift release after another key should not toggle input");
+    }
+
+    private static void TestShiftReleaseIgnoresStaleStandaloneShift()
+    {
+        ShiftKeyReleaseDecision staleShift = KeyboardHookStateRules.EvaluateShiftRelease(false, false, KeyboardHookStateRules.MaxStandaloneShiftToggleMilliseconds + 1);
+
+        AssertTrue(staleShift.ShouldClearShiftState, "stale shift release should still clear state");
+        AssertTrue(!staleShift.ShouldToggleInputMode, "stale standalone shift should not toggle input under high load");
     }
 
     private static void TestPinyiV001SkipsPhoneCodeAndBopomofo()

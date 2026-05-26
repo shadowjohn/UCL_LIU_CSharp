@@ -105,6 +105,7 @@ namespace uclliu
         const int WH_KEYBOARD_LL = 13;
         private int intLLKey;
         private KBDLLHOOKSTRUCT lParam;
+        private long shiftKeyDownTicks = 0;
 
         //https://stackoverflow.com/questions/577411/how-can-i-find-the-state-of-numlock-capslock-and-scrolllock-in-net
         [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
@@ -283,6 +284,7 @@ namespace uclliu
                 if (ucl.flag_is_shift_down == false)
                 {
                     ucl.flag_is_play_otherkey = false;
+                    shiftKeyDownTicks = KeyboardHookLatencyMonitor.GetTimestamp();
                 }
                 ucl.flag_is_shift_down = true;
                 ucl.debug_print("Debug event C");
@@ -354,10 +356,12 @@ namespace uclliu
                 //ucl.debug_print("flag_is_shift_down:"+str(flag_is_shift_down))        ;
                 //ucl.debug_print("flag_is_capslock_down:"+str(flag_is_capslock_down));
                 //ucl.debug_print("flag_is_play_capslock_otherkey:"+str(flag_is_play_capslock_otherkey));
-                ShiftKeyReleaseDecision shiftDecision = KeyboardHookStateRules.EvaluateShiftRelease(ucl.config["DEFAULT"]["CTRL_SP"] == "1", ucl.flag_is_play_otherkey);
+                int shiftHeldMilliseconds = shiftKeyDownTicks <= 0 ? 0 : KeyboardHookLatencyMonitor.TicksToMilliseconds(KeyboardHookLatencyMonitor.GetTimestamp() - shiftKeyDownTicks);
+                ShiftKeyReleaseDecision shiftDecision = KeyboardHookStateRules.EvaluateShiftRelease(ucl.config["DEFAULT"]["CTRL_SP"] == "1", ucl.flag_is_play_otherkey, shiftHeldMilliseconds);
                 if (shiftDecision.ShouldClearShiftState)
                 {
                     ucl.flag_is_shift_down = false;
+                    shiftKeyDownTicks = 0;
                 }
                 ucl.debug_print("Press shift");
 
