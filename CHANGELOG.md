@@ -26,7 +26,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 移除 `System.Json` NuGet 依賴與 ILRepack 合併項目。
 - `UCLLIU.ini` 改用內建 `SimpleIni` 讀寫，移除 `ini-parser` / `INIFileParser` 與 `packages.config`。
 - 出字模式選擇改為支援視窗標題規則，PTT/term.ptt.cc/ws.ptt.cc 與 Win11 Notepad 會自動改用剪貼簿貼上。
-- process 相容清單會忽略大小寫與 `.exe` 副檔名，並補上 Windows Terminal / mintty / RimWorld / Notepad++ / mstsc 等 Python 版後期清單。
+- process 相容清單會忽略大小寫與 `.exe` 副檔名，並補上 Windows Terminal / mintty / RimWorld / mstsc 等 Python 版後期清單。
 - 版本資訊更新至 v0.11，exe 詳細資料欄位參考 Python 版 metadata，補上 3WA、作者註解與產品資訊。
 - `KEYBOARD_VOLUME` 會限制在 0-100，避免錯誤設定造成音量邏輯異常。
 - `ENABLE_HALF_FULL=0` 時，`Shift+Space` 不再觸發半全形切換。
@@ -46,7 +46,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 補回 Python 版後期 `uclcode_rr` 字根反查 hash，`,,,x` 解算數字候選碼時可直接 O(1) 查表。
 - 修正新版 `pinyi.txt` 同音字候選會把注音碼或注音符號混到第 0 候選的問題，並保留舊版 `pinyi.txt` 相容。
 - 補齊新版 `pinyi.txt` 的反向注音表，出字後可依設定顯示讀音。
-- Notepad++ 預設改走 `Ctrl+V` 貼上模式，避開 Scintilla 對 Unicode `SendInput` 吃不到字的情況。
+- Notepad++ 不列入預設貼上模式，避免正常打字流程動到剪貼簿。
 
 ### Verification
 

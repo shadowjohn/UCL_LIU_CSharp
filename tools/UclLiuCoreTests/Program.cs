@@ -32,7 +32,7 @@ internal static class Program
         failed += Run("selected text transform dispatcher posts work outside hook", TestSelectedTextTransformDispatcherPostsWorkOutsideHook);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
         failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
-        failed += Run("default compatibility routes Notepad++ through paste", TestDefaultCompatibilityRoutesNotepadPlusPlusThroughPaste);
+        failed += Run("default compatibility keeps Notepad++ on unicode sendinput", TestDefaultCompatibilityKeepsNotepadPlusPlusOnUnicodeSendInput);
         failed += Run("output router forces paste for PTT browser titles", TestOutputRouterForcesPasteForPttBrowserTitles);
         failed += Run("output router forces paste for Windows 11 Notepad", TestOutputRouterForcesPasteForWindows11Notepad);
         failed += Run("typing sound volume clamps to supported range", TestTypingSoundVolumeClamp);
@@ -454,11 +454,11 @@ internal static class Program
         AssertEqual((int)TextOutputMode.PasteBig5, (int)TextOutputRouter.Select("DEFAULT", "ewinner", shiftInsertApps, ctrlVApps, big5Apps));
     }
 
-    private static void TestDefaultCompatibilityRoutesNotepadPlusPlusThroughPaste()
+    private static void TestDefaultCompatibilityKeepsNotepadPlusPlusOnUnicodeSendInput()
     {
         List<string> empty = new List<string>();
 
-        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", "notepad++.exe", empty, TextOutputCompatibilityDefaults.PasteCtrlVApps, empty));
+        AssertEqual((int)TextOutputMode.UnicodeSendInput, (int)TextOutputRouter.Select("DEFAULT", "notepad++.exe", empty, TextOutputCompatibilityDefaults.PasteCtrlVApps, empty));
     }
 
     private static void TestOutputRouterForcesPasteForPttBrowserTitles()

@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-05-26 - Notepad++ 貼上模式回退
+
+### 任務目標
+
+1. 依使用體感回退 Notepad++ 預設 `Ctrl+V` 貼上出字。
+2. 保留出字相容清單集中管理，但不讓 Notepad++ 預設碰剪貼簿。
+
+### 實作紀錄
+
+- 將 Notepad++ 從 `TextOutputCompatibilityDefaults.PasteCtrlVApps` 移除。
+- 核心測試改為要求 Notepad++ 預設維持 Unicode `SendInput`。
+- README/CHANGELOG 同步移除 Notepad++ 貼上模式描述。
+
+### 驗證紀錄
+
+- 先修改測試期待 Notepad++ 不走貼上，確認舊行為測試失敗。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-26 - Notepad++ 出字相容修正
 
 ### 任務目標

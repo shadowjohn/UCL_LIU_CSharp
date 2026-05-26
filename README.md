@@ -89,7 +89,7 @@ C# 版目前右下角選單提供三種出字模式：
 | Chrome / Edge / Brave / Firefox / Opera 開 PTT | 視窗標題包含 `批踢踢實業坊`、`term.ptt.cc` 或 `ws.ptt.cc` | `Ctrl+V` 貼上 |
 | Win11 Notepad | Windows build >= 22000 且 process 為 `notepad` / `notepad.exe` | `Ctrl+V` 貼上 |
 | PuTTY / PCMan / Pietty / Windows Terminal / mintty / RimWorld 等 | process 相容清單 | `Shift+Insert` 貼上 |
-| Notepad++ / Oxygen Not Included / PhotoImpact `iedit_` | process 相容清單 | `Ctrl+V` 貼上 |
+| Oxygen Not Included / PhotoImpact `iedit_` | process 相容清單 | `Ctrl+V` 貼上 |
 | zip32w / DaqKing / EWinner | process 相容清單 | Big5 `Ctrl+V` 貼上 |
 
 process 規則會自動忽略大小寫與 `.exe` 副檔名，`notepad` 與 `notepad.exe` 視為同一個程式。
