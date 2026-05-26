@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-05-26 - Notepad++ 出字相容修正
+
+### 任務目標
+
+1. 修正 Notepad++ 中肥米候選可運作但送字吃不到的情況。
+2. 避免同類相容清單散在 `uclliu.cs` 與文件中。
+
+### 實作紀錄
+
+- 判斷根因偏向 Notepad++/Scintilla 不穩定接收 Unicode `SendInput`，Codex/Electron 可出字代表 hook 本身仍活著。
+- 新增 `TextOutputCompatibilityDefaults` 集中管理內建出字相容清單。
+- 將 Notepad++ 加入 `Ctrl+V` 貼上出字清單，避開 `SendInput` 對 Scintilla 的相容問題。
+- `uclliu.cs` 改從同一份預設相容清單初始化，減少文件、測試、實作分叉。
+
+### 驗證紀錄
+
+- 先加入 Notepad++ 預設貼上模式測試，確認缺少預設清單時測試紅燈。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-25 - C# 版第一輪追功能：轉檔與 UI 熱路徑降載
 
 ### 任務目標

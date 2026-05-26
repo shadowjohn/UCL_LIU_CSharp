@@ -55,10 +55,10 @@ namespace uclliu
         //#DEFAULT
         //#BIG5
         //#PASTE
-        public List<string> sendkey_paste_ctrl_v_apps = new List<string>() { "oxygennotincluded.exe", "iedit_.exe" }; //使用複製文字貼上出字的 ctrl + v app
-        public List<string> sendkey_paste_shift_ins_apps = new List<string>() { "putty", "pietty", "pcman", "xyplorer", "kinza.exe", "iedit.exe", "rimworldwin64.exe", "windowsterminal.exe", "wt.exe", "mintty.exe" }; //使用複製文字貼上出字的 shift + ins app
-        public List<string> sendkey_paste_big5_apps = new List<string>() { "zip32w", "daqkingcon.exe", "EWinner.exe" }; //使用 big5 複製文字貼上出字的 app
-        public List<string> sendkey_not_use_ucl_apps = new List<string>() { "mstsc.exe", "cyberpunk2077.exe", "vncviewer.exe" }; //無法使用肥米的 app
+        public List<string> sendkey_paste_ctrl_v_apps = new List<string>(TextOutputCompatibilityDefaults.PasteCtrlVApps); //使用複製文字貼上出字的 ctrl + v app
+        public List<string> sendkey_paste_shift_ins_apps = new List<string>(TextOutputCompatibilityDefaults.PasteShiftInsertApps); //使用複製文字貼上出字的 shift + ins app
+        public List<string> sendkey_paste_big5_apps = new List<string>(TextOutputCompatibilityDefaults.PasteBig5Apps); //使用 big5 複製文字貼上出字的 app
+        public List<string> sendkey_not_use_ucl_apps = new List<string>(TextOutputCompatibilityDefaults.NoUclApps); //無法使用肥米的 app
 
         
 

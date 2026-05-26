@@ -30,6 +30,14 @@ namespace uclliu
         public bool IsWindows11 { get; private set; }
     }
 
+    public static class TextOutputCompatibilityDefaults
+    {
+        public static readonly string[] PasteShiftInsertApps = new string[] { "putty", "pietty", "pcman", "xyplorer", "kinza.exe", "iedit.exe", "rimworldwin64.exe", "windowsterminal.exe", "wt.exe", "mintty.exe" };
+        public static readonly string[] PasteCtrlVApps = new string[] { "oxygennotincluded.exe", "iedit_.exe", "notepad++.exe" };
+        public static readonly string[] PasteBig5Apps = new string[] { "zip32w", "daqkingcon.exe", "EWinner.exe" };
+        public static readonly string[] NoUclApps = new string[] { "mstsc.exe", "cyberpunk2077.exe", "vncviewer.exe" };
+    }
+
     public static class TextOutputRouter
     {
         public static TextOutputMode Select(string defaultOutputType, string processName, IEnumerable<string> shiftInsertApps, IEnumerable<string> ctrlVApps, IEnumerable<string> big5Apps)
