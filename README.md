@@ -2,7 +2,7 @@
 
 C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
 
-目前 C# 版已進入可日用測試的現代化復刻狀態：已補上字碼表自動轉換、自定詞庫、Unicode SendInput 出字、剪貼簿 fallback、打字音效、同音/注音查詢、Win11/Chrome/PTT/Notepad 相容規則與核心測試。它仍不是 Python 版 v1.67 的完整替代品；TSF Bridge、OpenCC/特殊字修正、更多長尾 App 相容規則仍在後續項目。
+目前 C# 版已進入可日用測試的現代化復刻狀態：已補上字碼表自動轉換、自定詞庫、Unicode SendInput 出字、剪貼簿 fallback、打字音效、同音/注音查詢、OpenCC Lite 簡轉繁、Win11/Chrome/PTT/Notepad 相容規則與核心測試。它仍不是 Python 版 v1.67 的完整替代品；TSF Bridge、更多特殊字修正、更多長尾 App 相容規則仍在後續項目。
 
 ![UCL_LIU C# screenshot](screenshot/ucl_1.png)
 
@@ -26,6 +26,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是
 | TSF Bridge | 尚未移植 | v1.67 實驗性支援 |
 | 打字音效 | 支援 `wavs\*.wav`、開關、10%-100% 音量、特殊鍵音效、防長按連發 | 已支援音效與音量設定 |
 | 同音/注音 | 支援新版 `pinyi.txt` 同音字、`';` 注音查詢、出字後提示注音 | 已支援 |
+| OpenCC 簡轉繁 | 內嵌 `s2t` OpenCC Lite，用於 `,,,z` 反白文字轉字根前處理 | v1.47 起用 OpenCC 修正逐字簡繁問題 |
 | 啟動與半全形 UX | 支援啟動預設肥/英、允許停用 `Shift+Space` 半全形切換 | 已支援 |
 | 測試 | `tools/UclLiuCoreTests` 可用 .NET SDK 跑核心測試 | Python 版以實機與歷史回報為主 |
 
@@ -40,6 +41,8 @@ C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是
 4. 執行 `uclliu.exe`。
 
 因字碼表版權問題，本專案不提供 `liu.json` / `liu.cin` / `liu-uni.tab`。若使用 `liu.cin` 或 `liu-uni.tab`，C# 版啟動時會自動產生 `liu.json`。
+
+OpenCC Lite 的 `s2t` 字典已內嵌在 exe，使用 `,,,z` 將反白文字轉字根時會先做詞彙級簡轉繁，避免 `皇后 -> 皇後`、`后面 -> 後麵` 這類逐字轉換錯誤。重新打包發行 zip 時，請同時放入 `third_party/opencc/LICENSE.txt`、`third_party/opencc/NOTICE.txt` 與 `third_party/opencc/README.md`。
 
 發行檔位置：
 
@@ -148,6 +151,7 @@ C# 版已追上的重點：
 - Win11 Notepad、Chrome/Edge/Brave/PTT 標題規則與常見終端相容清單
 - 打字音效、音量設定、特殊鍵音效
 - 新版 `pinyi.txt` 同音字、`';` 注音查詢、出字後提示注音
+- OpenCC Lite `s2t` 簡轉繁，用於 `,,,z` 反白文字轉字根前處理
 - 啟動預設肥/英與 `Shift+Space` 半全形切換設定
 - 短版 UI 熱路徑降載
 - foreground process 查詢短暫 cache
@@ -157,7 +161,7 @@ Python 版仍領先的重點：
 
 - TSF Bridge 出字模式與註冊/解除註冊管理
 - 更多長尾 App 實機相容規則，例如 VBA、Neovim、特殊遊戲與遠端桌面情境
-- OpenCC 簡繁轉換與更多特殊字修正
+- OpenCC 其他區域配置與更多特殊字修正
 - 更多字碼表來源轉換
 - 管理員權限導引與重啟流程
 - 多年累積的問題回報修正
@@ -196,6 +200,7 @@ dotnet run --project .\tools\UclLiuCoreTests\UclLiuCoreTests.csproj
 | `TextOutput.cs` | Unicode SendInput、剪貼簿貼上、出字策略選擇 |
 | `TypingSound.cs` | 打字音效、音量縮放、wav 分類、防長按連發 |
 | `PhoneCodeTable.cs` | 新版 `pinyi.txt` 注音查詢與反向讀音表 |
+| `OpenCcLite.cs` | 內嵌 OpenCC `s2t` 字典的詞彙級簡轉繁 |
 | `LiuTableConverter.cs` | `liu-uni.tab` / `liu.cin` / `liu.json` 轉換 |
 | `CustomDictionaryStore.cs` | `custom.json` 載入、儲存、合併 |
 | `CustomDictionaryForm.cs` | 自定詞庫編輯器 |
@@ -204,6 +209,7 @@ dotnet run --project .\tools\UclLiuCoreTests\UclLiuCoreTests.csproj
 | `UiLayoutCalculator.cs` | 可測試的 UI 寬度計算 |
 | `tools/UclLiuCoreTests` | 核心測試 harness |
 | `wavs` | Python 版後期打字音效 wav 素材 |
+| `third_party/opencc` | OpenCC Lite 字典、License、NOTICE 與使用說明 |
 | `CHANGELOG.md` | C# 版近期變更 |
 | `GOALS.md` | 追 Python 版功能清單 |
 | `history.md` | 開發對話與驗證紀錄 |
@@ -213,3 +219,7 @@ dotnet run --project .\tools\UclLiuCoreTests\UclLiuCoreTests.csproj
 - 作者：羽山秋人 ([3wa.tw](https://3wa.tw))
 - 信箱：uclliu.3wa@gmail.com
 - 授權：MIT License
+
+第三方資料：
+
+- OpenCC `s2t` 字典與設定：Apache License 2.0，詳見 [third_party/opencc](third_party/opencc)。

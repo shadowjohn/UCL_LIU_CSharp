@@ -1139,6 +1139,10 @@ namespace uclliu
             ucl.loadConfig();
             //載入字根檔     
             ucl.loadJsonData();
+            OpenCcLite.WarmUpAsync(delegate(Exception ex)
+            {
+                ucl.debug_print("OpenCC Lite warmup failed: " + ex.Message);
+            });
             //如果有拚音，載入拚音功能
             if (my.is_file(my.pwd() + "\\pinyi.txt"))
             {

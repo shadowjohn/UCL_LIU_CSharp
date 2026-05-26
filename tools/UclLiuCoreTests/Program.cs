@@ -40,6 +40,8 @@ internal static class Program
         failed += Run("pinyi legacy same sound keeps whole matching lines", TestPinyiLegacyKeepsWholeMatchingLines);
         failed += Run("phone table converts zhuyin query to candidates", TestPhoneTableConvertsZhuyinQueryToCandidates);
         failed += Run("phone table maps words back to zhuyin labels", TestPhoneTableMapsWordsBackToZhuyinLabels);
+        failed += Run("opencc lite converts simplified text with phrase context", TestOpenCcLiteConvertsSimplifiedTextWithPhraseContext);
+        failed += Run("opencc lite default loads embedded s2t dictionaries", TestOpenCcLiteDefaultLoadsEmbeddedS2tDictionaries);
 
         if (failed > 0)
         {
@@ -498,6 +500,30 @@ internal static class Program
 
         AssertSequence(new string[] { "ㄈㄟˊ" }, table.GetPhonesForWord("肥").ToArray());
         AssertSequence(new string[] { "ㄈㄟ", "ㄈㄟˊ" }, table.GetPhonesForWord("菲").ToArray());
+    }
+
+    private static void TestOpenCcLiteConvertsSimplifiedTextWithPhraseContext()
+    {
+        string phrases = "后面\t後面\r\n天后\t天后 天後\r\n皇后\t皇后\r\n干杯\t乾杯\r\n面包\t麪包\r\n";
+        string characters = "后\t後 后\r\n家\t家 傢\r\n干\t幹 乾 干\r\n面\t面 麪\r\n个\t個\r\n说\t說\r\n酱\t醬\r\n当\t當\r\n";
+        OpenCcLite converter = OpenCcLite.FromDictionaryText(phrases, characters);
+
+        AssertEqual("家", converter.ConvertSimplifiedToTraditional("家"));
+        AssertEqual("皇后", converter.ConvertSimplifiedToTraditional("皇后"));
+        AssertEqual("後面", converter.ConvertSimplifiedToTraditional("后面"));
+        AssertEqual("乾杯", converter.ConvertSimplifiedToTraditional("干杯"));
+        AssertEqual("麪包", converter.ConvertSimplifiedToTraditional("面包"));
+        AssertEqual("所以我說那個醬汁呢，小當家你是在...", converter.ConvertSimplifiedToTraditional("所以我说那个酱汁呢，小当家你是在..."));
+    }
+
+    private static void TestOpenCcLiteDefaultLoadsEmbeddedS2tDictionaries()
+    {
+        OpenCcLite converter = OpenCcLite.Default;
+
+        AssertEqual("家", converter.ConvertSimplifiedToTraditional("家"));
+        AssertEqual("皇后", converter.ConvertSimplifiedToTraditional("皇后"));
+        AssertEqual("後面", converter.ConvertSimplifiedToTraditional("后面"));
+        AssertEqual("乾杯", converter.ConvertSimplifiedToTraditional("干杯"));
     }
 
     private static byte[] BuildUnitab(string firstTwoKeys, int key3, int key4, int unicodeCodePoint)

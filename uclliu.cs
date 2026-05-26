@@ -126,6 +126,18 @@ namespace uclliu
             }
             return my.implode("", m);
         }
+        public string simple2trad_opencc(string data)
+        {
+            try
+            {
+                return OpenCcLite.Default.ConvertSimplifiedToTraditional(data);
+            }
+            catch (Exception ex)
+            {
+                debug_print("OpenCC Lite fallback: " + ex.Message);
+                return simple2trad(data);
+            }
+        }
         public void generator_sp_table()
         {
             //產生最簡根速查表
@@ -296,8 +308,8 @@ namespace uclliu
                     Thread.Sleep(500);
                     string selectData = Clipboard.GetText();
                     Thread.Sleep(500);
-                    //# 簡轉繁
-                    selectData = simple2trad(selectData);
+                    //# 簡轉繁，使用詞彙級 OpenCC Lite 避免「皇后 -> 皇後」這類逐字轉換錯誤
+                    selectData = simple2trad_opencc(selectData);
                     //然後寫回
                     is_send_ucl = true;
                     selectData = word_to_sp(selectData);

@@ -126,6 +126,7 @@
     <Compile Include="KeyboardHookState.cs" />
     <Compile Include="LiuTableConverter.cs" />
     <Compile Include="LiuJsonTable.cs" />
+    <Compile Include="OpenCcLite.cs" />
     <Compile Include="PinyiCandidateSelector.cs" />
     <Compile Include="PhoneCodeTable.cs" />
     <Compile Include="Program.cs" />
@@ -161,6 +162,20 @@
     </Compile>
     <None Include="CHANGELOG.md" />
     <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="third_party\opencc\dictionary\STCharacters.txt" />
+    <EmbeddedResource Include="third_party\opencc\dictionary\STPhrases.txt" />
+    <None Include="third_party\opencc\config\s2t.json" />
+    <Content Include="third_party\opencc\LICENSE.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="third_party\opencc\NOTICE.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="third_party\opencc\README.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
