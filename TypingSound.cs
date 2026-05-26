@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Media;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
@@ -224,6 +224,108 @@ namespace uclliu
         }
     }
 
+    public sealed class Pcm16WavData
+    {
+        private Pcm16WavData(ushort channels, int samplesPerSecond, int averageBytesPerSecond, ushort blockAlign, ushort bitsPerSample, byte[] pcmData)
+        {
+            Channels = channels;
+            SamplesPerSecond = samplesPerSecond;
+            AverageBytesPerSecond = averageBytesPerSecond;
+            BlockAlign = blockAlign;
+            BitsPerSample = bitsPerSample;
+            PcmData = pcmData;
+        }
+
+        public ushort Channels { get; private set; }
+        public int SamplesPerSecond { get; private set; }
+        public int AverageBytesPerSecond { get; private set; }
+        public ushort BlockAlign { get; private set; }
+        public ushort BitsPerSample { get; private set; }
+        public byte[] PcmData { get; private set; }
+
+        public static bool TryCreate(byte[] wav, out Pcm16WavData data)
+        {
+            data = null;
+            int fmtOffset;
+            int fmtSize;
+            int dataOffset;
+            int dataSize;
+
+            if (!TryFindChunk(wav, "fmt ", out fmtOffset, out fmtSize) ||
+                !TryFindChunk(wav, "data", out dataOffset, out dataSize))
+            {
+                return false;
+            }
+
+            if (fmtSize < 16)
+            {
+                return false;
+            }
+
+            ushort audioFormat = BitConverter.ToUInt16(wav, fmtOffset);
+            ushort channels = BitConverter.ToUInt16(wav, fmtOffset + 2);
+            int samplesPerSecond = BitConverter.ToInt32(wav, fmtOffset + 4);
+            int averageBytesPerSecond = BitConverter.ToInt32(wav, fmtOffset + 8);
+            ushort blockAlign = BitConverter.ToUInt16(wav, fmtOffset + 12);
+            ushort bitsPerSample = BitConverter.ToUInt16(wav, fmtOffset + 14);
+            if (audioFormat != 1 || bitsPerSample != 16 || channels == 0 || dataSize <= 0)
+            {
+                return false;
+            }
+
+            byte[] pcmData = new byte[dataSize];
+            Buffer.BlockCopy(wav, dataOffset, pcmData, 0, dataSize);
+            data = new Pcm16WavData(channels, samplesPerSecond, averageBytesPerSecond, blockAlign, bitsPerSample, pcmData);
+            return true;
+        }
+
+        private static bool TryFindChunk(byte[] wav, string chunkId, out int dataOffset, out int dataSize)
+        {
+            dataOffset = 0;
+            dataSize = 0;
+            if (wav == null || wav.Length < 12 || Encoding.ASCII.GetString(wav, 0, 4) != "RIFF")
+            {
+                return false;
+            }
+
+            byte[] idBytes = Encoding.ASCII.GetBytes(chunkId);
+            int offset = 12;
+            while (offset + 8 <= wav.Length)
+            {
+                bool isMatch = true;
+                for (int i = 0; i < 4; i++)
+                {
+                    if (wav[offset + i] != idBytes[i])
+                    {
+                        isMatch = false;
+                        break;
+                    }
+                }
+
+                int size = BitConverter.ToInt32(wav, offset + 4);
+                int nextOffset = offset + 8 + size;
+                if (isMatch)
+                {
+                    if (size < 0 || offset + 8 + size > wav.Length)
+                    {
+                        return false;
+                    }
+                    dataOffset = offset + 8;
+                    dataSize = size;
+                    return true;
+                }
+
+                if (size < 0 || nextOffset <= offset || nextOffset > wav.Length + 1)
+                {
+                    return false;
+                }
+                offset = nextOffset + (size % 2);
+            }
+
+            return false;
+        }
+    }
+
     public interface ITypingSoundHandle : IDisposable
     {
         void Play();
@@ -234,42 +336,214 @@ namespace uclliu
         ITypingSoundHandle Create(byte[] wavData);
     }
 
-    public sealed class SoundPlayerPlaybackEngine : ITypingSoundPlaybackEngine
+    public sealed class WaveOutPlaybackEngine : ITypingSoundPlaybackEngine
     {
         public ITypingSoundHandle Create(byte[] wavData)
         {
-            return new SoundPlayerTypingSoundHandle(wavData);
+            return new WaveOutTypingSoundHandle(wavData);
         }
     }
 
-    internal sealed class SoundPlayerTypingSoundHandle : ITypingSoundHandle
+    internal sealed class WaveOutTypingSoundHandle : ITypingSoundHandle
     {
-        private readonly object syncRoot = new object();
-        private readonly byte[] wavData;
-        private readonly MemoryStream stream;
-        private readonly SoundPlayer player;
+        private static readonly object threadPoolSyncRoot = new object();
+        private static bool threadPoolWarmUpComplete;
+        private readonly Pcm16WavData wavData;
+        private int activePlayCount;
+        private const int MaxActivePlayCount = 8;
 
-        public SoundPlayerTypingSoundHandle(byte[] wavData)
+        public WaveOutTypingSoundHandle(byte[] wavBytes)
         {
-            this.wavData = wavData;
-            stream = new MemoryStream(this.wavData, false);
-            player = new SoundPlayer(stream);
-            player.Load();
+            Pcm16WavData parsed;
+            if (!Pcm16WavData.TryCreate(wavBytes, out parsed))
+            {
+                throw new InvalidDataException("Only PCM 16-bit wav files are supported for typing sound playback.");
+            }
+            wavData = parsed;
         }
 
         public void Play()
         {
-            lock (syncRoot)
+            EnsureThreadPoolCapacity();
+
+            if (Interlocked.Increment(ref activePlayCount) > MaxActivePlayCount)
             {
-                stream.Position = 0;
-                player.Play();
+                Interlocked.Decrement(ref activePlayCount);
+                return;
             }
+
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                try
+                {
+                    WaveOutOneShotPlayer.Play(wavData);
+                }
+                catch
+                {
+                    // 音效只是 UX 補助，播放失敗不可影響輸入法主流程。
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref activePlayCount);
+                }
+            });
         }
 
         public void Dispose()
         {
-            player.Dispose();
-            stream.Dispose();
+        }
+
+        private static void EnsureThreadPoolCapacity()
+        {
+            if (threadPoolWarmUpComplete)
+            {
+                return;
+            }
+
+            lock (threadPoolSyncRoot)
+            {
+                if (threadPoolWarmUpComplete)
+                {
+                    return;
+                }
+
+                int workerThreads;
+                int completionPortThreads;
+                ThreadPool.GetMinThreads(out workerThreads, out completionPortThreads);
+                if (workerThreads < MaxActivePlayCount)
+                {
+                    ThreadPool.SetMinThreads(MaxActivePlayCount, completionPortThreads);
+                }
+                threadPoolWarmUpComplete = true;
+            }
+        }
+    }
+
+    internal static class WaveOutOneShotPlayer
+    {
+        private const int WaveMapper = -1;
+        private const int CallbackNull = 0;
+        private const int MmSysErrNoError = 0;
+        private const int WhdrDone = 0x00000001;
+
+        public static void Play(Pcm16WavData data)
+        {
+            if (data == null || data.PcmData == null || data.PcmData.Length == 0)
+            {
+                return;
+            }
+
+            WaveFormatEx format = new WaveFormatEx();
+            format.wFormatTag = 1;
+            format.nChannels = data.Channels;
+            format.nSamplesPerSec = (uint)data.SamplesPerSecond;
+            format.nAvgBytesPerSec = (uint)data.AverageBytesPerSecond;
+            format.nBlockAlign = data.BlockAlign;
+            format.wBitsPerSample = data.BitsPerSample;
+            format.cbSize = 0;
+
+            IntPtr waveOut = IntPtr.Zero;
+            IntPtr dataPtr = IntPtr.Zero;
+            IntPtr headerPtr = IntPtr.Zero;
+            int headerSize = Marshal.SizeOf(typeof(WaveHeader));
+            bool isPrepared = false;
+
+            try
+            {
+                if (waveOutOpen(out waveOut, WaveMapper, ref format, IntPtr.Zero, IntPtr.Zero, CallbackNull) != MmSysErrNoError)
+                {
+                    return;
+                }
+
+                dataPtr = Marshal.AllocHGlobal(data.PcmData.Length);
+                Marshal.Copy(data.PcmData, 0, dataPtr, data.PcmData.Length);
+
+                WaveHeader header = new WaveHeader();
+                header.lpData = dataPtr;
+                header.dwBufferLength = (uint)data.PcmData.Length;
+                headerPtr = Marshal.AllocHGlobal(headerSize);
+                Marshal.StructureToPtr(header, headerPtr, false);
+
+                if (waveOutPrepareHeader(waveOut, headerPtr, headerSize) != MmSysErrNoError)
+                {
+                    return;
+                }
+                isPrepared = true;
+
+                if (waveOutWrite(waveOut, headerPtr, headerSize) != MmSysErrNoError)
+                {
+                    return;
+                }
+
+                while (true)
+                {
+                    WaveHeader current = (WaveHeader)Marshal.PtrToStructure(headerPtr, typeof(WaveHeader));
+                    if ((current.dwFlags & WhdrDone) == WhdrDone)
+                    {
+                        break;
+                    }
+                    Thread.Sleep(1);
+                }
+            }
+            finally
+            {
+                if (isPrepared && waveOut != IntPtr.Zero && headerPtr != IntPtr.Zero)
+                {
+                    waveOutUnprepareHeader(waveOut, headerPtr, headerSize);
+                }
+                if (waveOut != IntPtr.Zero)
+                {
+                    waveOutClose(waveOut);
+                }
+                if (headerPtr != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(headerPtr);
+                }
+                if (dataPtr != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(dataPtr);
+                }
+            }
+        }
+
+        [DllImport("winmm.dll")]
+        private static extern int waveOutOpen(out IntPtr hWaveOut, int uDeviceID, ref WaveFormatEx lpFormat, IntPtr dwCallback, IntPtr dwInstance, int dwFlags);
+
+        [DllImport("winmm.dll")]
+        private static extern int waveOutPrepareHeader(IntPtr hWaveOut, IntPtr lpWaveOutHdr, int uSize);
+
+        [DllImport("winmm.dll")]
+        private static extern int waveOutWrite(IntPtr hWaveOut, IntPtr lpWaveOutHdr, int uSize);
+
+        [DllImport("winmm.dll")]
+        private static extern int waveOutUnprepareHeader(IntPtr hWaveOut, IntPtr lpWaveOutHdr, int uSize);
+
+        [DllImport("winmm.dll")]
+        private static extern int waveOutClose(IntPtr hWaveOut);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WaveFormatEx
+        {
+            public ushort wFormatTag;
+            public ushort nChannels;
+            public uint nSamplesPerSec;
+            public uint nAvgBytesPerSec;
+            public ushort nBlockAlign;
+            public ushort wBitsPerSample;
+            public ushort cbSize;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WaveHeader
+        {
+            public IntPtr lpData;
+            public uint dwBufferLength;
+            public uint dwBytesRecorded;
+            public IntPtr dwUser;
+            public uint dwFlags;
+            public uint dwLoops;
+            public IntPtr lpNext;
+            public IntPtr reserved;
         }
     }
 
@@ -292,14 +566,14 @@ namespace uclliu
         }
 
         public TypingSoundPlayer(string baseDirectory)
-            : this(baseDirectory, new SoundPlayerPlaybackEngine())
+            : this(baseDirectory, new WaveOutPlaybackEngine())
         {
         }
 
         public TypingSoundPlayer(string baseDirectory, ITypingSoundPlaybackEngine playbackEngine)
         {
             this.baseDirectory = baseDirectory;
-            this.playbackEngine = playbackEngine ?? new SoundPlayerPlaybackEngine();
+            this.playbackEngine = playbackEngine ?? new WaveOutPlaybackEngine();
             Reload();
         }
 

@@ -33,6 +33,7 @@ internal static class Program
         failed += Run("typing sound catalog maps special wav names", TestTypingSoundCatalogSpecialNames);
         failed += Run("typing sound volume scaler adjusts pcm16 samples", TestTypingSoundVolumeScalerPcm16);
         failed += Run("typing sound reuses loaded handle on hot playback", TestTypingSoundReusesLoadedHandleOnHotPlayback);
+        failed += Run("typing sound parses pcm16 wav for independent waveout playback", TestTypingSoundParsesPcm16WavForIndependentWaveOutPlayback);
         failed += Run("keyboard hook treats system key messages as key transitions", TestKeyboardHookSystemMessages);
         failed += Run("shift release clears state even when ctrl space is enabled", TestShiftReleaseClearsStateWithCtrlSpace);
         failed += Run("shift release toggles input only for standalone shift mode", TestShiftReleaseToggleRules);
@@ -411,6 +412,19 @@ internal static class Program
         {
             Directory.Delete(dir, true);
         }
+    }
+
+    private static void TestTypingSoundParsesPcm16WavForIndependentWaveOutPlayback()
+    {
+        Pcm16WavData data;
+
+        AssertTrue(Pcm16WavData.TryCreate(BuildPcm16WavBytes(), out data), "pcm16 wav should parse");
+        AssertEqual(1, data.Channels);
+        AssertEqual(8000, data.SamplesPerSecond);
+        AssertEqual(16000, data.AverageBytesPerSecond);
+        AssertEqual(2, data.BlockAlign);
+        AssertEqual(16, data.BitsPerSample);
+        AssertEqual(4, data.PcmData.Length);
     }
 
     private static void TestKeyboardHookSystemMessages()

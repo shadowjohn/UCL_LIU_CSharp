@@ -185,6 +185,29 @@
 
 ---
 
+## 2026-05-26 - C# 打字音斷聲修正
+
+### 問題觀察
+
+- 使用者回報打字音雖有改善，但連打時仍有斷聲感。
+- 追查後判斷瓶頸不只是 thread 數量，而是 `SoundPlayer.Play()` 同一播放模型不適合高速重疊短音效，容易讓前一段聲音被後一段切掉。
+- 專案音效素材皆為 PCM 16-bit wav，可直接用 Windows 內建 `winmm.dll` 播放，不需要額外 DLL 或 NuGet。
+
+### 實作紀錄
+
+- 新增 `Pcm16WavData` 解析 PCM 16-bit wav 的 format/data chunk。
+- 打字音播放引擎改為 `WaveOutPlaybackEngine`，每次按鍵建立獨立 `waveOut` one-shot playback handle。
+- 每個音效同時最多保留 8 個播放工作，避免連打時無限制累積背景工作。
+- 播放前提高 ThreadPool 最小 worker 數到同時出聲上限，降低短音效排隊造成的延遲感。
+- `waveOutPrepareHeader` 後統一在 `finally` unprepare/close/free，避免播放失敗時殘留 native 資源。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `Pcm16WavData`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-26 - 新版 pinyi.txt 同音字候選修正
 
 ### 問題觀察

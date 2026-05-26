@@ -38,6 +38,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - low-level keyboard hook 支援 `WM_SYSKEYDOWN` / `WM_SYSKEYUP`，避免 Alt/系統組合鍵流程漏掉 keyup。
 - 打字音效的 wav 音量快取與檔案準備移到背景執行緒，降低第一次按鍵或切換時卡 UI 的機會。
 - 打字音效改為預載 wav 到記憶體並重用播放 handle，熱路徑不再每鍵建立 `SoundPlayer`、`PlaySync()` 或查檔案 timestamp。
+- 打字音效播放改用 `winmm.dll` 的 `waveOut` one-shot，每次按鍵使用獨立播放 handle，避免連打時前一個聲音被截斷。
 - 程式自己送字時會先跳過 hook 處理，避免不必要的 foreground process 查詢。
 - 修正新版 `pinyi.txt` 同音字候選會把注音碼或注音符號混到第 0 候選的問題，並保留舊版 `pinyi.txt` 相容。
 - 補齊新版 `pinyi.txt` 的反向注音表，出字後可依設定顯示讀音。
