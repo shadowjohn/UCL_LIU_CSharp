@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-05-26 - Notepad++ 快速接打卡頓與跳英文修正
+
+### 任務目標
+
+1. 修正 Notepad++ 中第一字可出、第二字快速接打時偶發卡住或跳英文的問題。
+2. 保持 Notepad++ 使用 Unicode `SendInput`，不回退到剪貼簿貼上。
+
+### 根因判斷
+
+- 前次為了避開 hook 內同步出字，將整個 `senddata()` 延後到 hook 回傳後執行；但 `senddata()` 也會清 `play_ucl_label` 與候選狀態，快速輸入下一字時可能被上一字的延後流程清掉。
+- `is_send_ucl` 期間 hook 直接放行所有鍵盤事件，真人下一碼若剛好落在送字期間，可能穿透到目標 App 變成英文字。
+
+### 實作紀錄
+
+- 將 `senddata()` 拆成 `prepare_senddata_text()` 與 `send_prepared_output()`。
+- `queue_senddata()` 先同步執行狀態清理與簡繁轉換，只把真正輸出排到 hook 回傳後。
+- Unicode `SendInput` 的 key event 加入固定 `dwExtraInfo` 標記。
+- low-level hook 改為只放行肥米自己標記的 injected event；剪貼簿/舊 SendKeys 模式仍可在 `is_send_ucl` 期間放行 injected event，但不再放行真人按鍵。
+
+### 驗證紀錄
+
+- 先新增測試確認 `DeferredTextOutputDispatcher` 會先 prepare 再 post。
+- 先新增測試確認 Unicode `SendInput` 事件帶有肥米標記，且 hook 判斷不會把未標記 injected event 或真人按鍵視為肥米輸出。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-26 - tray menu 狀態即時更新
 
 ### 任務目標

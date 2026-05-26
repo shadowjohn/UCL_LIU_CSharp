@@ -170,6 +170,21 @@ namespace uclliu
                 sendOutput(text);
             });
         }
+
+        public void Queue(string text, Func<string, string> prepareOutput, Action<string> sendOutput)
+        {
+            if (prepareOutput == null)
+            {
+                throw new ArgumentNullException("prepareOutput");
+            }
+            if (sendOutput == null)
+            {
+                throw new ArgumentNullException("sendOutput");
+            }
+
+            string preparedText = prepareOutput(text);
+            Queue(preparedText, sendOutput);
+        }
     }
 
     public static class WindowsVersionDetector
@@ -224,6 +239,7 @@ namespace uclliu
         public const int InputKeyboard = 1;
         public const uint KeyEventKeyUp = 0x0002;
         public const uint KeyEventUnicode = 0x0004;
+        public static readonly IntPtr UclExtraInfo = new IntPtr(0x55434C49);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
@@ -277,7 +293,7 @@ namespace uclliu
             input.u.ki.wScan = textChar;
             input.u.ki.dwFlags = KeyEventUnicode | (keyUp ? KeyEventKeyUp : 0);
             input.u.ki.time = 0;
-            input.u.ki.dwExtraInfo = IntPtr.Zero;
+            input.u.ki.dwExtraInfo = UclExtraInfo;
             return input;
         }
 

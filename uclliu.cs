@@ -374,19 +374,21 @@ namespace uclliu
         }
         public void queue_senddata(string data)
         {
-            deferredTextOutputDispatcher.Queue(data, delegate(string output)
-            {
-                senddata(output);
-            });
+            deferredTextOutputDispatcher.Queue(data, prepare_senddata_text, send_prepared_output);
         }
         public void queue_senddata_with_labels(string data)
         {
-            deferredTextOutputDispatcher.Queue(data, delegate(string output)
-            {
-                senddata(output);
-                show_sp_to_label(output);
-                show_phone_to_label(output);
-            });
+            string labelText = data;
+            deferredTextOutputDispatcher.Queue(
+                data,
+                delegate(string output)
+                {
+                    string preparedOutput = prepare_senddata_text(output);
+                    show_sp_to_label(labelText);
+                    show_phone_to_label(labelText);
+                    return preparedOutput;
+                },
+                send_prepared_output);
         }
         public bool start_phone_mode()
         {
@@ -1698,12 +1700,9 @@ namespace uclliu
             return isWindows11OrLaterCache.Value;
         }
 
-        public void senddata(string data)
+        private string prepare_senddata_text(string data)
         {
-            //人生很難，研究很久 C# 的 sendkeys 遇到有些吃 iso-8859-1、big5 的app 如pcman、putty
-            //或是早期的 photoimpact，最好的方法還是利用剪貼簿貼上，使用前備份一下原來的內容即可
-            //一般視窗先使用 Unicode SendInput；剪貼簿仍保留給終端機、Big5、特殊 App。
-            //data = "肥的天下";
+            data = data ?? "";
             same_sound_index = 0;// #回到第零頁
             is_has_more_page = false;// #回到沒有分頁
             same_sound_last_word = "";
@@ -1718,6 +1717,21 @@ namespace uclliu
                 data = trad2simple(data);
             }
 
+            return data;
+        }
+
+        public void senddata(string data)
+        {
+            data = prepare_senddata_text(data);
+            send_prepared_output(data);
+        }
+
+        private void send_prepared_output(string data)
+        {
+            //人生很難，研究很久 C# 的 sendkeys 遇到有些吃 iso-8859-1、big5 的app 如pcman、putty
+            //或是早期的 photoimpact，最好的方法還是利用剪貼簿貼上，使用前備份一下原來的內容即可
+            //一般視窗先使用 Unicode SendInput；剪貼簿仍保留給終端機、Big5、特殊 App。
+            //data = "肥的天下";
             if (data == "")
             {
                 is_send_ucl = false;

@@ -27,12 +27,15 @@ internal static class Program
         failed += Run("custom dictionary save writes deterministic json", TestCustomDictionarySave);
         failed += Run("unicode sendinput builds literal down/up events", TestUnicodeSendInputBuildsLiteralEvents);
         failed += Run("unicode sendinput preserves surrogate pairs", TestUnicodeSendInputPreservesSurrogatePairs);
+        failed += Run("unicode sendinput marks injected events", TestUnicodeSendInputMarksInjectedEvents);
+        failed += Run("keyboard hook only treats marked injected keys as UCL output", TestKeyboardHookOnlyTreatsMarkedInjectedKeysAsUclOutput);
         failed += Run("clipboard paste restores original text after send failure", TestClipboardPasteRestoresOriginalTextAfterSendFailure);
         failed += Run("clipboard paste reports set clipboard failure before send", TestClipboardPasteReportsSetClipboardFailureBeforeSend);
         failed += Run("selected text transform copies selection and restores clipboard", TestSelectedTextTransformCopiesSelectionAndRestoresClipboard);
         failed += Run("selected text transform does not use stale clipboard", TestSelectedTextTransformDoesNotUseStaleClipboard);
         failed += Run("selected text transform dispatcher posts work outside hook", TestSelectedTextTransformDispatcherPostsWorkOutsideHook);
         failed += Run("deferred text output dispatcher posts send outside hook", TestDeferredTextOutputDispatcherPostsSendOutsideHook);
+        failed += Run("deferred text output dispatcher prepares before posting", TestDeferredTextOutputDispatcherPreparesBeforePosting);
         failed += Run("deferred text output dispatcher preserves label update order", TestDeferredTextOutputDispatcherPreservesLabelUpdateOrder);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
         failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
@@ -327,6 +330,22 @@ internal static class Program
         AssertKeyboardInput(inputs[3], text[1], true);
     }
 
+    private static void TestUnicodeSendInputMarksInjectedEvents()
+    {
+        UnicodeSendInputOutput.INPUT[] inputs = UnicodeSendInputOutput.BuildInputsForText("肥");
+
+        AssertEqual(UnicodeSendInputOutput.UclExtraInfo, inputs[0].u.ki.dwExtraInfo);
+        AssertEqual(UnicodeSendInputOutput.UclExtraInfo, inputs[1].u.ki.dwExtraInfo);
+    }
+
+    private static void TestKeyboardHookOnlyTreatsMarkedInjectedKeysAsUclOutput()
+    {
+        AssertTrue(KeyboardHookMessage.IsInjected(KeyboardHookMessage.LowLevelInjectedFlag), "injected flag should be detected");
+        AssertTrue(KeyboardHookMessage.IsInjectedByUcl(KeyboardHookMessage.LowLevelInjectedFlag, UnicodeSendInputOutput.UclExtraInfo), "marked injected event should be UCL output");
+        AssertTrue(!KeyboardHookMessage.IsInjectedByUcl(KeyboardHookMessage.LowLevelInjectedFlag, IntPtr.Zero), "generic injected event should not be UCL unicode output");
+        AssertTrue(!KeyboardHookMessage.IsInjectedByUcl(0, UnicodeSendInputOutput.UclExtraInfo), "physical event should not be UCL unicode output");
+    }
+
     private static void TestClipboardPasteRestoresOriginalTextAfterSendFailure()
     {
         FakeClipboardGateway clipboard = new FakeClipboardGateway("原剪貼簿");
@@ -470,6 +489,37 @@ internal static class Program
         postedActions[0]();
 
         AssertSequence(new string[] { "post", "send:肥" }, events.ToArray());
+    }
+
+    private static void TestDeferredTextOutputDispatcherPreparesBeforePosting()
+    {
+        List<Action> postedActions = new List<Action>();
+        List<string> events = new List<string>();
+        DeferredTextOutputDispatcher dispatcher = new DeferredTextOutputDispatcher(
+            delegate(Action action)
+            {
+                events.Add("post");
+                postedActions.Add(action);
+            });
+
+        dispatcher.Queue(
+            "肥",
+            delegate(string output)
+            {
+                events.Add("prepare:" + output);
+                return output + "米";
+            },
+            delegate(string output)
+            {
+                events.Add("send:" + output);
+            });
+
+        AssertSequence(new string[] { "prepare:肥", "post" }, events.ToArray());
+        AssertEqual(1, postedActions.Count);
+
+        postedActions[0]();
+
+        AssertSequence(new string[] { "prepare:肥", "post", "send:肥米" }, events.ToArray());
     }
 
     private static void TestDeferredTextOutputDispatcherPreservesLabelUpdateOrder()
@@ -858,6 +908,14 @@ internal static class Program
     }
 
     private static void AssertEqual(string expected, string actual)
+    {
+        if (expected != actual)
+        {
+            throw new Exception("Expected " + expected + ", got " + actual);
+        }
+    }
+
+    private static void AssertEqual(IntPtr expected, IntPtr actual)
     {
         if (expected != actual)
         {

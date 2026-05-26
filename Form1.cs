@@ -116,7 +116,7 @@ namespace uclliu
             int scanCode;
             public int flags;
             int time;
-            int dwExtraInfo;
+            public IntPtr dwExtraInfo;
         }
 
 
@@ -175,10 +175,14 @@ namespace uclliu
                 ucl.debug_print("flag_is_play_capslock_otherkey:" + ucl.flag_is_play_capslock_otherkey.ToString());
             }
 
-            if (ucl.is_send_ucl == true)
+            if (KeyboardHookMessage.IsInjectedByUcl(lParam.flags, lParam.dwExtraInfo))
             {
-                //出字用
-                //ucl.is_send_ucl = false;
+                //出字用，肥米自己的 SendInput event 要放行，避免被 hook 吃掉。
+                return OK;
+            }
+            if (ucl.is_send_ucl == true && KeyboardHookMessage.IsInjected(lParam.flags))
+            {
+                //剪貼簿與舊 SendKeys 模式會產生 injected key，但不要放行真人按鍵。
                 return OK;
             }
             //如果是需要跳過的 app ，就跳過
