@@ -129,6 +129,9 @@ namespace uclliu
             {
                 return CallNextHookEx(0, nCode, wParam, ref lParam);
             }
+            long hookStartedTicks = KeyboardHookLatencyMonitor.GetTimestamp();
+            try
+            {
             bool isCapsLock = (((ushort)GetKeyState(0x14)) & 0xffff) != 0;
             bool keydown = KeyboardHookMessage.IsKeyDown(wParam);
             bool keyup = KeyboardHookMessage.IsKeyUp(wParam);
@@ -1028,6 +1031,11 @@ namespace uclliu
                 return OK;
             }
 
+            }
+            finally
+            {
+                ucl.report_keyboard_hook_latency(hookStartedTicks, wParam, lParam.vkCode);
+            }
         }
         private string get_phone_key_from_vk(int vkCode)
         {
@@ -1147,6 +1155,7 @@ namespace uclliu
                 MessageBox.Show("肥米已執行了...");
                 Application.Exit();
             }
+            ucl.apply_runtime_performance_tuning();
             //載入 UCLLIU.ini
             ucl.loadConfig();
             ucl.preload_typing_sound();

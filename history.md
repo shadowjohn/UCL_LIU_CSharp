@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-05-26 - CPU high loading 下的 hook 快修與量測
+
+### 任務目標
+
+1. 先降低 CPU high loading 時 C# 版肥米 keyboard hook 被延遲造成打字失敗的機率。
+2. 若仍有卡頓，留下可追的 slow hook log，再評估第二階段獨立 hook thread。
+
+### 根因判斷
+
+- C# 版目前 `WH_KEYBOARD_LL` 裝在 WinForms UI thread，CPU 忙時回呼容易被排程延遲。
+- hook 熱路徑仍會做 foreground process 查詢、UI 狀態更新、音效入口與送字排程；高負載下比 Python 版更容易放大成手感卡頓。
+
+### 實作紀錄
+
+- 新增 `KeyboardHookPerformancePolicy`，集中設定 high loading 快修參數。
+- 啟動時 best-effort 將 process priority 與 UI thread priority 提升到 `AboveNormal`。
+- foreground process cache 從 120ms 拉長到 500ms，減少 hook 內重複查 process。
+- 新增 `KeyboardHookLatencyMonitor`，hook 回呼超過 20ms 時才記錄，並以 1000ms 節流。
+- slow hook log 透過背景 thread 寫入 `UCLLIU_performance.log`，避免 log 本身卡在 hook 內。
+
+### 驗證紀錄
+
+- 新增核心測試確認 priority/cache/slow threshold policy。
+- 新增核心測試確認 latency monitor 只記慢回呼且會節流。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-26 - 顯示短根設定寫回 INI
 
 ### 任務目標

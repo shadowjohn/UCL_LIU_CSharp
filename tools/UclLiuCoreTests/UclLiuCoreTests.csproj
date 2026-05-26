@@ -10,6 +10,7 @@
     <Compile Include="..\..\AltTabWindowStyle.cs" Link="AltTabWindowStyle.cs" />
     <Compile Include="..\..\CustomDictionaryStore.cs" Link="CustomDictionaryStore.cs" />
     <Compile Include="..\..\ForegroundProcessSnapshot.cs" Link="ForegroundProcessSnapshot.cs" />
+    <Compile Include="..\..\KeyboardHookPerformance.cs" Link="KeyboardHookPerformance.cs" />
     <Compile Include="..\..\KeyboardHookState.cs" Link="KeyboardHookState.cs" />
     <Compile Include="..\..\LiuJsonTable.cs" Link="LiuJsonTable.cs" />
     <Compile Include="..\..\LiuReverseLookupTable.cs" Link="LiuReverseLookupTable.cs" />

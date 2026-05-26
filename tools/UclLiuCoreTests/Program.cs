@@ -32,6 +32,8 @@ internal static class Program
         failed += Run("unicode sendinput preserves surrogate pairs", TestUnicodeSendInputPreservesSurrogatePairs);
         failed += Run("unicode sendinput marks injected events", TestUnicodeSendInputMarksInjectedEvents);
         failed += Run("keyboard hook only treats marked injected keys as UCL output", TestKeyboardHookOnlyTreatsMarkedInjectedKeysAsUclOutput);
+        failed += Run("keyboard hook performance policy raises priority and cache duration", TestKeyboardHookPerformancePolicy);
+        failed += Run("keyboard hook latency monitor logs slow callbacks with throttle", TestKeyboardHookLatencyMonitor);
         failed += Run("clipboard paste restores original text after send failure", TestClipboardPasteRestoresOriginalTextAfterSendFailure);
         failed += Run("clipboard paste reports set clipboard failure before send", TestClipboardPasteReportsSetClipboardFailureBeforeSend);
         failed += Run("selected text transform copies selection and restores clipboard", TestSelectedTextTransformCopiesSelectionAndRestoresClipboard);
@@ -383,6 +385,25 @@ internal static class Program
         AssertTrue(KeyboardHookMessage.IsInjectedByUcl(KeyboardHookMessage.LowLevelInjectedFlag, UnicodeSendInputOutput.UclExtraInfo), "marked injected event should be UCL output");
         AssertTrue(!KeyboardHookMessage.IsInjectedByUcl(KeyboardHookMessage.LowLevelInjectedFlag, IntPtr.Zero), "generic injected event should not be UCL unicode output");
         AssertTrue(!KeyboardHookMessage.IsInjectedByUcl(0, UnicodeSendInputOutput.UclExtraInfo), "physical event should not be UCL unicode output");
+    }
+
+    private static void TestKeyboardHookPerformancePolicy()
+    {
+        AssertEqual((int)System.Diagnostics.ProcessPriorityClass.AboveNormal, (int)KeyboardHookPerformancePolicy.ProcessPriorityClass);
+        AssertEqual((int)System.Threading.ThreadPriority.AboveNormal, (int)KeyboardHookPerformancePolicy.UiThreadPriority);
+        AssertTrue(KeyboardHookPerformancePolicy.ForegroundProcessCacheMilliseconds >= 500, "foreground process cache should reduce hot-path process lookup");
+        AssertTrue(KeyboardHookPerformancePolicy.SlowHookThresholdMilliseconds <= 50, "slow hook threshold should catch visible typing stalls");
+    }
+
+    private static void TestKeyboardHookLatencyMonitor()
+    {
+        KeyboardHookLatencyMonitor monitor = new KeyboardHookLatencyMonitor(20, 1000);
+        long firstTick = KeyboardHookLatencyMonitor.MillisecondsToTicks(1000);
+
+        AssertTrue(!monitor.ShouldLogElapsedMilliseconds(19, firstTick), "fast callback should not log");
+        AssertTrue(monitor.ShouldLogElapsedMilliseconds(20, firstTick), "slow callback should log");
+        AssertTrue(!monitor.ShouldLogElapsedMilliseconds(80, firstTick + KeyboardHookLatencyMonitor.MillisecondsToTicks(500)), "slow callback should be throttled");
+        AssertTrue(monitor.ShouldLogElapsedMilliseconds(80, firstTick + KeyboardHookLatencyMonitor.MillisecondsToTicks(1000)), "slow callback should log after throttle interval");
     }
 
     private static void TestClipboardPasteRestoresOriginalTextAfterSendFailure()

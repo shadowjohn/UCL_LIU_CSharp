@@ -125,6 +125,7 @@
     <Compile Include="CustomDictionaryStore.cs" />
     <Compile Include="AltTabWindowStyle.cs" />
     <Compile Include="ForegroundProcessSnapshot.cs" />
+    <Compile Include="KeyboardHookPerformance.cs" />
     <Compile Include="KeyboardHookState.cs" />
     <Compile Include="LiuTableConverter.cs" />
     <Compile Include="LiuJsonTable.cs" />

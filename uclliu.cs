@@ -19,6 +19,8 @@ namespace uclliu
         private readonly SelectedTextTransformDispatcher selectedTextTransformDispatcher;
         private readonly DeferredTextOutputDispatcher deferredTextOutputDispatcher;
         private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
+        private readonly KeyboardHookLatencyMonitor keyboardHookLatencyMonitor = new KeyboardHookLatencyMonitor(KeyboardHookPerformancePolicy.SlowHookThresholdMilliseconds, KeyboardHookPerformancePolicy.SlowHookLogIntervalMilliseconds);
+        private readonly AsyncPerformanceLogger performanceLogger;
         public string VERSION = UclLiuAppInfo.Version;
         public FileStream lockFileString;
         public string CUSTOM_JSON_FILE
@@ -80,7 +82,7 @@ namespace uclliu
         public Font GUI_FONT_20 = new Font("roman", 20, FontStyle.Bold);
         public Font GUI_FONT_22 = new Font("roman", 22, FontStyle.Bold);
         public Font GUI_FONT_26 = new Font("roman", 26, FontStyle.Bold);
-        private readonly TimeSpan foregroundProcessCacheDuration = TimeSpan.FromMilliseconds(120);
+        private readonly TimeSpan foregroundProcessCacheDuration = TimeSpan.FromMilliseconds(KeyboardHookPerformancePolicy.ForegroundProcessCacheMilliseconds);
         private DateTime foregroundProcessCachedAt = DateTime.MinValue;
         private IntPtr foregroundProcessCachedHandle = IntPtr.Zero;
         private Dictionary<string, string> foregroundProcessCache = null;
@@ -94,6 +96,7 @@ namespace uclliu
             f = _f;
             selectedTextTransformDispatcher = new SelectedTextTransformDispatcher(post_ui_action, set_is_send_ucl, debug_print);
             deferredTextOutputDispatcher = new DeferredTextOutputDispatcher(post_ui_action);
+            performanceLogger = new AsyncPerformanceLogger(my.pwd() + "\\UCLLIU_performance.log");
         }
         //感謝台灣碼農
         public string simple2trad(string data)
@@ -1276,6 +1279,29 @@ namespace uclliu
             {
                 Console.WriteLine(data);
             }
+        }
+        public void apply_runtime_performance_tuning()
+        {
+            RuntimePriorityTuning.ApplyBestEffort(debug_print);
+        }
+        public void report_keyboard_hook_latency(long startedTicks, int message, int vkCode)
+        {
+            int elapsedMilliseconds;
+            if (!keyboardHookLatencyMonitor.ShouldLog(startedTicks, out elapsedMilliseconds))
+            {
+                return;
+            }
+
+            string logMessage = "slow keyboard hook "
+                + elapsedMilliseconds.ToString() + "ms"
+                + " message=" + message.ToString()
+                + " vk=" + vkCode.ToString()
+                + " ucl=" + flag_is_ucl.ToString()
+                + " hf=" + flag_is_hf.ToString()
+                + " label=" + play_ucl_label
+                + " process=" + foregroundProcessNameCache;
+            performanceLogger.Log(logMessage);
+            debug_print("PERF " + logMessage);
         }
         public bool type_label_set_text(string last_word_label_txt = "")
         {
