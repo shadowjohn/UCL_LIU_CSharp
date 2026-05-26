@@ -39,6 +39,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - low-level keyboard hook 的前段 App 判斷改走輕量 process name 查詢，不再每鍵讀完整視窗標題或 `Process.MainModule`，降低剛切入 Notepad++ 等 App 時短暫卡住的機率。
 - 修正 `CTRL_SP=1` 時 Shift 放開不會清掉 `flag_is_shift_down`，造成後續輸入像 Shift 黏住。
 - low-level keyboard hook 支援 `WM_SYSKEYDOWN` / `WM_SYSKEYUP`，避免 Alt/系統組合鍵流程漏掉 keyup。
+- 一般出字改成在 low-level keyboard hook 回傳後才送出，降低 Notepad++ / Scintilla 編輯區因同步 `SendInput` 重入而卡頓的機率。
 - 打字音效的 wav 音量快取與檔案準備移到背景執行緒，降低第一次按鍵或切換時卡 UI 的機會。
 - 打字音效改為預載 wav 到記憶體並重用播放 handle，熱路徑不再每鍵建立 `SoundPlayer`、`PlaySync()` 或查檔案 timestamp。
 - 打字音效播放改用 `winmm.dll` 的 `waveOut` one-shot，每次按鍵使用獨立播放 handle，避免連打時前一個聲音被截斷。

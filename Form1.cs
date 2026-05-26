@@ -405,10 +405,8 @@ namespace uclliu
                         //# send data        
                         //肥模式，打字時，如果後選字有如 0 1 2 3 4…按數字鍵，也可以出字
                         string data = ucl.ucl_find_data[Convert.ToInt32(Convert.ToString((char)ea))];
-                        ucl.senddata(data);
+                        ucl.queue_senddata_with_labels(data);
                         //todo
-                        ucl.show_sp_to_label(data);
-                        ucl.show_phone_to_label(data);
                         //ucl.show_sp_to_label(data.decode('utf-8'));
                         //# 快選用的
                         //# print(data)        
@@ -423,7 +421,7 @@ namespace uclliu
                             //kac = ea
                             string k = ucl.widen(((char)(ea)).ToString());
                             //ucl.debug_print("event.Key to Full:%s %s" % (event.Key,k));
-                            ucl.senddata(k);
+                            ucl.queue_senddata(k);
                             ucl.debug_print("Debug11");
                             return NO;
                         }
@@ -455,7 +453,7 @@ namespace uclliu
                             }
 
                             string k = ucl.widen(((char)(kac)).ToString());
-                            ucl.senddata(k);
+                            ucl.queue_senddata(k);
                             ucl.debug_print("Debug100");
                             return NO;
                         }
@@ -560,7 +558,7 @@ namespace uclliu
                             }
                             string k = ucl.widen(((char)(kac)).ToString());
                             //ucl.debug_print("285 event.Key to Full:%s %s" % (event.Key,k));
-                            ucl.senddata(k);
+                            ucl.queue_senddata(k);
                             ucl.debug_print("Debug9");
                             return NO;
                         }
@@ -584,7 +582,7 @@ namespace uclliu
                                 break;
                             case 220: //\
                                 //kac = 92;
-                                ucl.senddata("＼");
+                                ucl.queue_senddata("＼");
                                 return NO;
                             case 187: //+
                             case 188: //,
@@ -595,7 +593,7 @@ namespace uclliu
                                 break;
                         }
                         string k = ucl.widen(((char)(kac)).ToString());
-                        ucl.senddata(k);
+                        ucl.queue_senddata(k);
                         ucl.debug_print("Debug22");
                         return NO;
                     }
@@ -676,9 +674,7 @@ namespace uclliu
                         }
                         else
                         {
-                            ucl.senddata(text);
-                            ucl.show_sp_to_label(text);
-                            ucl.show_phone_to_label(text);
+                            ucl.queue_senddata_with_labels(text);
                         }
                         ucl.debug_print("Debug4");
                         return NO;
@@ -700,7 +696,7 @@ namespace uclliu
                         {
                             int kac = ea;
                             string k = ucl.widen(((char)(kac)).ToString());
-                            ucl.senddata(k);
+                            ucl.queue_senddata(k);
                             ucl.debug_print("Debug23");
                             return NO;
                         }
@@ -737,7 +733,7 @@ namespace uclliu
                 // string keycode =  (char)lParam.KeyValue;
                 if (data == 65 && keydown)
                 {
-                    ucl.senddata("肥");
+                    ucl.queue_senddata("肥");
                     return NO;
                 }
                 if (data >= 65 && data <= 65 + 26)
@@ -880,7 +876,7 @@ namespace uclliu
                             break;
                         case 220: //\
                             kac -= 128;
-                            ucl.senddata("＼");
+                            ucl.queue_senddata("＼");
                             return NO;
                         case 219: //[
                             kac = 91;
@@ -911,7 +907,7 @@ namespace uclliu
                         //kac = kac;
                     }
                     string k = ucl.widen(((char)(kac)).ToString());
-                    ucl.senddata(k);
+                    ucl.queue_senddata(k);
                     ucl.debug_print("eng / full");
                     //數字變全形
                     return NO;
@@ -1020,7 +1016,7 @@ namespace uclliu
                         //kac = kac;
                     }
                     string k = ucl.widen(((char)(kac)).ToString());
-                    ucl.senddata(k);
+                    ucl.queue_senddata(k);
                     ucl.debug_print("eng / full");
                     //數字變全形
                     return NO;

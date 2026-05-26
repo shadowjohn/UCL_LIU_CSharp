@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-05-26 - Notepad++ 打字手感追查與 hook 出字延後
+
+### 任務目標
+
+1. 不使用剪貼簿的前提下，改善 Notepad++ / Scintilla 編輯區忽然變難打的情況。
+2. 降低 low-level keyboard hook 內同步送字造成的重入與卡頓風險。
+
+### 實作紀錄
+
+- 對照 Python 版後確認正常模式同樣是 `KEYEVENTF_UNICODE` SendInput，不應把 Notepad++ 改成貼上模式。
+- 新增 `DeferredTextOutputDispatcher`，把一般出字排到 hook 回傳後再執行。
+- `Form1.LowLevelKeyboardProc` 中所有直接 `ucl.senddata(...)` 改為 `ucl.queue_senddata(...)`。
+- 需要出字後顯示簡根/注音的候選輸出改為 `queue_senddata_with_labels(...)`，確保 `senddata()` 清輸入區後才更新提示。
+
+### 驗證紀錄
+
+- 先新增 deferred output 測試，確認缺少 dispatcher 時測試紅燈。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `rg -n "ucl\.senddata" Form1.cs` 確認 hook 內已無直接送字。
+
+---
+
 ## 2026-05-26 - 移除 C# 版 dist 目錄
 
 ### 任務目標

@@ -144,6 +144,34 @@ namespace uclliu
         }
     }
 
+    public sealed class DeferredTextOutputDispatcher
+    {
+        private readonly Action<Action> post;
+
+        public DeferredTextOutputDispatcher(Action<Action> post)
+        {
+            if (post == null)
+            {
+                throw new ArgumentNullException("post");
+            }
+
+            this.post = post;
+        }
+
+        public void Queue(string text, Action<string> sendOutput)
+        {
+            if (sendOutput == null)
+            {
+                throw new ArgumentNullException("sendOutput");
+            }
+
+            post(delegate
+            {
+                sendOutput(text);
+            });
+        }
+    }
+
     public static class WindowsVersionDetector
     {
         public static bool IsWindows11OrLater()

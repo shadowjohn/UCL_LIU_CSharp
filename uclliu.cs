@@ -17,6 +17,7 @@ namespace uclliu
         private readonly ClipboardPasteOutput clipboardPasteOutput = new ClipboardPasteOutput();
         private readonly SelectedTextTransformCommand selectedTextTransformCommand = new SelectedTextTransformCommand();
         private readonly SelectedTextTransformDispatcher selectedTextTransformDispatcher;
+        private readonly DeferredTextOutputDispatcher deferredTextOutputDispatcher;
         private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
         public string VERSION = UclLiuAppInfo.Version;
         public FileStream lockFileString;
@@ -92,6 +93,7 @@ namespace uclliu
         {
             f = _f;
             selectedTextTransformDispatcher = new SelectedTextTransformDispatcher(post_ui_action, set_is_send_ucl, debug_print);
+            deferredTextOutputDispatcher = new DeferredTextOutputDispatcher(post_ui_action);
         }
         //感謝台灣碼農
         public string simple2trad(string data)
@@ -369,6 +371,22 @@ namespace uclliu
         private void set_is_send_ucl(bool value)
         {
             is_send_ucl = value;
+        }
+        public void queue_senddata(string data)
+        {
+            deferredTextOutputDispatcher.Queue(data, delegate(string output)
+            {
+                senddata(output);
+            });
+        }
+        public void queue_senddata_with_labels(string data)
+        {
+            deferredTextOutputDispatcher.Queue(data, delegate(string output)
+            {
+                senddata(output);
+                show_sp_to_label(output);
+                show_phone_to_label(output);
+            });
         }
         public bool start_phone_mode()
         {

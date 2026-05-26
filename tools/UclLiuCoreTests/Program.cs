@@ -30,6 +30,8 @@ internal static class Program
         failed += Run("selected text transform copies selection and restores clipboard", TestSelectedTextTransformCopiesSelectionAndRestoresClipboard);
         failed += Run("selected text transform does not use stale clipboard", TestSelectedTextTransformDoesNotUseStaleClipboard);
         failed += Run("selected text transform dispatcher posts work outside hook", TestSelectedTextTransformDispatcherPostsWorkOutsideHook);
+        failed += Run("deferred text output dispatcher posts send outside hook", TestDeferredTextOutputDispatcherPostsSendOutsideHook);
+        failed += Run("deferred text output dispatcher preserves label update order", TestDeferredTextOutputDispatcherPreservesLabelUpdateOrder);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
         failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
         failed += Run("default compatibility keeps Notepad++ on unicode sendinput", TestDefaultCompatibilityKeepsNotepadPlusPlusOnUnicodeSendInput);
@@ -428,6 +430,54 @@ internal static class Program
 
         AssertEqual(1, command.RunCount);
         AssertSequence(new string[] { "post", "send=True", "transform", "output:UCL", "send=False" }, events.ToArray());
+    }
+
+    private static void TestDeferredTextOutputDispatcherPostsSendOutsideHook()
+    {
+        List<Action> postedActions = new List<Action>();
+        List<string> events = new List<string>();
+        DeferredTextOutputDispatcher dispatcher = new DeferredTextOutputDispatcher(
+            delegate(Action action)
+            {
+                events.Add("post");
+                postedActions.Add(action);
+            });
+
+        dispatcher.Queue("肥", delegate(string output)
+        {
+            events.Add("send:" + output);
+        });
+
+        AssertSequence(new string[] { "post" }, events.ToArray());
+        AssertEqual(1, postedActions.Count);
+
+        postedActions[0]();
+
+        AssertSequence(new string[] { "post", "send:肥" }, events.ToArray());
+    }
+
+    private static void TestDeferredTextOutputDispatcherPreservesLabelUpdateOrder()
+    {
+        List<Action> postedActions = new List<Action>();
+        List<string> events = new List<string>();
+        DeferredTextOutputDispatcher dispatcher = new DeferredTextOutputDispatcher(
+            delegate(Action action)
+            {
+                events.Add("post");
+                postedActions.Add(action);
+            });
+
+        dispatcher.Queue("米", delegate(string output)
+        {
+            events.Add("send:" + output);
+            events.Add("sp:" + output);
+            events.Add("phone:" + output);
+        });
+
+        AssertSequence(new string[] { "post" }, events.ToArray());
+        postedActions[0]();
+
+        AssertSequence(new string[] { "post", "send:米", "sp:米", "phone:米" }, events.ToArray());
     }
 
     private static void TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste()
