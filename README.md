@@ -1,6 +1,6 @@
 # UCL_LIU_CSharp
 
-C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
+C# / WinForms 版肥米輸入法，目前版本 v0.12。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
 
 目前 C# 版已進入可日用測試的現代化復刻狀態：已補上字碼表自動轉換、自定詞庫、Unicode SendInput 出字、剪貼簿 fallback、打字音效、同音/注音查詢、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback 與核心測試。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
 
@@ -11,7 +11,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是
 | 版本 | 實用成熟度 | 工程可維護性 | 日用信心 | 定位 |
 | --- | ---: | ---: | ---: | --- |
 | Python 版 v1.67 | 8.5 / 10 | 6.5 / 10 | 8.5 / 10 | 功能最完整的正史版，多年實戰相容性最足 |
-| C# 版 v0.11 | 7.4 / 10 | 8.0 / 10 | 7.2 / 10 | 低依賴、可維護、開始能日用的現代化復刻版 |
+| C# 版 v0.12 | 7.8 / 10 | 8.1 / 10 | 7.8 / 10 | TSF 出字已可日用測試、低依賴、可維護的現代化復刻版 |
 
 ## 目前狀態
 
@@ -31,7 +31,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.11。這個分支的目標是
 
 ## 低依賴狀態
 
-C# 版 v0.11 目前已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。主程式只使用 .NET Framework 4.5.2 內建 reference，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。
+C# 版 v0.12 目前已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。主程式只使用 .NET Framework 4.5.2 內建 reference，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。
 
 TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預設出字流程；只有手動切到 `TSF出字模式` 時才會透過 named pipe 呼叫 `tsf_bridge\UclTsfBridge.dll`。
 
@@ -71,11 +71,13 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 
 | 檔案 | 說明 |
 | --- | --- |
+| [RELEASE/0.12/uclliu.exe](RELEASE/0.12/uclliu.exe) | v0.12 開發分支打包版 |
+| [RELEASE/0.12/uclliu.zip](RELEASE/0.12/uclliu.zip) | v0.12 壓縮版，含選配 TSF Bridge 外掛 |
 | [RELEASE/0.11/uclliu.exe](RELEASE/0.11/uclliu.exe) | v0.11 開發分支打包版 |
 | [RELEASE/0.11/uclliu.zip](RELEASE/0.11/uclliu.zip) | v0.11 壓縮版 |
 | [RELEASE/0.1/uclliu.exe](RELEASE/0.1/uclliu.exe) | 2019 初版備份 |
 
-v0.11 發行日期：2026-05-26。病毒碼掃描已提交 Microsoft WDSI：[submission 2a365b04-dea0-496f-937f-9051b163a968](https://www.microsoft.com/en-us/wdsi/submission/2a365b04-dea0-496f-937f-9051b163a968)。
+v0.12 發行日期：2026-05-27。v0.11 病毒碼掃描已提交 Microsoft WDSI：[submission 2a365b04-dea0-496f-937f-9051b163a968](https://www.microsoft.com/en-us/wdsi/submission/2a365b04-dea0-496f-937f-9051b163a968)。
 
 若自行編譯，請使用 .NET Framework 4.5.2 WinForms 專案重建。C# 版開發輸出以 `bin\Debug\uclliu.exe` 或 `bin\Release\uclliu.exe` 為準，不另外維護 `dist` 目錄；請確認 `pinyi.txt`、`wavs`、`tsf_bridge`、`liu.json` 或可轉換字碼表與 exe 放在同一目錄。
 
@@ -103,7 +105,7 @@ C# 版目前右下角選單提供四種出字模式：
 | 正常出字模式（Unicode） | 預設使用逐字 Unicode `SendInput`，貼近 Python 版 `SendKeysCtypes` 每字送出的節奏，並避免舊 `SendKeys` 對 `+ ^ % { } ( )` 等字元的語法干擾 |
 | BIG5 模式 | 以 Big5 文字貼上，保留給舊程式與特定環境 |
 | 複製貼上模式 | 使用剪貼簿貼上，適合 PuTTY、PCMan、部分遊戲或特殊文字框 |
-| TSF出字模式 | 透過外掛 `UclTsfBridge.dll` named pipe 出字；若 pipe、TSF context 或 DLL 狀態失敗，會 fallback 回 Unicode `SendInput` |
+| TSF出字模式 | 透過外掛 `UclTsfBridge.dll` named pipe 出字；若 pipe、TSF context 或 DLL 狀態失敗，會 fallback 回 Unicode `SendInput`。實機測試 Notepad++ 開啟自動完成時也可正常出字 |
 
 貼上流程已改為集中封裝：先備份剪貼簿、設定輸出文字、送出 `Ctrl+V` 或 `Shift+Insert`、最後盡量還原原本剪貼簿。
 

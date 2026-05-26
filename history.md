@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-05-27 - v0.12 版號與主線整理
+
+### 任務目標
+
+1. TSF Bridge 實機確認穩定後，將 C# 版版本升到 v0.12。
+2. 更新 README/CHANGELOG 反映 v0.12 與 Notepad++ 自動完成實測結果。
+3. 合回主線並推送。
+
+### 實作紀錄
+
+- `UclLiuAppInfo.Version`、`AssemblyVersion`、`AssemblyFileVersion` 更新為 `0.12`。
+- README 成熟度評分與發行資訊更新到 v0.12。
+- CHANGELOG 將本輪 TSF Bridge 外掛 fallback 整理為 v0.12。
+- 產出 `RELEASE/0.12/uclliu.exe` 與包含 `tsf_bridge` 外掛的 `RELEASE/0.12/uclliu.zip`。
+
+### 驗證紀錄
+
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過，僅保留既有 `Form1.lParam` 未使用警告。
+
+---
+
 ## 2026-05-27 - TSF Bridge 外掛式 fallback 移植
 
 ### 任務目標
