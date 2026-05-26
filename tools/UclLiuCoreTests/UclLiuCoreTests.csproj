@@ -7,6 +7,7 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\AltTabWindowStyle.cs" Link="AltTabWindowStyle.cs" />
     <Compile Include="..\..\CustomDictionaryStore.cs" Link="CustomDictionaryStore.cs" />
     <Compile Include="..\..\KeyboardHookState.cs" Link="KeyboardHookState.cs" />
     <Compile Include="..\..\LiuJsonTable.cs" Link="LiuJsonTable.cs" />

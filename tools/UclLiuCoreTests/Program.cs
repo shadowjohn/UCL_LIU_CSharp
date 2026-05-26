@@ -13,6 +13,7 @@ internal static class Program
         failed += Run("unitab converter writes expected cin entry", TestUnitabConverterWritesCinEntry);
         failed += Run("ensure json converts cin in working directory", TestEnsureJsonConvertsCin);
         failed += Run("app info exposes version and author message", TestAppInfoExposesVersionAndAuthorMessage);
+        failed += Run("alt tab window style hides tool window from switcher", TestAltTabWindowStyleHidesToolWindowFromSwitcher);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
@@ -144,6 +145,16 @@ internal static class Program
         AssertEqual("Copyright (c) MIT 3WA Studio (https://3wa.tw)", UclLiuAppInfo.Copyright);
         AssertEqual("Author: FeatherMountain (https://3wa.tw)", UclLiuAppInfo.Comments);
         AssertEqual(expected, UclLiuAppInfo.BuildAboutText());
+    }
+
+    private static void TestAltTabWindowStyleHidesToolWindowFromSwitcher()
+    {
+        int original = AltTabWindowStyle.WsExAppWindow;
+
+        int adjusted = AltTabWindowStyle.HideFromSwitcher(original);
+
+        AssertEqual(0, adjusted & AltTabWindowStyle.WsExAppWindow);
+        AssertEqual(AltTabWindowStyle.WsExToolWindow, adjusted & AltTabWindowStyle.WsExToolWindow);
     }
 
     private static void TestShortModeWidth()

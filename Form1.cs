@@ -12,6 +12,16 @@ namespace uclliu
     public partial class Form1 : Form
     {
         myinclude my = new myinclude();
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                cp.ExStyle = AltTabWindowStyle.HideFromSwitcher(cp.ExStyle);
+                return cp;
+            }
+        }
+
         //From : https://stackoverflow.com/questions/115868/how-do-i-get-the-title-of-the-current-active-window-using-c
         //https://stackoverflow.com/questions/6569405/how-to-get-active-process-name-in-c
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]

@@ -123,6 +123,7 @@
     </Compile>
     <Compile Include="App_Code\include.cs" />
     <Compile Include="CustomDictionaryStore.cs" />
+    <Compile Include="AltTabWindowStyle.cs" />
     <Compile Include="KeyboardHookState.cs" />
     <Compile Include="LiuTableConverter.cs" />
     <Compile Include="LiuJsonTable.cs" />

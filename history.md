@@ -284,6 +284,26 @@
 
 ---
 
+## 2026-05-26 - 主視窗不出現在 Alt+Tab
+
+### 問題觀察
+
+- 使用者回報 Python 版按 Alt+Tab 不會看到肥米浮動視窗，但 C# 版會出現在切換器。
+- `Form1.Designer.cs` 已有 `ShowInTaskbar=false`，因此問題不是 taskbar button，而是 top-level window 沒有 tool window extended style。
+
+### 實作紀錄
+
+- 新增 `AltTabWindowStyle`，集中處理 `WS_EX_TOOLWINDOW` / `WS_EX_APPWINDOW` bit。
+- `Form1.CreateParams` 套用 `HideFromSwitcher()`，讓主浮動視窗保留顯示但不被 Alt+Tab 收進 App 清單。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `AltTabWindowStyle`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 搭配臨時 `OutDir` 通過，僅保留既有 `Form1.lParam` 未使用警告。
+
+---
+
 ## 2026-05-26 - `,,,x` / `,,,z` 取字流程收斂
 
 ### 問題觀察
