@@ -17,6 +17,7 @@ internal static class Program
         failed += Run("foreground process snapshot normalizes process name", TestForegroundProcessSnapshotNormalizesProcessName);
         failed += Run("tray menu text marks current output mode", TestTrayMenuTextMarksCurrentOutputMode);
         failed += Run("tray menu text marks boolean settings", TestTrayMenuTextMarksBooleanSettings);
+        failed += Run("tray menu opens on left and right click", TestTrayMenuOpensOnLeftAndRightClick);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
@@ -187,6 +188,13 @@ internal static class Program
     {
         AssertEqual("5.【●】使用 CTRL+SPACE 切換輸入法", TrayMenuText.ToggleItem("5.", true, "使用 CTRL+SPACE 切換輸入法"));
         AssertEqual("5.【　】使用 CTRL+SPACE 切換輸入法", TrayMenuText.ToggleItem("5.", false, "使用 CTRL+SPACE 切換輸入法"));
+    }
+
+    private static void TestTrayMenuOpensOnLeftAndRightClick()
+    {
+        AssertTrue(TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Left), "left click should open tray menu");
+        AssertTrue(TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Right), "right click should open tray menu");
+        AssertTrue(!TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Middle), "middle click should not open tray menu");
     }
 
     private static void TestShortModeWidth()

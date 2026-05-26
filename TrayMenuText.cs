@@ -1,3 +1,5 @@
+using System.Windows.Forms;
+
 namespace uclliu
 {
     public static class TrayMenuText
@@ -30,6 +32,14 @@ namespace uclliu
         private static bool IsOutputType(string outputType, string expected)
         {
             return (outputType ?? "DEFAULT").Trim().ToUpperInvariant() == expected;
+        }
+    }
+
+    public static class TrayMenuClickPolicy
+    {
+        public static bool ShouldOpenMenu(MouseButtons button)
+        {
+            return button == MouseButtons.Left || button == MouseButtons.Right;
         }
     }
 }

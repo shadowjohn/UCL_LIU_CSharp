@@ -33,6 +33,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - `STARTUP_DEFAULT_UCL=0` 時，啟動後會套用英模式。
 - 移除 C# 版不需要的 `dist` 目錄，開發輸出改以 `bin\Debug` / `bin\Release` 為準。
 - tray menu 改在 `ContextMenu.Popup` 前即時重建，避免右下角選單狀態慢半拍才更新。
+- tray icon 左鍵也可打開同一份選單，右鍵維持既有托盤選單行為。
 
 ### Fixed
 

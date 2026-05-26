@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-05-26 - tray icon 左右鍵開啟選單
+
+### 任務目標
+
+1. 讓 tray icon 左鍵與右鍵都能開啟右下角選單。
+2. 保留右鍵原本 `NotifyIcon.ContextMenu` 行為，避免改壞既有托盤選單關閉/失焦流程。
+
+### 實作紀錄
+
+- 新增 `TrayMenuClickPolicy.ShouldOpenMenu()`，明確定義左鍵與右鍵都屬於開啟選單操作。
+- `NotifyIcon1_MouseClick` 對左鍵手動呼叫同一份 `ContextMenu`。
+- 右鍵仍交給 WinForms `NotifyIcon.ContextMenu` 內建流程處理。
+
+### 驗證紀錄
+
+- 新增核心測試確認左鍵、右鍵會開選單，中鍵不開。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-26 - Notepad++ 快速接打卡頓與跳英文修正
 
 ### 任務目標

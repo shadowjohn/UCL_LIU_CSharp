@@ -1441,6 +1441,16 @@ namespace uclliu
         }
         private void NotifyIcon1_MouseClick(object sender, MouseEventArgs e)
         {
+            if (TrayMenuClickPolicy.ShouldOpenMenu(e.Button) && e.Button == MouseButtons.Left)
+            {
+                // 右鍵交給 NotifyIcon.ContextMenu 內建流程；左鍵手動打開同一份選單。
+                show_tray_menu_at_cursor();
+            }
+        }
+        private void show_tray_menu_at_cursor()
+        {
+            rebuild_tray_menu();
+            cMenu.Show(this, PointToClient(Cursor.Position));
         }
         private void rebuild_tray_menu()
         {
