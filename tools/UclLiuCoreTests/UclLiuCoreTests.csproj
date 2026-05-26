@@ -11,6 +11,7 @@
     <Compile Include="..\..\CustomDictionaryStore.cs" Link="CustomDictionaryStore.cs" />
     <Compile Include="..\..\KeyboardHookState.cs" Link="KeyboardHookState.cs" />
     <Compile Include="..\..\LiuJsonTable.cs" Link="LiuJsonTable.cs" />
+    <Compile Include="..\..\LiuReverseLookupTable.cs" Link="LiuReverseLookupTable.cs" />
     <Compile Include="..\..\LiuTableConverter.cs" Link="LiuTableConverter.cs" />
     <Compile Include="..\..\PinyiCandidateSelector.cs" Link="PinyiCandidateSelector.cs" />
     <Compile Include="..\..\PhoneCodeTable.cs" Link="PhoneCodeTable.cs" />

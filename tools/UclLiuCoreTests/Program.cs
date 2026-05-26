@@ -18,6 +18,7 @@ internal static class Program
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
         failed += Run("simple ini writes readable sections", TestSimpleIniWritesReadableSections);
         failed += Run("liu json parser decodes chardefs without System.Json", TestLiuJsonParserDecodesChardefs);
+        failed += Run("liu reverse lookup builds numbered candidate hash", TestLiuReverseLookupBuildsNumberedCandidateHash);
         failed += Run("custom dictionary lowercases and merges values", TestCustomDictionaryMerge);
         failed += Run("custom dictionary save writes deterministic json", TestCustomDictionarySave);
         failed += Run("unicode sendinput builds literal down/up events", TestUnicodeSendInputBuildsLiteralEvents);
@@ -28,6 +29,7 @@ internal static class Program
         failed += Run("selected text transform does not use stale clipboard", TestSelectedTextTransformDoesNotUseStaleClipboard);
         failed += Run("selected text transform prefers first successful source", TestSelectedTextTransformPrefersFirstSuccessfulSource);
         failed += Run("selected text transform falls back through sources in order", TestSelectedTextTransformFallsBackThroughSourcesInOrder);
+        failed += Run("scintilla selected text source copies focused selection", TestScintillaSelectedTextSourceCopiesFocusedSelection);
         failed += Run("selected text transform dispatcher posts work outside hook", TestSelectedTextTransformDispatcherPostsWorkOutsideHook);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
         failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
@@ -204,6 +206,23 @@ internal static class Program
 
         AssertSequence(new string[] { "肥", "米" }, chardefs["ucl"].ToArray());
         AssertSequence(new string[] { "一" }, chardefs["abc"].ToArray());
+    }
+
+    private static void TestLiuReverseLookupBuildsNumberedCandidateHash()
+    {
+        Dictionary<string, List<string>> chardefs = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        chardefs["gqd"] = new List<string>() { "動", "舅", "娚" };
+        chardefs["A"] = new List<string>() { "舅" };
+
+        LiuReverseLookupTable table = LiuReverseLookupTable.Build(chardefs);
+
+        AssertEqual("gqd", table.WordToRoot["動"]);
+        AssertEqual("a", table.WordToRoot["舅"]);
+        AssertEqual("gqd2", table.WordToRoot["娚"]);
+        AssertEqual("動", table.CodeToWord["gqd"]);
+        AssertEqual("舅", table.CodeToWord["gqd1"]);
+        AssertEqual("娚", table.CodeToWord["gqd2"]);
+        AssertEqual("舅", table.CodeToWord["a"]);
     }
 
     private static void TestCustomDictionaryMerge()
@@ -389,6 +408,29 @@ internal static class Program
         AssertTrue(ok, "selected text transform should fall back to ctrl+c source");
         AssertEqual("UCL", sent);
         AssertSequence(new string[] { "uia", "wm_copy", "ctrl_c" }, calls.ToArray());
+    }
+
+    private static void TestScintillaSelectedTextSourceCopiesFocusedSelection()
+    {
+        FakeClipboardGateway clipboard = new FakeClipboardGateway("原剪貼簿");
+        FakeFocusedWindowGateway windows = new FakeFocusedWindowGateway();
+        windows.ClassName = "Scintilla";
+        windows.OnSendMessage = delegate(uint message)
+        {
+            AssertEqual(2178, (int)message);
+            AssertEqual(null, clipboard.Text);
+            clipboard.SetText("框選字", ClipboardTextKind.Unicode);
+        };
+        ScintillaCopySelectedTextSource source = new ScintillaCopySelectedTextSource(clipboard, delegate(int ms) { }, 3, 1, windows);
+
+        string selectedText;
+        string error;
+        bool ok = source.TryReadSelectedText(out selectedText, out error);
+
+        AssertTrue(ok, "Scintilla source should copy focused selection");
+        AssertEqual("框選字", selectedText);
+        AssertEqual(null, error);
+        AssertEqual(1, windows.SendCount);
     }
 
     private static void TestSelectedTextTransformDispatcherPostsWorkOutsideHook()
@@ -934,6 +976,42 @@ internal static class Program
             selectedText = success ? text : null;
             error = success ? null : name + " failed";
             return success;
+        }
+    }
+
+    private sealed class FakeFocusedWindowGateway : IFocusedWindowGateway
+    {
+        public FakeFocusedWindowGateway()
+        {
+            FocusedWindow = new IntPtr(123);
+            ClassName = "";
+        }
+
+        public IntPtr FocusedWindow { get; set; }
+        public string ClassName { get; set; }
+        public int SendCount { get; private set; }
+        public Action<uint> OnSendMessage { get; set; }
+
+        public IntPtr GetFocusedWindowOrForegroundWindow()
+        {
+            return FocusedWindow;
+        }
+
+        public string GetClassName(IntPtr windowHandle)
+        {
+            return ClassName;
+        }
+
+        public bool SendMessageTimeout(IntPtr windowHandle, uint message, IntPtr wParam, IntPtr lParam, uint flags, uint timeoutMs, out string error)
+        {
+            SendCount++;
+            if (OnSendMessage != null)
+            {
+                OnSendMessage(message);
+            }
+
+            error = null;
+            return true;
         }
     }
 

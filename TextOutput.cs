@@ -319,6 +319,13 @@ namespace uclliu
         void SendWait(string keys);
     }
 
+    internal interface IFocusedWindowGateway
+    {
+        IntPtr GetFocusedWindowOrForegroundWindow();
+        string GetClassName(IntPtr windowHandle);
+        bool SendMessageTimeout(IntPtr windowHandle, uint message, IntPtr wParam, IntPtr lParam, uint flags, uint timeoutMs, out string error);
+    }
+
     internal interface ISelectedTextSource
     {
         string Name { get; }
@@ -370,6 +377,91 @@ namespace uclliu
         {
             SendKeys.SendWait(keys);
         }
+    }
+
+    internal sealed class Win32FocusedWindowGateway : IFocusedWindowGateway
+    {
+        public IntPtr GetFocusedWindowOrForegroundWindow()
+        {
+            IntPtr foreground = GetForegroundWindow();
+            if (foreground == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+
+            uint currentThreadId = GetCurrentThreadId();
+            uint targetThreadId = GetWindowThreadProcessId(foreground, IntPtr.Zero);
+            bool attached = false;
+            try
+            {
+                if (targetThreadId != 0 && targetThreadId != currentThreadId)
+                {
+                    attached = AttachThreadInput(currentThreadId, targetThreadId, true);
+                }
+
+                IntPtr focused = GetFocus();
+                return focused == IntPtr.Zero ? foreground : focused;
+            }
+            finally
+            {
+                if (attached)
+                {
+                    AttachThreadInput(currentThreadId, targetThreadId, false);
+                }
+            }
+        }
+
+        public string GetClassName(IntPtr windowHandle)
+        {
+            if (windowHandle == IntPtr.Zero)
+            {
+                return "";
+            }
+
+            StringBuilder className = new StringBuilder(256);
+            int length = GetClassName(windowHandle, className, className.Capacity);
+            return length > 0 ? className.ToString() : "";
+        }
+
+        public bool SendMessageTimeout(IntPtr windowHandle, uint message, IntPtr wParam, IntPtr lParam, uint flags, uint timeoutMs, out string error)
+        {
+            IntPtr result;
+            IntPtr sendResult = NativeSendMessageTimeout(windowHandle, message, wParam, lParam, flags, timeoutMs, out result);
+            if (sendResult == IntPtr.Zero)
+            {
+                int lastError = Marshal.GetLastWin32Error();
+                error = "message 0x" + message.ToString("X") + " failed";
+                if (lastError != 0)
+                {
+                    error += ": " + new Win32Exception(lastError).Message;
+                }
+                return false;
+            }
+
+            error = null;
+            return true;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
+
+        [DllImport("user32.dll")]
+        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetFocus();
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+        [DllImport("user32.dll", EntryPoint = "SendMessageTimeout", SetLastError = true)]
+        private static extern IntPtr NativeSendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeout, out IntPtr result);
     }
 
     internal sealed class SelectedTextTransformDispatcher
@@ -495,10 +587,12 @@ namespace uclliu
             this.sleep = sleep;
             if (usePreferredSources)
             {
+                IFocusedWindowGateway focusedWindow = new Win32FocusedWindowGateway();
                 this.selectedTextSources = new ISelectedTextSource[]
                 {
                     new UiAutomationSelectedTextSource(),
-                    new WindowMessageCopySelectedTextSource(clipboard, sleep, RetryCount, RetryDelayMs),
+                    new ScintillaCopySelectedTextSource(clipboard, sleep, RetryCount, RetryDelayMs, focusedWindow),
+                    new WindowMessageCopySelectedTextSource(clipboard, sleep, RetryCount, RetryDelayMs, focusedWindow),
                     new KeyboardCopySelectedTextSource(clipboard, keySender, sleep, RetryCount, RetryDelayMs)
                 };
             }
@@ -838,15 +932,73 @@ namespace uclliu
         }
     }
 
+    internal sealed class ScintillaCopySelectedTextSource : ClipboardSelectedTextSourceBase
+    {
+        private const uint SciCopy = 2178;
+        private const uint SmtoAbortIfHung = 0x0002;
+        private const uint CopyTimeoutMs = 250;
+        private readonly IFocusedWindowGateway focusedWindow;
+
+        public ScintillaCopySelectedTextSource(IClipboardGateway clipboard, Action<int> sleep, int retryCount, int retryDelayMs)
+            : this(clipboard, sleep, retryCount, retryDelayMs, new Win32FocusedWindowGateway())
+        {
+        }
+
+        internal ScintillaCopySelectedTextSource(IClipboardGateway clipboard, Action<int> sleep, int retryCount, int retryDelayMs, IFocusedWindowGateway focusedWindow)
+            : base(clipboard, sleep, retryCount, retryDelayMs)
+        {
+            if (focusedWindow == null)
+            {
+                throw new ArgumentNullException("focusedWindow");
+            }
+            this.focusedWindow = focusedWindow;
+        }
+
+        public override string Name
+        {
+            get { return "Scintilla SCI_COPY"; }
+        }
+
+        protected override bool TryCopyToClipboard(out string error)
+        {
+            IntPtr target = focusedWindow.GetFocusedWindowOrForegroundWindow();
+            if (target == IntPtr.Zero)
+            {
+                error = "focused window unavailable";
+                return false;
+            }
+
+            string className = focusedWindow.GetClassName(target);
+            if (className.IndexOf("Scintilla", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                error = "focused control is not Scintilla";
+                return false;
+            }
+
+            return focusedWindow.SendMessageTimeout(target, SciCopy, IntPtr.Zero, IntPtr.Zero, SmtoAbortIfHung, CopyTimeoutMs, out error);
+        }
+    }
+
     internal sealed class WindowMessageCopySelectedTextSource : ClipboardSelectedTextSourceBase
     {
         private const uint WmCopy = 0x0301;
         private const uint SmtoAbortIfHung = 0x0002;
         private const uint CopyTimeoutMs = 250;
+        private readonly IFocusedWindowGateway focusedWindow;
 
         public WindowMessageCopySelectedTextSource(IClipboardGateway clipboard, Action<int> sleep, int retryCount, int retryDelayMs)
+            : this(clipboard, sleep, retryCount, retryDelayMs, new Win32FocusedWindowGateway())
+        {
+        }
+
+        internal WindowMessageCopySelectedTextSource(IClipboardGateway clipboard, Action<int> sleep, int retryCount, int retryDelayMs, IFocusedWindowGateway focusedWindow)
             : base(clipboard, sleep, retryCount, retryDelayMs)
         {
+            if (focusedWindow == null)
+            {
+                throw new ArgumentNullException("focusedWindow");
+            }
+            this.focusedWindow = focusedWindow;
         }
 
         public override string Name
@@ -856,77 +1008,15 @@ namespace uclliu
 
         protected override bool TryCopyToClipboard(out string error)
         {
-            IntPtr target = GetFocusedWindowOrForegroundWindow();
+            IntPtr target = focusedWindow.GetFocusedWindowOrForegroundWindow();
             if (target == IntPtr.Zero)
             {
                 error = "focused window unavailable";
                 return false;
             }
 
-            IntPtr result;
-            IntPtr sendResult = SendMessageTimeout(target, WmCopy, IntPtr.Zero, IntPtr.Zero, SmtoAbortIfHung, CopyTimeoutMs, out result);
-            if (sendResult == IntPtr.Zero)
-            {
-                int lastError = Marshal.GetLastWin32Error();
-                error = "WM_COPY failed";
-                if (lastError != 0)
-                {
-                    error += ": " + new Win32Exception(lastError).Message;
-                }
-                return false;
-            }
-
-            error = null;
-            return true;
+            return focusedWindow.SendMessageTimeout(target, WmCopy, IntPtr.Zero, IntPtr.Zero, SmtoAbortIfHung, CopyTimeoutMs, out error);
         }
-
-        private static IntPtr GetFocusedWindowOrForegroundWindow()
-        {
-            IntPtr foreground = GetForegroundWindow();
-            if (foreground == IntPtr.Zero)
-            {
-                return IntPtr.Zero;
-            }
-
-            uint currentThreadId = GetCurrentThreadId();
-            uint targetThreadId = GetWindowThreadProcessId(foreground, IntPtr.Zero);
-            bool attached = false;
-            try
-            {
-                if (targetThreadId != 0 && targetThreadId != currentThreadId)
-                {
-                    attached = AttachThreadInput(currentThreadId, targetThreadId, true);
-                }
-
-                IntPtr focused = GetFocus();
-                return focused == IntPtr.Zero ? foreground : focused;
-            }
-            finally
-            {
-                if (attached)
-                {
-                    AttachThreadInput(currentThreadId, targetThreadId, false);
-                }
-            }
-        }
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetForegroundWindow();
-
-        [DllImport("user32.dll")]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
-
-        [DllImport("kernel32.dll")]
-        private static extern uint GetCurrentThreadId();
-
-        [DllImport("user32.dll")]
-        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetFocus();
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeout, out IntPtr result);
     }
 
     internal static class ClipboardActionRunner

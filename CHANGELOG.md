@@ -41,6 +41,8 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 打字音效播放改用 `winmm.dll` 的 `waveOut` one-shot，每次按鍵使用獨立播放 handle，避免連打時前一個聲音被截斷。
 - 程式自己送字時會先跳過 hook 處理，避免不必要的 foreground process 查詢。
 - 修正 `,,,x` / `,,,z` 框選轉換流程，優先用 UI Automation 讀取選取文字，再 fallback 到 `WM_COPY` 與安全版 `Ctrl+C`，並延後到 keyboard hook 回傳後執行，避免讀到舊剪貼簿或尾鍵繼續流入目標視窗。
+- `,,,x` / `,,,z` 在 Notepad++ / Scintilla 控制項新增 `SCI_COPY` 專用取字路徑，避免框選文字沒有先手動複製就取不到。
+- 補回 Python 版後期 `uclcode_rr` 字根反查 hash，`,,,x` 解算數字候選碼時可直接 O(1) 查表。
 - 修正新版 `pinyi.txt` 同音字候選會把注音碼或注音符號混到第 0 候選的問題，並保留舊版 `pinyi.txt` 相容。
 - 補齊新版 `pinyi.txt` 的反向注音表，出字後可依設定顯示讀音。
 

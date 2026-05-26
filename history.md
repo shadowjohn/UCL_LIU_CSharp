@@ -258,3 +258,26 @@
 - 先新增核心測試並確認紅燈：缺少 `SelectedTextTransformCommand` / `ISelectedTextSource` / hook 外排程 dispatcher。
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
 - `MSBuild.exe uclliu.sln /t:Rebuild ...` 的正式輸出被正在執行的 `uclliu.exe` 鎖住；改用臨時 `OutDir` build 通過。
+
+---
+
+## 2026-05-26 - `,,,x` / `,,,z` Scintilla 取字與反查加速
+
+### 問題觀察
+
+- 使用者回報必須先手動複製或剪下框選文字，之後按 `,,,x` / `,,,z` 才會生效，代表 C# 版還是沒有穩定取得目前框選字。
+- Notepad++ 編輯區是 Scintilla；直接跨 process 讀 Scintilla buffer 需要傳 pointer，風險高且不適合在這裡做。
+- Python 版後期有 `uclcode_rr` 字根對字的 hash；C# 版只保留 `uclcode_r`，解算與候選碼還原都不完整。
+
+### 實作紀錄
+
+- 新增 `ScintillaCopySelectedTextSource`，偵測 focused control class name 包含 `Scintilla` 時送 `SCI_COPY`，排在 UI Automation 後、一般 `WM_COPY` 前。
+- 將 focused window / class name / `SendMessageTimeout` 抽成 `IFocusedWindowGateway`，保留 250ms timeout，避免目標視窗卡住拖慢 UI。
+- 新增 `LiuReverseLookupTable`，建立 `word -> code` 與 `code -> word` 兩張表；同根第 2 候選起會依 Python 版輸出 `root1`、`root2`。
+- `uclcode_to_chinese()` 先查 `uclcode_rr`，再 fallback 到 `v/r/s/f/w` 候選尾碼與原本字根表。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `IFocusedWindowGateway` / `ScintillaCopySelectedTextSource`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 搭配臨時 `OutDir` 通過，僅保留既有 `Form1.lParam` 未使用警告。

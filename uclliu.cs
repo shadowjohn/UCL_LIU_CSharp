@@ -27,6 +27,7 @@ namespace uclliu
 
         //把 chardefs 的字碼，變成對照字根，可以加速 ,,,z、,,,x 反查的速度
         public Dictionary<string, string> uclcode_r = new Dictionary<string, string>();
+        public Dictionary<string, string> uclcode_rr = new Dictionary<string, string>();
         public Dictionary<string, List<string>> uclcode = null;
         public bool is_DEBUG_mode = false; //除錯模式
         public string INI_CONFIG_FILE = "C:\\temp\\UCLLIU.ini"; //預設在 此，實際使用的位置同在 uclliu.exe
@@ -133,29 +134,20 @@ namespace uclliu
         {
             //產生最簡根速查表
             uclcode_r.Clear();
+            uclcode_rr.Clear();
             if (uclcode == null)
             {
                 return;
             }
 
-            foreach (KeyValuePair<string, List<string>> pair in uclcode)
+            LiuReverseLookupTable reverseLookup = LiuReverseLookupTable.Build(uclcode);
+            foreach (KeyValuePair<string, string> pair in reverseLookup.WordToRoot)
             {
-                string root = pair.Key;
-                for (int i = 0, max_i = pair.Value.Count; i < max_i; i++)
-                {
-                    string word = pair.Value[i];
-                    if (!uclcode_r.ContainsKey(word))
-                    {
-                        uclcode_r.Add(word, root);
-                    }
-                    else
-                    {
-                        if (root.Length < uclcode_r[word].Length)
-                        {
-                            uclcode_r[word] = root;
-                        }
-                    }
-                }
+                uclcode_r[pair.Key] = pair.Value;
+            }
+            foreach (KeyValuePair<string, string> pair in reverseLookup.CodeToWord)
+            {
+                uclcode_rr[pair.Key] = pair.Value;
             }
             //Console.WriteLine("測試簡根:" + uclcode_r["臨"]);
         }
@@ -980,9 +972,10 @@ namespace uclliu
         {
             //# 用中文反找蝦碼(V1.10版寫法)
             //一次傳一個字
-            if (uclcode_r.ContainsKey(chinese_data))
+            string root;
+            if (uclcode_r.TryGetValue(chinese_data, out root))
             {
-                return uclcode_r[chinese_data];
+                return root;
             }
             else
             {
@@ -1367,10 +1360,16 @@ namespace uclliu
         }
         public string uclcode_to_chinese(string c)
         {
-            c = my.trim(c);
+            c = my.strtolower(my.trim(c));
             if (c == "")
             {
                 return "";
+            }
+
+            string directCandidate;
+            if (uclcode_rr.TryGetValue(c, out directCandidate))
+            {
+                return directCandidate;
             }
 
             string candidate;
@@ -1387,6 +1386,10 @@ namespace uclliu
                 return candidate;
             }
             if (try_get_suffix_candidate(c, "f", 4, out candidate))
+            {
+                return candidate;
+            }
+            if (try_get_suffix_candidate(c, "w", 5, out candidate))
             {
                 return candidate;
             }
@@ -1450,6 +1453,13 @@ namespace uclliu
                 return true;
             }
             else if (try_get_suffix_search_candidates(c, "f", 4, out candidates))
+            {
+                //#print("Debug V1")
+                ucl_find_data = candidates;
+                word_label_set_text();
+                return true;
+            }
+            else if (try_get_suffix_search_candidates(c, "w", 5, out candidates))
             {
                 //#print("Debug V1")
                 ucl_find_data = candidates;
