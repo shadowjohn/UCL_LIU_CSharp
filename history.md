@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-05-27 - Notepad++ hook 內同步送字實驗撤回
+
+### 任務目標
+
+1. 撤回 `573f35f fix: send notepad++ output synchronously`。
+2. 保留目前實機確認的穩定結論：Notepad++ 自動完成會干擾 Scintilla，關閉後可正常打字。
+
+### 根因判斷
+
+- Notepad++ `DEFAULT` 模式改成 hook 內同步送字後，仍無法解決自動完成 popup 造成的出字問題。
+- 因此問題不只是 C# 版延後送字時序，而是 Notepad++ 自動完成 popup 本身會攔截或改變 Scintilla 的輸入流程。
+
+### 實作紀錄
+
+- 使用 `git revert` 撤回 Notepad++ 同步送字策略與相關測試/文件。
+- C# 版維持逐字 Unicode `SendInput`，Notepad++ 不走剪貼簿、不走 `WM_CHAR` 預設。
+- README 保留 Notepad++ 自動完成相容註記。
+
+---
+
 ## 2026-05-27 - Notepad++ 改試 Python-style 逐字 SendInput
 
 ### 任務目標
