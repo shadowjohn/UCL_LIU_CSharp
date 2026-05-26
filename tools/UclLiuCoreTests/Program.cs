@@ -43,7 +43,6 @@ internal static class Program
         failed += Run("deferred text output dispatcher posts send outside hook", TestDeferredTextOutputDispatcherPostsSendOutsideHook);
         failed += Run("deferred text output dispatcher prepares before posting", TestDeferredTextOutputDispatcherPreparesBeforePosting);
         failed += Run("deferred text output dispatcher preserves label update order", TestDeferredTextOutputDispatcherPreservesLabelUpdateOrder);
-        failed += Run("text output dispatch policy sends Notepad++ synchronously", TestTextOutputDispatchPolicySendsNotepadPlusPlusSynchronously);
         failed += Run("output router prefers unicode sendinput unless app needs paste", TestOutputRouterPrefersUnicodeSendInputUnlessAppNeedsPaste);
         failed += Run("output router matches app names with optional exe suffix", TestOutputRouterMatchesAppNamesWithOptionalExeSuffix);
         failed += Run("default compatibility keeps Notepad++ on unicode sendinput", TestDefaultCompatibilityKeepsNotepadPlusPlusOnUnicodeSendInput);
@@ -636,15 +635,6 @@ internal static class Program
         AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", "oxygennotincluded.exe", shiftInsertApps, ctrlVApps, big5Apps));
         AssertEqual((int)TextOutputMode.PasteBig5, (int)TextOutputRouter.Select("BIG5", "notepad.exe", shiftInsertApps, ctrlVApps, big5Apps));
         AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("PASTE", "notepad.exe", shiftInsertApps, ctrlVApps, big5Apps));
-    }
-
-    private static void TestTextOutputDispatchPolicySendsNotepadPlusPlusSynchronously()
-    {
-        AssertTrue(TextOutputDispatchPolicy.ShouldSendSynchronously("DEFAULT", "notepad++.exe"), "Notepad++ should use Python-style synchronous output timing");
-        AssertTrue(TextOutputDispatchPolicy.ShouldSendSynchronously("default", "Notepad++"), "process matching should ignore case and exe suffix");
-        AssertTrue(!TextOutputDispatchPolicy.ShouldSendSynchronously("DEFAULT", "notepad.exe"), "other apps should stay deferred");
-        AssertTrue(!TextOutputDispatchPolicy.ShouldSendSynchronously("PASTE", "notepad++.exe"), "manual paste mode should stay deferred");
-        AssertTrue(!TextOutputDispatchPolicy.ShouldSendSynchronously("BIG5", "notepad++.exe"), "manual Big5 mode should stay deferred");
     }
 
     private static void TestOutputRouterMatchesAppNamesWithOptionalExeSuffix()

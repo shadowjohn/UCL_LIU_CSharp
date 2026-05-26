@@ -378,26 +378,11 @@ namespace uclliu
         }
         public void queue_senddata(string data)
         {
-            if (should_senddata_synchronously_for_foreground())
-            {
-                senddata(data);
-                return;
-            }
-
             deferredTextOutputDispatcher.Queue(data, prepare_senddata_text, send_prepared_output);
         }
         public void queue_senddata_with_labels(string data)
         {
             string labelText = data;
-            if (should_senddata_synchronously_for_foreground())
-            {
-                string preparedOutput = prepare_senddata_text(data);
-                show_sp_to_label(labelText);
-                show_phone_to_label(labelText);
-                send_prepared_output(preparedOutput);
-                return;
-            }
-
             deferredTextOutputDispatcher.Queue(
                 data,
                 delegate(string output)
@@ -408,10 +393,6 @@ namespace uclliu
                     return preparedOutput;
                 },
                 send_prepared_output);
-        }
-        private bool should_senddata_synchronously_for_foreground()
-        {
-            return TextOutputDispatchPolicy.ShouldSendSynchronously(DEFAULT_OUTPUT_TYPE, getForegroundWindowProcessName());
         }
         public bool start_phone_mode()
         {

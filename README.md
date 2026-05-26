@@ -86,14 +86,14 @@ C# 版目前右下角選單提供三種出字模式：
 | --- | --- | --- |
 | Chrome / Edge / Brave / Firefox / Opera 開 PTT | 視窗標題包含 `批踢踢實業坊`、`term.ptt.cc` 或 `ws.ptt.cc` | `Ctrl+V` 貼上 |
 | Win11 Notepad | Windows build >= 22000 且 process 為 `notepad` / `notepad.exe` | `Ctrl+V` 貼上 |
-| Notepad++ | process 為 `notepad++` / `notepad++.exe`，焦點控制項通常為 Scintilla | 在 hook 內同步逐字 Unicode `SendInput`，不使用剪貼簿；若仍異常，建議關閉 Notepad++ 自動完成 |
+| Notepad++ | process 為 `notepad++` / `notepad++.exe`，焦點控制項通常為 Scintilla | 逐字 Unicode `SendInput`，不使用剪貼簿；建議關閉 Notepad++ 自動完成 |
 | PuTTY / PCMan / Pietty / Windows Terminal / mintty / RimWorld 等 | process 相容清單 | `Shift+Insert` 貼上 |
 | Oxygen Not Included / PhotoImpact `iedit_` | process 相容清單 | `Ctrl+V` 貼上 |
 | zip32w / DaqKing / EWinner | process 相容清單 | Big5 `Ctrl+V` 貼上 |
 
 process 規則會自動忽略大小寫與 `.exe` 副檔名，`notepad` 與 `notepad.exe` 視為同一個程式。
 
-Notepad++ 若啟用自動完成，彈出的候選視窗可能攔截 Scintilla 的按鍵與焦點流程，造成肥米字根漏進編輯區或出字失敗。C# 版對 Notepad++ 的 `DEFAULT` 模式會貼近 Python 版，在 keyboard hook 回傳前同步送字；若仍異常，關閉 Notepad++ 自動完成後可正常打字。
+Notepad++ 若啟用自動完成，彈出的候選視窗可能攔截 Scintilla 的按鍵與焦點流程，造成肥米字根漏進編輯區或出字失敗。實機測試關閉 Notepad++ 自動完成後，逐字 Unicode `SendInput` 可正常打字。
 
 ## 自定詞庫
 

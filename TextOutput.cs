@@ -194,20 +194,6 @@ namespace uclliu
         }
     }
 
-    public static class TextOutputDispatchPolicy
-    {
-        public static bool ShouldSendSynchronously(string defaultOutputType, string processName)
-        {
-            string outputType = (defaultOutputType ?? "DEFAULT").Trim().ToUpperInvariant();
-            if (outputType != "DEFAULT")
-            {
-                return false;
-            }
-
-            return TextOutputRouter.MatchesProcess(processName, new string[] { "notepad++" });
-        }
-    }
-
     public static class WindowsVersionDetector
     {
         public static bool IsWindows11OrLater()
