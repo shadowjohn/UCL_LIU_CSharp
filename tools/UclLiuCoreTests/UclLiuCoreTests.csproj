@@ -11,7 +11,6 @@
     <Compile Include="..\..\KeyboardHookState.cs" Link="KeyboardHookState.cs" />
     <Compile Include="..\..\LiuJsonTable.cs" Link="LiuJsonTable.cs" />
     <Compile Include="..\..\LiuTableConverter.cs" Link="LiuTableConverter.cs" />
-    <Compile Include="..\..\OpenCcLite.cs" Link="OpenCcLite.cs" />
     <Compile Include="..\..\PinyiCandidateSelector.cs" Link="PinyiCandidateSelector.cs" />
     <Compile Include="..\..\PhoneCodeTable.cs" Link="PhoneCodeTable.cs" />
     <Compile Include="..\..\SimpleIni.cs" Link="SimpleIni.cs" />
@@ -19,9 +18,5 @@
     <Compile Include="..\..\TypingSound.cs" Link="TypingSound.cs" />
     <Compile Include="..\..\UclLiuAppInfo.cs" Link="UclLiuAppInfo.cs" />
     <Compile Include="..\..\UiLayoutCalculator.cs" Link="UiLayoutCalculator.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="..\..\third_party\opencc\dictionary\STCharacters.txt" Link="third_party\opencc\dictionary\STCharacters.txt" />
-    <EmbeddedResource Include="..\..\third_party\opencc\dictionary\STPhrases.txt" Link="third_party\opencc\dictionary\STPhrases.txt" />
   </ItemGroup>
 </Project>

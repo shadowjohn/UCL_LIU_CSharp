@@ -19,8 +19,6 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 右下角選單新增「顯示提示注音」，可控制出字後是否顯示 `音:ㄈㄟˊ` 類提示。
 - 新增新版 `pinyi.txt` 注音查詢表，支援 `';zo6` 查「ㄈㄟˊ」候選。
 - 專案加入 Python 版後期 `wavs` 音效素材，build 時複製到輸出目錄。
-- 新增 `OpenCcLite.cs`，內嵌 OpenCC `s2t` 字典，`,,,z` 反白文字轉字根前會做詞彙級簡轉繁。
-- 新增 `third_party/opencc`，保存 OpenCC 字典、License、NOTICE 與 C# 版使用方式。
 
 ### Changed
 
@@ -33,8 +31,6 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - `KEYBOARD_VOLUME` 會限制在 0-100，避免錯誤設定造成音量邏輯異常。
 - `ENABLE_HALF_FULL=0` 時，`Shift+Space` 不再觸發半全形切換。
 - `STARTUP_DEFAULT_UCL=0` 時，啟動後會套用英模式。
-- `,,,z` 不再使用逐字 `simple2trad()`，改用 OpenCC Lite，避免 `皇后`、`后面`、`家` 等詞字轉換錯誤。
-- OpenCC Lite 字典會在啟動後背景預熱，降低第一次使用 `,,,z` 時的 UI 停頓。
 
 ### Fixed
 
