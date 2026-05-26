@@ -281,3 +281,24 @@
 - 先新增核心測試並確認紅燈：缺少 `IFocusedWindowGateway` / `ScintillaCopySelectedTextSource`。
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
 - `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 搭配臨時 `OutDir` 通過，僅保留既有 `Form1.lParam` 未使用警告。
+
+---
+
+## 2026-05-26 - `,,,x` / `,,,z` 取字流程收斂
+
+### 問題觀察
+
+- 使用者回饋 Scintilla / Win32 gateway 分支過度複雜，先回到原本靠剪貼簿取框選文字的做法。
+- 重新對照 Python 版後確認原版使用 `Ctrl+C`，不是 `Ctrl+X`；用 `Ctrl+X` 會先剪掉目標文字，失敗時風險較高。
+
+### 實作紀錄
+
+- 移除 `ISelectedTextSource`、UI Automation、`WM_COPY`、Scintilla `SCI_COPY` 與 focused window gateway。
+- `SelectedTextTransformCommand` 收斂為單一路徑：備份剪貼簿、清空剪貼簿、送 `Ctrl+C`、retry 讀取 Unicode 文字、轉換後送出、最後還原剪貼簿。
+- 移除不再使用的 UI Automation 參考與測試專案 WPF 設定。
+- 保留 `LiuReverseLookupTable` / `uclcode_rr` 反查 hash 加速。
+
+### 驗證紀錄
+
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 搭配臨時 `OutDir` 通過，僅保留既有 `Form1.lParam` 未使用警告。
