@@ -6,6 +6,11 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ## [Unreleased] - 2026-05-27
 
+### Documentation
+
+- README 補上 v0.12 與 v0.11 的 Microsoft WDSI 病毒碼掃描提交連結。
+- README 補充短版 UI chrome 尺寸、啟動 packed layout 與 focus 視覺修正狀態。
+
 ### Fixed
 
 - 修正候選字存在時按 numpad 數字或特殊鍵可能在 `LowLevelKeyboardProc` 觸發 `System.FormatException`，導致瀏覽器輸入時卡頓後崩潰。
@@ -13,9 +18,9 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 修正短版模式出字後注音提示讀取舊候選 label，造成 `0覺,音:...` 類殘留；短版欄寬未變時不再觸發 TableLayout 重排。
 - 修正短版模式仍保留零寬隱藏欄位的 TableLayout 格線，造成 `肥 半 ㄥ 0 X` 之間出現不自然間距。
 - 修正短版模式候選欄只用字數估算寬度，導致 `0肥`、`0你 1條` 類候選被截斷；改用目前 WinForms 字型實測寬度並微調置中。
-- 微調短版模式 `肥` / `半` / `X` 按鈕字級，讓 40x40 chrome 更接近 Python 版視覺比例。
+- 短版模式 `肥` / `英`、`半` / `全`、`╳` chrome 字級與長版一致，並固定 40x40 尺寸。
 - 修正 `,,,l` 從短版切回長版時，先顯示「正常模式」按鈕再復原欄位，造成 `TableLayoutPanel` 在 `X` 跨欄狀態下拋出 `System.ArgumentException` 崩潰。
-- 修正短版模式 `肥` / `半` / `X` 按鈕文字視覺中心偏低，加入短版專用 bottom padding 微調，長版維持原本對齊。
+- 修正短版模式 `肥` / `半` / `╳` 按鈕文字視覺中心偏低，加入短版專用 bottom padding 微調，長版維持原本對齊。
 - 修正短版模式 chrome 按鈕 focus 後殘留按下視覺狀態，並讓短版啟動時立即套用 packed layout，避免一開始留下長版空白欄位。
 
 ---
