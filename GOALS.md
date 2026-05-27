@@ -25,6 +25,7 @@
 
 - [x] 補 Win11/Chrome/PTT/Notepad 出字模式相容清單與標題規則。
 - [x] 補新版 `pinyi.txt` 注音查詢與出字後提示注音。
+- [x] 補 Python 版常見外部字碼表來源轉換：RIME / fcitx / 小小輸入法 / uniliu。
 - [ ] 評估 OpenCC / 特殊字修正移植範圍。
 
 ## 持續原則

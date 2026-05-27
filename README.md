@@ -2,7 +2,7 @@
 
 C# / WinForms 版肥米輸入法，目前版本 v0.12。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
 
-目前 C# 版已進入可日用測試的現代化復刻狀態：已補上字碼表自動轉換、自定詞庫、Unicode SendInput 出字、剪貼簿 fallback、打字音效、同音/注音查詢、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback 與核心測試。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
+目前 C# 版已進入可日用測試的現代化復刻狀態：已補上多來源字碼表自動轉換、自定詞庫、Unicode SendInput 出字、剪貼簿 fallback、打字音效、同音/注音查詢、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback 與核心測試。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
 
 ![UCL_LIU C# screenshot](screenshot/ucl_1.png)
 
@@ -11,7 +11,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.12。這個分支的目標是
 | 版本 | 實用成熟度 | 工程可維護性 | 日用信心 | 定位 |
 | --- | ---: | ---: | ---: | --- |
 | Python 版 v1.67 | 8.5 / 10 | 6.5 / 10 | 8.5 / 10 | 功能最完整的正史版，多年實戰相容性最足 |
-| C# 版 v0.12 | 7.8 / 10 | 8.1 / 10 | 7.8 / 10 | TSF 出字已可日用測試、低依賴、可維護的現代化復刻版 |
+| C# 版 v0.12 | 8.0 / 10 | 8.1 / 10 | 8.0 / 10 | 多來源字碼表、TSF 出字已可日用測試、低依賴、可維護的現代化復刻版 |
 
 ## 目前狀態
 
@@ -20,7 +20,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.12。這個分支的目標是
 | 核心輸入 | WinForms + low-level keyboard hook | PyHook / PyWin32 |
 | 預設出字 | Python-style 逐字 Unicode `SendInput`，失敗 fallback 舊 `SendKeys` | TSF 可選，失敗 fallback `SendKeysCtypes` / paste |
 | 貼上模式 | 已封裝 retry、timeout、try/finally 還原剪貼簿 | 已有大量 App 特例 |
-| 字碼表 | 支援 `liu.json`、`liu.cin`、`liu-uni.tab` 自動轉換 | 支援來源較多，含 RIME/fcitx/小小輸入法等 |
+| 字碼表 | 支援 `liu.json`、`liu.cin`、`liu-uni.tab`、RIME/fcitx/小小輸入法等來源自動轉換 | 支援來源較多，另含部分需手動整理的長尾碼表 |
 | 自定詞庫 | 支援 `custom.json`、右下角選單、`,,,BOX`、單例視窗 | v1.63-v1.65 已完整支援 |
 | UI 效能 | 已降低短版模式與 foreground process 查詢熱路徑負擔；短版啟動即套用 packed layout，`肥` / `半` / `╳` chrome 尺寸與長版一致，並移除按鈕 focus 後的按下視覺殘留 | Python 版後期另有多輪 Win11/位置修正 |
 | TSF Bridge | 已移植為手動 `TSF出字模式`，透過 named pipe 呼叫外掛 DLL，失敗 fallback Unicode `SendInput`；右下角選單可檢查/註冊/解除註冊 | v1.67 實驗性支援 |
@@ -43,7 +43,7 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 | INI | 使用專案內 `SimpleIni.cs`，不再依賴 `ini-parser` / `INIFileParser` |
 | 打包合併 | 不再使用 ILRepack，不需要把套件 DLL 合併進 exe |
 | 開發輸出 | 直接使用 `bin\Debug` / `bin\Release`，不再維護 Python 版式的 `dist` 目錄 |
-| 可選資料檔 | `liu.json` / `liu.cin` / `liu-uni.tab`、`pinyi.txt`、`wavs\*.wav`、`tsf_bridge\*` |
+| 可選資料檔 | `liu.json` / `liu.cin` / `liu-uni.tab`、`wuxiami.txt`、`liur_trad.dict.yaml`、`terry_boshiamy.txt`、`fcitx_boshiamy.txt`、`uniliu.txt`、`pinyi.txt`、`wavs\*.wav`、`tsf_bridge\*` |
 
 目前 `uclliu.csproj` 的 reference 只保留：
 
@@ -57,15 +57,20 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 ## 快速開始
 
 1. 下載或編譯 `uclliu.exe`。
-2. 將字碼表放在 `uclliu.exe` 同一個目錄，三選一即可：
+2. 將字碼表放在 `uclliu.exe` 同一個目錄，擇一即可：
    - `liu.json`
    - `liu.cin`
    - `liu-uni.tab`
+   - `wuxiami.txt`
+   - `liur_trad.dict.yaml` / `liur_Trad.dict.yaml`
+   - `terry_boshiamy.txt`
+   - `fcitx_boshiamy.txt`
+   - `uniliu.txt`
 3. 可選：放入 `pinyi.txt` 啟用同音字與注音查詢。
 4. 可選：保留 `tsf_bridge` 目錄，右下角選單可註冊 TSF Bridge 並手動切到 `TSF出字模式`。
 5. 執行 `uclliu.exe`。
 
-因字碼表版權問題，本專案不提供 `liu.json` / `liu.cin` / `liu-uni.tab`。若使用 `liu.cin` 或 `liu-uni.tab`，C# 版啟動時會自動產生 `liu.json`。
+因字碼表版權問題，本專案不提供上述字碼表。若使用 `liu.cin`、`liu-uni.tab` 或外部文字碼表，C# 版啟動時會自動產生 `liu.json`。
 
 發行檔位置：
 
@@ -185,6 +190,8 @@ C# 版已追上的重點：
 - 無外部 NuGet 依賴，`System.Json`、`ini-parser` / `INIFileParser`、ILRepack 與 `packages.config` 已移除
 - `liu-uni.tab -> liu.cin -> liu.json`
 - `liu.cin -> liu.json`
+- Python 版常見外部字碼表來源轉換：`wuxiami.txt`、`liur_trad.dict.yaml` / `liur_Trad.dict.yaml`、`terry_boshiamy.txt`、`fcitx_boshiamy.txt`、`uniliu.txt`
+- `liu.json` 字根 key 載入時統一轉小寫，可吃到大寫 root 的特殊碼表
 - `custom.json` 自定詞庫
 - `,,,BOX`
 - 自定詞庫單例視窗
@@ -204,7 +211,7 @@ Python 版仍領先的重點：
 - TSF Bridge 多環境實機調校與更完整的啟用提示
 - 更多長尾 App 實機相容規則，例如 VBA、Neovim、特殊遊戲與遠端桌面情境
 - OpenCC 簡繁轉換與更多特殊字修正
-- 更多字碼表來源轉換
+- 韓文字根等原本需人工整理的長尾碼表匯入流程
 - 管理員權限導引與重啟流程細節
 - 多年累積的問題回報修正
 
@@ -243,7 +250,7 @@ dotnet run --project .\tools\UclLiuCoreTests\UclLiuCoreTests.csproj
 | `TsfBridge.cs` | TSF Bridge assets 定位、註冊狀態、named pipe 出字 fallback |
 | `TypingSound.cs` | 打字音效、音量縮放、wav 分類、防長按連發 |
 | `PhoneCodeTable.cs` | 新版 `pinyi.txt` 注音查詢與反向讀音表 |
-| `LiuTableConverter.cs` | `liu-uni.tab` / `liu.cin` / `liu.json` 轉換 |
+| `LiuTableConverter.cs` | `liu-uni.tab` / `liu.cin` / `liu.json` 與外部字碼表轉換 |
 | `CustomDictionaryStore.cs` | `custom.json` 載入、儲存、合併 |
 | `CustomDictionaryForm.cs` | 自定詞庫編輯器 |
 | `SimpleIni.cs` | 內建 INI 讀寫，取代外部 ini-parser |

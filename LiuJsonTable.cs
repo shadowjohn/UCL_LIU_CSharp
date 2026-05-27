@@ -46,7 +46,7 @@ namespace uclliu
                 throw new InvalidDataException("liu.json 缺少 chardefs。");
             }
 
-            return ParseStringListDictionary(chardefs);
+            return NormalizeChardefKeys(ParseStringListDictionary(chardefs));
         }
 
         public static Dictionary<string, List<string>> ParseStringListDictionaryJson(string json)
@@ -123,6 +123,25 @@ namespace uclliu
             foreach (DictionaryEntry entry in dictionary)
             {
                 result[Convert.ToString(entry.Key, CultureInfo.InvariantCulture)] = entry.Value;
+            }
+            return result;
+        }
+
+        private static Dictionary<string, List<string>> NormalizeChardefKeys(Dictionary<string, List<string>> chardefs)
+        {
+            Dictionary<string, List<string>> result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, List<string>> pair in chardefs)
+            {
+                string key = pair.Key == null ? "" : pair.Key.Trim().ToLowerInvariant();
+                if (key.Length == 0)
+                {
+                    continue;
+                }
+                if (!result.ContainsKey(key))
+                {
+                    result[key] = new List<string>();
+                }
+                result[key].AddRange(pair.Value);
             }
             return result;
         }

@@ -14,6 +14,11 @@ internal static class Program
         failed += Run("cin parser groups multiple words under one root", TestCinParserGroupsWords);
         failed += Run("unitab converter writes expected cin entry", TestUnitabConverterWritesCinEntry);
         failed += Run("ensure json converts cin in working directory", TestEnsureJsonConvertsCin);
+        failed += Run("ensure json converts fcitx boshiamy text", TestEnsureJsonConvertsFcitxBoshiamyText);
+        failed += Run("ensure json converts rime liur yaml", TestEnsureJsonConvertsRimeLiurYaml);
+        failed += Run("ensure json converts terry boshiamy text", TestEnsureJsonConvertsTerryBoshiamyText);
+        failed += Run("ensure json converts wuxiami text", TestEnsureJsonConvertsWuxiamiText);
+        failed += Run("ensure json converts uniliu text", TestEnsureJsonConvertsUniliuText);
         failed += Run("app info exposes version and author message", TestAppInfoExposesVersionAndAuthorMessage);
         failed += Run("alt tab window style hides tool window from switcher", TestAltTabWindowStyleHidesToolWindowFromSwitcher);
         failed += Run("foreground process snapshot normalizes process name", TestForegroundProcessSnapshotNormalizesProcessName);
@@ -38,6 +43,7 @@ internal static class Program
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
         failed += Run("simple ini writes readable sections", TestSimpleIniWritesReadableSections);
         failed += Run("liu json parser decodes chardefs without System.Json", TestLiuJsonParserDecodesChardefs);
+        failed += Run("liu json parser lowercases chardef roots", TestLiuJsonParserLowercasesChardefRoots);
         failed += Run("liu reverse lookup builds numbered candidate hash", TestLiuReverseLookupBuildsNumberedCandidateHash);
         failed += Run("custom dictionary lowercases and merges values", TestCustomDictionaryMerge);
         failed += Run("custom dictionary save writes deterministic json", TestCustomDictionarySave);
@@ -145,6 +151,73 @@ internal static class Program
             string json = File.ReadAllText(Path.Combine(dir, "liu.json"), Encoding.UTF8);
             AssertContains(json, "\"ucl\"");
             AssertContains(json, "\"肥\"");
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    private static void TestEnsureJsonConvertsFcitxBoshiamyText()
+    {
+        AssertEnsureJsonFromTableSource(
+            "fcitx_boshiamy.txt",
+            "鍵碼=,.'abcdefghijklmnopqrstuvwxyz[]\n碼長=5\n[數據]\nucl 肥 米\n",
+            "\"ucl\"",
+            "\"肥\"");
+    }
+
+    private static void TestEnsureJsonConvertsRimeLiurYaml()
+    {
+        AssertEnsureJsonFromTableSource(
+            "liur_trad.dict.yaml",
+            "# Rime dictionary\n#字碼格式: 字 + Tab + 字碼\n肥\tucl\t1\n米\tmln\t1\n",
+            "\"ucl\"",
+            "\"肥\"");
+    }
+
+    private static void TestEnsureJsonConvertsTerryBoshiamyText()
+    {
+        AssertEnsureJsonFromTableSource(
+            "terry_boshiamy.txt",
+            "## 無蝦米-大五碼-常用漢字：\nucl 肥\nmln 米\n",
+            "\"ucl\"",
+            "\"肥\"");
+    }
+
+    private static void TestEnsureJsonConvertsWuxiamiText()
+    {
+        AssertEnsureJsonFromTableSource(
+            "wuxiami.txt",
+            "#修正錯誤：2018-4-15,17\nucl 肥\nmln 米\n",
+            "\"ucl\"",
+            "\"肥\"");
+    }
+
+    private static void TestEnsureJsonConvertsUniliuText()
+    {
+        AssertEnsureJsonFromTableSource(
+            "uniliu.txt",
+            "[Data]\nucl 肥\nmln 米\n",
+            "\"ucl\"",
+            "\"肥\"");
+    }
+
+    private static void AssertEnsureJsonFromTableSource(string fileName, string content, string expectedKey, string expectedWord)
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "uclliu-core-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, fileName), content, new UTF8Encoding(false));
+
+            bool created = LiuTableConverter.EnsureLiuJson(dir, null);
+
+            AssertTrue(created, "EnsureLiuJson should create liu.json from " + fileName);
+            AssertTrue(File.Exists(Path.Combine(dir, "liu.cin")), "EnsureLiuJson should create liu.cin from " + fileName);
+            string json = File.ReadAllText(Path.Combine(dir, "liu.json"), Encoding.UTF8);
+            AssertContains(json, expectedKey);
+            AssertContains(json, expectedWord);
         }
         finally
         {
@@ -628,6 +701,14 @@ internal static class Program
 
         AssertSequence(new string[] { "肥", "米" }, chardefs["ucl"].ToArray());
         AssertSequence(new string[] { "一" }, chardefs["abc"].ToArray());
+    }
+
+    private static void TestLiuJsonParserLowercasesChardefRoots()
+    {
+        Dictionary<string, List<string>> chardefs = LiuJsonTable.ParseChardefsJson("{\"chardefs\":{\"UCL\":[\"肥\"],\"ucl\":[\"米\"]}}");
+
+        AssertTrue(!chardefs.ContainsKey("UCL"), "liu.json roots should be normalized to lowercase");
+        AssertSequence(new string[] { "肥", "米" }, chardefs["ucl"].ToArray());
     }
 
     private static void TestLiuReverseLookupBuildsNumberedCandidateHash()

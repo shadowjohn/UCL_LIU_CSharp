@@ -6,10 +6,17 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ## [Unreleased] - 2026-05-27
 
+### Added
+
+- C# 字碼表自動轉換補上 Python 版常見外部來源：`wuxiami.txt`、`liur_trad.dict.yaml` / `liur_Trad.dict.yaml`、`terry_boshiamy.txt`、`fcitx_boshiamy.txt`、`uniliu.txt`。
+- `LiuTableConverter` 新增 RIME YAML 與鬆散文字碼表匯入流程，會先產生 `liu.cin`，再沿用既有 `liu.cin -> liu.json` 路徑。
+- 載入 `liu.json` 時會將字根 key 正規化為小寫並合併同碼候選，對齊 Python 版後期韓語/特殊碼表相容處理。
+
 ### Documentation
 
 - README 補上 v0.12 與 v0.11 的 Microsoft WDSI 病毒碼掃描提交連結。
 - README 補充短版 UI chrome 尺寸、啟動 packed layout 與 focus 視覺修正狀態。
+- README 更新 C# / Python 成熟度評估與字碼表支援清單。
 
 ### Fixed
 
