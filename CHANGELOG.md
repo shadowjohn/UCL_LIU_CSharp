@@ -17,6 +17,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - README 補上 v0.12 與 v0.11 的 Microsoft WDSI 病毒碼掃描提交連結。
 - README 補充短版 UI chrome 尺寸、啟動 packed layout 與 focus 視覺修正狀態。
 - README 更新 C# / Python 成熟度評估與字碼表支援清單。
+- README 補充 TSF Bridge 推薦下載 `uclliu.zip`、啟用流程與 Windows 鍵盤配置成功狀態說明。
 
 ### Fixed
 

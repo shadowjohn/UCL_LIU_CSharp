@@ -76,8 +76,8 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 
 | 檔案 | 說明 |
 | --- | --- |
-| [RELEASE/0.12/uclliu.exe](RELEASE/0.12/uclliu.exe) | v0.12 開發分支打包版 |
-| [RELEASE/0.12/uclliu.zip](RELEASE/0.12/uclliu.zip) | v0.12 壓縮版，含選配 TSF Bridge 外掛 |
+| [RELEASE/0.12/uclliu.zip](RELEASE/0.12/uclliu.zip) | v0.12 推薦下載包，含 `uclliu.exe`、`tsf_bridge` 外掛、註冊/解除註冊腳本 |
+| [RELEASE/0.12/uclliu.exe](RELEASE/0.12/uclliu.exe) | v0.12 單檔版，不含 TSF Bridge；只適合不需要 TSF 的使用者 |
 | [RELEASE/0.11/uclliu.exe](RELEASE/0.11/uclliu.exe) | v0.11 開發分支打包版 |
 | [RELEASE/0.11/uclliu.zip](RELEASE/0.11/uclliu.zip) | v0.11 壓縮版 |
 | [RELEASE/0.1/uclliu.exe](RELEASE/0.1/uclliu.exe) | 2019 初版備份 |
@@ -118,13 +118,31 @@ C# 版目前右下角選單提供四種出字模式：
 
 ### TSF Bridge 管理
 
-TSF Bridge 不會自動啟用，也不會自動註冊。右下角選單提供「TSF Bridge 管理」：
+TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下載 `uclliu.zip` 並完整解壓縮，讓 `tsf_bridge` 目錄與 `uclliu.exe` 放在同一層。只下載單檔 `uclliu.exe` 時不會包含 TSF Bridge。
+
+右下角選單提供「TSF Bridge 管理」：
 
 - 檢查 TSF Bridge 狀態：顯示 DLL、註冊狀態、目前權限與註冊位置。
 - 註冊 TSF Bridge：透過 UAC 執行 `tsf_bridge\register_tsf_bridge.bat`。
 - 解除註冊 TSF Bridge：透過 UAC 執行 `tsf_bridge\unregister_tsf_bridge.bat`。
 - 解除 DLL 封鎖：執行 `tsf_bridge\unlock_tsf_bridge.ps1`。
 - 開啟 Windows 輸入法設定：協助加入或切換 `UCLLIU TSF Bridge`。
+
+建議啟用流程：
+
+1. 下載並解壓縮 [RELEASE/0.12/uclliu.zip](RELEASE/0.12/uclliu.zip)。
+2. 執行 `uclliu.exe`。
+3. 從右下角肥米選單進入 `4.TSF Bridge 管理`。
+4. 若檔案是從網路下載，先點 `解除 DLL 封鎖`。
+5. 點 `註冊 TSF Bridge`，允許 UAC 後等待註冊完成。
+6. 點 `開啟 Windows 輸入法設定`，將 `UCLLIU TSF Bridge` 加入繁體中文鍵盤。
+7. 用工作列語言選單或 `Win+Space` 切到 `繁體中文（台灣） / UCLLIU TSF Bridge`。
+8. 回肥米右下角選單，選 `TSF出字模式`。
+
+看到以下狀態代表設定完成：
+
+- Windows 11 鍵盤配置清單會出現 `繁體中文（台灣）`，下方顯示 `UCLLIU TSF Bridge`；選取後工作列語言圖示會維持在繁體中文輸入環境。
+- 肥米右下角 `4.TSF Bridge 管理` 子選單第一列會顯示 `TSF Bridge 已註冊`。
 
 切到 `TSF出字模式` 後，C# 版會先嘗試連線 `uclliu_tsf_bridge_<foreground pid>`，再退回全域 `uclliu_tsf_bridge`。預設 timeout 為 80ms，失敗時直接回到 Unicode `SendInput`，避免 TSF 狀態不穩時卡住主出字流程。
 
