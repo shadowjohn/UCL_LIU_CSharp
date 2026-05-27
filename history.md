@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-05-27 - 短版模式間距壓縮
+
+### 問題觀察
+
+- 使用者截圖顯示短版模式在 `肥 半 ㄥ 0 X` 狀態下，`0` 與 `X` 之間仍有多條空白分隔線，整體間距鬆散。
+
+### 根因判斷
+
+- C# 版短版仍沿用 7 欄 `TableLayoutPanel`，simple/gamemode 等隱藏欄雖然寬度設為 0，但 `CellBorderStyle.Inset` 仍會畫出零寬欄位的格線。
+- `ColumnSpan` 可以縮短總寬，但無法可靠消掉 TableLayout 的內部格線殘影。
+
+### 實作紀錄
+
+- 新增短版 packed layout plan，讓 type、word、簡繁與 X 依可見順序往前打包，避免 X 固定卡在第 6 欄。
+- 短版改由控制項自己的 1px border 顯示框線，`TableLayoutPanel` 不再畫格線；長版仍維持原本 Inset 格線。
+- 加入測試覆蓋短版 hidden column 不再插在候選與 X 中間。
+
+### 驗證紀錄
+
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過。
+- 實機截圖確認空短版狀態已壓成 `肥 半 X`，不再殘留尾端 hidden column 格線。
+
+---
+
 ## 2026-05-27 - 短版模式提示殘留與 layout 熱路徑修正
 
 ### 問題觀察

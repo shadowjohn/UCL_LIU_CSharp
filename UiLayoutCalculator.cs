@@ -37,6 +37,41 @@ namespace uclliu
         public bool WordVisible { get; private set; }
     }
 
+    public sealed class ShortModePackedLayoutPlan
+    {
+        public ShortModePackedLayoutPlan(
+            int[] columnWidths,
+            int typeColumn,
+            int typeColumnSpan,
+            int wordColumn,
+            int wordColumnSpan,
+            int simpleColumn,
+            int simpleColumnSpan,
+            int closeColumn,
+            int closeColumnSpan)
+        {
+            ColumnWidths = columnWidths ?? new int[0];
+            TypeColumn = typeColumn;
+            TypeColumnSpan = typeColumnSpan;
+            WordColumn = wordColumn;
+            WordColumnSpan = wordColumnSpan;
+            SimpleColumn = simpleColumn;
+            SimpleColumnSpan = simpleColumnSpan;
+            CloseColumn = closeColumn;
+            CloseColumnSpan = closeColumnSpan;
+        }
+
+        public int[] ColumnWidths { get; private set; }
+        public int TypeColumn { get; private set; }
+        public int TypeColumnSpan { get; private set; }
+        public int WordColumn { get; private set; }
+        public int WordColumnSpan { get; private set; }
+        public int SimpleColumn { get; private set; }
+        public int SimpleColumnSpan { get; private set; }
+        public int CloseColumn { get; private set; }
+        public int CloseColumnSpan { get; private set; }
+    }
+
     public static class UiLayoutCalculator
     {
         public static int ShortModeTextWidth(string text, double zoom, int charWidth, int minWidth, int maxWidth)
@@ -99,6 +134,72 @@ namespace uclliu
                 || current.TypeVisible != next.TypeVisible
                 || current.WordWidth != next.WordWidth
                 || current.WordVisible != next.WordVisible;
+        }
+
+        public static ShortModePackedLayoutPlan BuildShortModePackedLayout(
+            ShortModeLabelLayout typeLayout,
+            ShortModeLabelLayout wordLayout,
+            bool simpleVisible,
+            int buttonWidth,
+            int columnCount)
+        {
+            if (columnCount < 3)
+            {
+                columnCount = 3;
+            }
+            if (buttonWidth < 0)
+            {
+                buttonWidth = 0;
+            }
+
+            int[] widths = new int[columnCount];
+            widths[0] = buttonWidth;
+            widths[1] = buttonWidth;
+
+            int nextColumn = 2;
+            int typeColumn = 2;
+            int wordColumn = Math.Min(3, columnCount - 1);
+            int simpleColumn = Math.Min(4, columnCount - 1);
+
+            if (typeLayout.Visible && nextColumn < columnCount)
+            {
+                typeColumn = nextColumn;
+                widths[nextColumn] = typeLayout.Width;
+                nextColumn++;
+            }
+
+            if (wordLayout.Visible && nextColumn < columnCount)
+            {
+                wordColumn = nextColumn;
+                widths[nextColumn] = wordLayout.Width;
+                nextColumn++;
+            }
+
+            if (simpleVisible && nextColumn < columnCount)
+            {
+                simpleColumn = nextColumn;
+                widths[nextColumn] = buttonWidth;
+                nextColumn++;
+            }
+
+            int closeColumn = nextColumn < columnCount ? nextColumn : columnCount - 1;
+            widths[closeColumn] = buttonWidth;
+            int closeColumnSpan = columnCount - closeColumn;
+            if (closeColumnSpan < 1)
+            {
+                closeColumnSpan = 1;
+            }
+
+            return new ShortModePackedLayoutPlan(
+                widths,
+                typeColumn,
+                1,
+                wordColumn,
+                1,
+                simpleColumn,
+                1,
+                closeColumn,
+                closeColumnSpan);
         }
     }
 

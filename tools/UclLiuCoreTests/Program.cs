@@ -26,6 +26,7 @@ internal static class Program
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("short mode uses python-style compact label metrics", TestShortModeUsesPythonStyleCompactLabelMetrics);
         failed += Run("short mode layout change detects only real column changes", TestShortModeLayoutChangeDetectsOnlyRealColumnChanges);
+        failed += Run("short mode packed layout removes hidden column gaps", TestShortModePackedLayoutRemovesHiddenColumnGaps);
         failed += Run("label update batcher coalesces short mode layout", TestLabelUpdateBatcherCoalescesShortModeLayout);
         failed += Run("output hint composer ignores stale candidate labels", TestOutputHintComposerIgnoresStaleCandidateLabels);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
@@ -321,6 +322,50 @@ internal static class Program
         AssertTrue(!UiLayoutCalculator.HasShortModeLayoutChange(current, same), "same short mode columns should not request layout");
         AssertTrue(UiLayoutCalculator.HasShortModeLayoutChange(current, changedWidth), "width change should request layout");
         AssertTrue(UiLayoutCalculator.HasShortModeLayoutChange(current, changedVisibility), "visibility change should request layout");
+    }
+
+    private static void TestShortModePackedLayoutRemovesHiddenColumnGaps()
+    {
+        ShortModePackedLayoutPlan plan = UiLayoutCalculator.BuildShortModePackedLayout(
+            new ShortModeLabelLayout(18, true),
+            new ShortModeLabelLayout(12, true),
+            false,
+            40,
+            7);
+
+        AssertEqual(18, plan.ColumnWidths[2]);
+        AssertEqual(12, plan.ColumnWidths[3]);
+        AssertEqual(40, plan.ColumnWidths[4]);
+        AssertEqual(0, plan.ColumnWidths[5]);
+        AssertEqual(0, plan.ColumnWidths[6]);
+        AssertEqual(2, plan.TypeColumn);
+        AssertEqual(3, plan.WordColumn);
+        AssertEqual(4, plan.CloseColumn);
+        AssertEqual(3, plan.CloseColumnSpan);
+
+        ShortModePackedLayoutPlan emptyTypePlan = UiLayoutCalculator.BuildShortModePackedLayout(
+            new ShortModeLabelLayout(0, false),
+            new ShortModeLabelLayout(12, true),
+            false,
+            40,
+            7);
+
+        AssertEqual(12, emptyTypePlan.ColumnWidths[2]);
+        AssertEqual(40, emptyTypePlan.ColumnWidths[3]);
+        AssertEqual(2, emptyTypePlan.WordColumn);
+        AssertEqual(3, emptyTypePlan.CloseColumn);
+        AssertEqual(4, emptyTypePlan.CloseColumnSpan);
+
+        ShortModePackedLayoutPlan simplePlan = UiLayoutCalculator.BuildShortModePackedLayout(
+            new ShortModeLabelLayout(18, true),
+            new ShortModeLabelLayout(12, true),
+            true,
+            40,
+            7);
+
+        AssertEqual(4, simplePlan.SimpleColumn);
+        AssertEqual(5, simplePlan.CloseColumn);
+        AssertEqual(2, simplePlan.CloseColumnSpan);
     }
 
     private static void TestLabelUpdateBatcherCoalescesShortModeLayout()

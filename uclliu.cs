@@ -820,9 +820,12 @@ namespace uclliu
             f.Opacity = Convert.ToDouble(config["DEFAULT"]["ALPHA"]);
             f.Width = 10;
             f.Height = 10;
+            bool isShortMode = config["DEFAULT"]["SHORT_MODE"] == "1";
 
             //Control c_type_label = f.LP.GetControlFromPosition(3, 1);
-            f.LP.CellBorderStyle = System.Windows.Forms.TableLayoutPanelCellBorderStyle.Inset;
+            f.LP.CellBorderStyle = isShortMode
+                ? System.Windows.Forms.TableLayoutPanelCellBorderStyle.None
+                : System.Windows.Forms.TableLayoutPanelCellBorderStyle.Inset;
             f.LP.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             f.LP.AutoSize = true;
             f.LP.Width = 10;
@@ -834,12 +837,11 @@ namespace uclliu
             set_column_width(1, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
 
             //btn_gamemode
-            if (config["DEFAULT"]["SHORT_MODE"] == "1")
+            if (isShortMode)
             {
                 //短
+                f.btn_gamemode.Visible = false;
                 apply_short_mode_columns(currentWordLayoutKind, currentWordHasMorePage);
-                //btn_gamemode
-                set_column_width(5, 0);
 
             }
             else
@@ -847,32 +849,41 @@ namespace uclliu
                 //tape_label
                 f.type_label.Visible = true;
                 f.word_label.Visible = true;
+                f.btn_gamemode.Visible = true;
+                set_control_column_span(f.type_label, 2, 1);
+                set_control_column_span(f.word_label, 3, 1);
+                set_control_column_span(f.btn_simple, 4, 1);
+                set_control_column_span(f.btn_gamemode, 5, 1);
+                set_control_column_span(f.btn_X, 6, 1);
                 set_column_width(2, Convert.ToInt32(150 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
                 //word_label
                 set_column_width(3, Convert.ToInt32(350 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
                 //btn_gamemode
                 set_column_width(5, Convert.ToInt32(120 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
-            }
 
-            //殘/正
-            if (is_simple())
-            {
-                //殘模式
-                set_column_width(4, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
-            }
-            else
-            {
-                //正模式
-                set_column_width(4, 0);
-            }
+                //殘/正
+                if (is_simple())
+                {
+                    //殘模式
+                    set_column_width(4, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+                }
+                else
+                {
+                    //正模式
+                    set_column_width(4, 0);
+                }
 
 
-            //btn_X
-            set_column_width(6, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+                //btn_X
+                set_column_width(6, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+            }
 
             // 肥
             f.btn_UCL.Font = GUI_FONT_16;
-            f.btn_UCL.FlatAppearance.BorderSize = 0;
+            int controlBorderSize = isShortMode ? 1 : 0;
+            BorderStyle labelBorderStyle = isShortMode ? BorderStyle.FixedSingle : BorderStyle.None;
+
+            f.btn_UCL.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_UCL.Margin = new System.Windows.Forms.Padding(0);
             f.btn_UCL.Padding = new System.Windows.Forms.Padding(0);
             f.btn_UCL.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -880,7 +891,7 @@ namespace uclliu
 
             // 半全
             f.btn_HALF.Font = GUI_FONT_16;
-            f.btn_HALF.FlatAppearance.BorderSize = 0;
+            f.btn_HALF.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_HALF.Margin = new System.Windows.Forms.Padding(0);
             f.btn_HALF.Padding = new System.Windows.Forms.Padding(0);
             f.btn_HALF.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -891,6 +902,7 @@ namespace uclliu
 
             f.type_label.Margin = new System.Windows.Forms.Padding(0);
             f.type_label.Padding = new System.Windows.Forms.Padding(0);
+            f.type_label.BorderStyle = labelBorderStyle;
             f.type_label.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.type_label.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
@@ -898,6 +910,7 @@ namespace uclliu
             f.word_label.Font = GUI_FONT_18;
             f.word_label.Margin = new System.Windows.Forms.Padding(0);
             f.word_label.Padding = new System.Windows.Forms.Padding(0);
+            f.word_label.BorderStyle = labelBorderStyle;
             f.word_label.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.word_label.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
@@ -905,7 +918,7 @@ namespace uclliu
             f.btn_simple.Font = GUI_FONT_18;
             f.btn_simple.Margin = new System.Windows.Forms.Padding(0);
             f.btn_simple.Padding = new System.Windows.Forms.Padding(0);
-            f.btn_simple.FlatAppearance.BorderSize = 0;
+            f.btn_simple.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_simple.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.btn_simple.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
@@ -913,7 +926,7 @@ namespace uclliu
             f.btn_gamemode.Font = GUI_FONT_14;
             f.btn_gamemode.Margin = new System.Windows.Forms.Padding(0);
             f.btn_gamemode.Padding = new System.Windows.Forms.Padding(0);
-            f.btn_gamemode.FlatAppearance.BorderSize = 0;
+            f.btn_gamemode.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_gamemode.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.btn_gamemode.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
@@ -921,7 +934,7 @@ namespace uclliu
             f.btn_X.Font = GUI_FONT_16;
             f.btn_X.Margin = new System.Windows.Forms.Padding(0);
             f.btn_X.Padding = new System.Windows.Forms.Padding(0);
-            f.btn_X.FlatAppearance.BorderSize = 0;
+            f.btn_X.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_X.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.btn_X.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
@@ -955,9 +968,14 @@ namespace uclliu
             int maxWidth = get_short_mode_max_width();
             ShortModeLabelLayout typeLayout = UiLayoutCalculator.ShortModeTypeLayout(f.type_label.Text, zoom, maxWidth);
             ShortModeLabelLayout wordLayout = UiLayoutCalculator.ShortModeWordLayout(f.word_label.Text, zoom, wordLayoutKind, wordHasMorePage, maxWidth);
-            ShortModeColumnState current = get_current_short_mode_column_state();
-            ShortModeColumnState next = new ShortModeColumnState(typeLayout.Width, typeLayout.Visible, wordLayout.Width, wordLayout.Visible);
-            if (!UiLayoutCalculator.HasShortModeLayoutChange(current, next))
+            int buttonWidth = Convert.ToInt32(40 * zoom);
+            ShortModePackedLayoutPlan plan = UiLayoutCalculator.BuildShortModePackedLayout(
+                typeLayout,
+                wordLayout,
+                is_simple(),
+                buttonWidth,
+                f.LP.ColumnStyles.Count);
+            if (!has_short_mode_packed_layout_change(plan, typeLayout, wordLayout))
             {
                 return;
             }
@@ -973,13 +991,44 @@ namespace uclliu
                 {
                     f.word_label.Visible = wordLayout.Visible;
                 }
-                set_column_width(2, typeLayout.Width);
-                set_column_width(3, wordLayout.Width);
+                if (f.btn_gamemode.Visible)
+                {
+                    f.btn_gamemode.Visible = false;
+                }
+                set_control_column_span(f.type_label, plan.TypeColumn, plan.TypeColumnSpan);
+                set_control_column_span(f.word_label, plan.WordColumn, plan.WordColumnSpan);
+                set_control_column_span(f.btn_simple, plan.SimpleColumn, plan.SimpleColumnSpan);
+                set_control_column_span(f.btn_X, plan.CloseColumn, plan.CloseColumnSpan);
+
+                for (int i = 2; i < plan.ColumnWidths.Length && i < f.LP.ColumnStyles.Count; i++)
+                {
+                    set_column_width(i, plan.ColumnWidths[i]);
+                }
             }
             finally
             {
                 f.LP.ResumeLayout(true);
             }
+        }
+        private bool has_short_mode_packed_layout_change(ShortModePackedLayoutPlan plan, ShortModeLabelLayout typeLayout, ShortModeLabelLayout wordLayout)
+        {
+            if (f.type_label.Visible != typeLayout.Visible || f.word_label.Visible != wordLayout.Visible || f.btn_gamemode.Visible)
+            {
+                return true;
+            }
+
+            for (int i = 2; i < plan.ColumnWidths.Length && i < f.LP.ColumnStyles.Count; i++)
+            {
+                if (get_column_width(i) != plan.ColumnWidths[i])
+                {
+                    return true;
+                }
+            }
+
+            return has_control_column_span_change(f.type_label, plan.TypeColumn, plan.TypeColumnSpan)
+                || has_control_column_span_change(f.word_label, plan.WordColumn, plan.WordColumnSpan)
+                || has_control_column_span_change(f.btn_simple, plan.SimpleColumn, plan.SimpleColumnSpan)
+                || has_control_column_span_change(f.btn_X, plan.CloseColumn, plan.CloseColumnSpan);
         }
         private ShortModeColumnState get_current_short_mode_column_state()
         {
@@ -997,6 +1046,42 @@ namespace uclliu
             }
 
             return Convert.ToInt32(f.LP.ColumnStyles[index].Width);
+        }
+        private bool has_control_column_span_change(Control control, int column, int span)
+        {
+            return f.LP.GetColumn(control) != column || f.LP.GetColumnSpan(control) != span;
+        }
+        private void set_control_column_span(Control control, int column, int span)
+        {
+            int columnCount = f.LP.ColumnStyles.Count;
+            if (columnCount <= 0)
+            {
+                return;
+            }
+            if (column < 0)
+            {
+                column = 0;
+            }
+            if (column >= columnCount)
+            {
+                column = columnCount - 1;
+            }
+            if (span < 1)
+            {
+                span = 1;
+            }
+            if (column + span > columnCount)
+            {
+                span = columnCount - column;
+            }
+            if (f.LP.GetColumn(control) != column)
+            {
+                f.LP.SetColumn(control, column);
+            }
+            if (f.LP.GetColumnSpan(control) != span)
+            {
+                f.LP.SetColumnSpan(control, span);
+            }
         }
         private void queue_type_label_update(string text, Color foreColor)
         {
