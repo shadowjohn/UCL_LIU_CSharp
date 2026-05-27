@@ -465,7 +465,6 @@ namespace uclliu
         {
             //f.word_label.Visible = false;
             //f.type_label.Vset_visible(False)
-            f.btn_gamemode.Visible = true;
             play_ucl_label = "";
             ucl_find_data = new List<string>();
             is_need_use_phone = false;
@@ -848,14 +847,16 @@ namespace uclliu
             else
             {
                 //tape_label
+                TableLayoutModeTransition.RestoreLongModeColumns(
+                    f.LP,
+                    f.type_label,
+                    f.word_label,
+                    f.btn_simple,
+                    f.btn_gamemode,
+                    f.btn_X);
                 f.type_label.Visible = true;
                 f.word_label.Visible = true;
                 f.btn_gamemode.Visible = true;
-                set_control_column_span(f.type_label, 2, 1);
-                set_control_column_span(f.word_label, 3, 1);
-                set_control_column_span(f.btn_simple, 4, 1);
-                set_control_column_span(f.btn_gamemode, 5, 1);
-                set_control_column_span(f.btn_X, 6, 1);
                 set_column_width(2, Convert.ToInt32(150 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
                 //word_label
                 set_column_width(3, Convert.ToInt32(350 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));

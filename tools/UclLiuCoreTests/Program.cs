@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Text;
+using System.Windows.Forms;
 using uclliu;
 
 internal static class Program
@@ -28,6 +29,7 @@ internal static class Program
         failed += Run("short mode measured layout keeps candidates readable", TestShortModeMeasuredLayoutKeepsCandidatesReadable);
         failed += Run("short mode layout change detects only real column changes", TestShortModeLayoutChangeDetectsOnlyRealColumnChanges);
         failed += Run("short mode packed layout removes hidden column gaps", TestShortModePackedLayoutRemovesHiddenColumnGaps);
+        failed += Run("long mode transition restores columns before showing game button", TestLongModeTransitionRestoresColumnsBeforeShowingGameButton);
         failed += Run("label update batcher coalesces short mode layout", TestLabelUpdateBatcherCoalescesShortModeLayout);
         failed += Run("output hint composer ignores stale candidate labels", TestOutputHintComposerIgnoresStaleCandidateLabels);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
@@ -386,6 +388,96 @@ internal static class Program
         AssertEqual(4, simplePlan.SimpleColumn);
         AssertEqual(5, simplePlan.CloseColumn);
         AssertEqual(2, simplePlan.CloseColumnSpan);
+    }
+
+    private static void TestLongModeTransitionRestoresColumnsBeforeShowingGameButton()
+    {
+        TableLayoutFixture fixture = CreateShortModeTableLayoutFixture();
+        bool unsafeShowThrows = false;
+        try
+        {
+            fixture.Game.Visible = true;
+        }
+        catch (ArgumentException)
+        {
+            unsafeShowThrows = true;
+        }
+        AssertTrue(unsafeShowThrows, "fixture should reproduce the short-to-long overlap crash");
+
+        fixture = CreateShortModeTableLayoutFixture();
+        TableLayoutModeTransition.RestoreLongModeColumns(
+            fixture.Panel,
+            fixture.Type,
+            fixture.Word,
+            fixture.Simple,
+            fixture.Game,
+            fixture.Close);
+        fixture.Game.Visible = true;
+        fixture.Panel.PerformLayout();
+
+        AssertEqual(2, fixture.Panel.GetColumn(fixture.Type));
+        AssertEqual(3, fixture.Panel.GetColumn(fixture.Word));
+        AssertEqual(4, fixture.Panel.GetColumn(fixture.Simple));
+        AssertEqual(5, fixture.Panel.GetColumn(fixture.Game));
+        AssertEqual(6, fixture.Panel.GetColumn(fixture.Close));
+        AssertEqual(1, fixture.Panel.GetColumnSpan(fixture.Close));
+    }
+
+    private static TableLayoutFixture CreateShortModeTableLayoutFixture()
+    {
+        TableLayoutPanel panel = new TableLayoutPanel();
+        panel.ColumnCount = 7;
+        panel.RowCount = 1;
+        panel.GrowStyle = TableLayoutPanelGrowStyle.FixedSize;
+        for (int i = 0; i < 7; i++)
+        {
+            panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 40));
+        }
+
+        Button uclButton = new Button();
+        Button halfButton = new Button();
+        Label typeLabel = new Label();
+        Label wordLabel = new Label();
+        Button simpleButton = new Button();
+        Button gameButton = new Button();
+        Button closeButton = new Button();
+
+        panel.Controls.Add(uclButton, 0, 0);
+        panel.Controls.Add(halfButton, 1, 0);
+        panel.Controls.Add(typeLabel, 2, 0);
+        panel.Controls.Add(wordLabel, 3, 0);
+        panel.Controls.Add(simpleButton, 4, 0);
+        panel.Controls.Add(gameButton, 5, 0);
+        panel.Controls.Add(closeButton, 6, 0);
+
+        typeLabel.Visible = false;
+        wordLabel.Visible = false;
+        simpleButton.Visible = false;
+        gameButton.Visible = false;
+        panel.SetColumn(closeButton, 2);
+        panel.SetColumnSpan(closeButton, 5);
+
+        return new TableLayoutFixture(panel, typeLabel, wordLabel, simpleButton, gameButton, closeButton);
+    }
+
+    private sealed class TableLayoutFixture
+    {
+        public TableLayoutFixture(TableLayoutPanel panel, Control type, Control word, Control simple, Control game, Control close)
+        {
+            Panel = panel;
+            Type = type;
+            Word = word;
+            Simple = simple;
+            Game = game;
+            Close = close;
+        }
+
+        public TableLayoutPanel Panel { get; private set; }
+        public Control Type { get; private set; }
+        public Control Word { get; private set; }
+        public Control Simple { get; private set; }
+        public Control Game { get; private set; }
+        public Control Close { get; private set; }
     }
 
     private static void TestLabelUpdateBatcherCoalescesShortModeLayout()

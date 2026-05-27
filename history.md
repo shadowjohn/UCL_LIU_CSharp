@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-05-27 - 短版切回長版崩潰修正
+
+### 問題觀察
+
+- 使用者回報按 `,,,l` 會直接 crash。
+- Windows Event Log 顯示例外為 `System.ArgumentException`，堆疊落在 `System.Windows.Forms.TableLayout`，呼叫端是 `uclliu.run_long()`。
+
+### 根因判斷
+
+- 短版模式會把 `X` 按鈕往前打包並跨多欄，例如空短版時 `X` 會在第 2 欄跨到第 6 欄。
+- `run_long()` 原本先把 `btn_gamemode.Visible = true`，但此時 `X` 還沒有收回第 6 欄，`GrowStyle.FixedSize` 的 `TableLayoutPanel` 會判定格子重疊而拋出例外。
+
+### 實作紀錄
+
+- 新增 `TableLayoutModeTransition.RestoreLongModeColumns()`，切回長版時先把 `X` 的 span 收回 1，再移回第 6 欄，接著復原 type/word/simple/gamemode 欄位。
+- `run_long()` 不再提前顯示 gamemode，改由 `update_UI()` 在欄位復原後顯示長版控制項。
+- 新增 WinForms TableLayout 測試，先重現短版跨欄狀態下直接顯示 gamemode 會丟 `ArgumentException`，再驗證安全復原流程。
+
+### 驗證紀錄
+
+- 先執行測試確認缺少 transition helper 時紅燈。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-27 - 短版模式 chrome 字級微調
 
 ### 問題觀察

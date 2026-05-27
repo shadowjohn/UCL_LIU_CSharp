@@ -137,6 +137,7 @@
     <Compile Include="SimpleIni.cs" />
     <Compile Include="ShortRootDisplaySetting.cs" />
     <Compile Include="TextOutput.cs" />
+    <Compile Include="TableLayoutModeTransition.cs" />
     <Compile Include="TrayMenuText.cs" />
     <Compile Include="TsfBridge.cs" />
     <Compile Include="TypingSound.cs" />

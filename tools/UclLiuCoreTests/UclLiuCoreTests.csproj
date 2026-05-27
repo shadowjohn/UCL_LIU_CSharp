@@ -20,6 +20,7 @@
     <Compile Include="..\..\SimpleIni.cs" Link="SimpleIni.cs" />
     <Compile Include="..\..\ShortRootDisplaySetting.cs" Link="ShortRootDisplaySetting.cs" />
     <Compile Include="..\..\TextOutput.cs" Link="TextOutput.cs" />
+    <Compile Include="..\..\TableLayoutModeTransition.cs" Link="TableLayoutModeTransition.cs" />
     <Compile Include="..\..\TrayMenuText.cs" Link="TrayMenuText.cs" />
     <Compile Include="..\..\TsfBridge.cs" Link="TsfBridge.cs" />
     <Compile Include="..\..\TypingSound.cs" Link="TypingSound.cs" />
