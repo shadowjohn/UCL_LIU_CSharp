@@ -16,6 +16,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 微調短版模式 `肥` / `半` / `X` 按鈕字級，讓 40x40 chrome 更接近 Python 版視覺比例。
 - 修正 `,,,l` 從短版切回長版時，先顯示「正常模式」按鈕再復原欄位，造成 `TableLayoutPanel` 在 `X` 跨欄狀態下拋出 `System.ArgumentException` 崩潰。
 - 修正短版模式 `肥` / `半` / `X` 按鈕文字視覺中心偏低，加入短版專用 bottom padding 微調，長版維持原本對齊。
+- 修正短版模式 chrome 按鈕 focus 後殘留按下視覺狀態，並讓短版啟動時立即套用 packed layout，避免一開始留下長版空白欄位。
 
 ---
 
