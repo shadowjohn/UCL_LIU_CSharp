@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\AltTabWindowStyle.cs" Link="AltTabWindowStyle.cs" />
+    <Compile Include="..\..\ChromeButton.cs" Link="ChromeButton.cs" />
     <Compile Include="..\..\ChromeButtonTextAlignment.cs" Link="ChromeButtonTextAlignment.cs" />
     <Compile Include="..\..\CustomDictionaryStore.cs" Link="CustomDictionaryStore.cs" />
     <Compile Include="..\..\ForegroundProcessSnapshot.cs" Link="ForegroundProcessSnapshot.cs" />

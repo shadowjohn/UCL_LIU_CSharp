@@ -32,12 +32,12 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.LP = new System.Windows.Forms.TableLayoutPanel();
             this.word_label = new System.Windows.Forms.Label();
-            this.btn_UCL = new System.Windows.Forms.Button();
-            this.btn_HALF = new System.Windows.Forms.Button();
+            this.btn_UCL = new global::uclliu.ChromeButton();
+            this.btn_HALF = new global::uclliu.ChromeButton();
             this.type_label = new System.Windows.Forms.Label();
-            this.btn_X = new System.Windows.Forms.Button();
-            this.btn_gamemode = new System.Windows.Forms.Button();
-            this.btn_simple = new System.Windows.Forms.Button();
+            this.btn_X = new global::uclliu.ChromeButton();
+            this.btn_gamemode = new global::uclliu.ChromeButton();
+            this.btn_simple = new global::uclliu.ChromeButton();
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
             this.LP.SuspendLayout();
             this.SuspendLayout();
@@ -222,13 +222,13 @@
 
         #endregion
         public System.Windows.Forms.TableLayoutPanel LP;
-        public System.Windows.Forms.Button btn_X;
-        public System.Windows.Forms.Button btn_UCL;
-        public System.Windows.Forms.Button btn_HALF;
+        public global::uclliu.ChromeButton btn_X;
+        public global::uclliu.ChromeButton btn_UCL;
+        public global::uclliu.ChromeButton btn_HALF;
         public System.Windows.Forms.Label word_label;
         public System.Windows.Forms.Label type_label;
-        public System.Windows.Forms.Button btn_gamemode;
-        public System.Windows.Forms.Button btn_simple;
+        public global::uclliu.ChromeButton btn_gamemode;
+        public global::uclliu.ChromeButton btn_simple;
         private System.Windows.Forms.NotifyIcon notifyIcon1;
     }
 }

@@ -20,6 +20,7 @@ internal static class Program
         failed += Run("tray menu text marks current output mode", TestTrayMenuTextMarksCurrentOutputMode);
         failed += Run("tray menu text marks boolean settings", TestTrayMenuTextMarksBooleanSettings);
         failed += Run("tray menu opens on left and right click", TestTrayMenuOpensOnLeftAndRightClick);
+        failed += Run("chrome button does not keep focus", TestChromeButtonDoesNotKeepFocus);
         failed += Run("tsf bridge assets prefer architecture subfolder", TestTsfBridgeAssetsPreferArchitectureSubfolder);
         failed += Run("tsf bridge command text is stable", TestTsfBridgeCommandText);
         failed += Run("short root setting toggles and persists SP", TestShortRootSettingTogglesAndPersistsSp);
@@ -224,6 +225,18 @@ internal static class Program
         AssertTrue(!TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Middle), "middle click should not open tray menu");
     }
 
+    private static void TestChromeButtonDoesNotKeepFocus()
+    {
+        ChromeButton button = new ChromeButton();
+        System.Reflection.MethodInfo getStyle = typeof(Control).GetMethod(
+            "GetStyle",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        bool selectable = (bool)getStyle.Invoke(button, new object[] { ControlStyles.Selectable });
+
+        AssertTrue(!button.TabStop, "chrome button should not enter tab focus order");
+        AssertTrue(!selectable, "chrome button should not keep focus after mouse click");
+    }
+
     private static void TestTsfBridgeAssetsPreferArchitectureSubfolder()
     {
         string dir = Path.Combine(Path.GetTempPath(), "uclliu-tsf-tests-" + Guid.NewGuid().ToString("N"));
@@ -378,6 +391,19 @@ internal static class Program
         AssertEqual(2, emptyTypePlan.WordColumn);
         AssertEqual(3, emptyTypePlan.CloseColumn);
         AssertEqual(4, emptyTypePlan.CloseColumnSpan);
+
+        ShortModePackedLayoutPlan emptyPlan = UiLayoutCalculator.BuildShortModePackedLayout(
+            new ShortModeLabelLayout(0, false),
+            new ShortModeLabelLayout(0, false),
+            false,
+            40,
+            7);
+
+        AssertEqual(40, emptyPlan.ColumnWidths[2]);
+        AssertEqual(0, emptyPlan.ColumnWidths[3]);
+        AssertEqual(0, emptyPlan.ColumnWidths[4]);
+        AssertEqual(2, emptyPlan.CloseColumn);
+        AssertEqual(5, emptyPlan.CloseColumnSpan);
 
         ShortModePackedLayoutPlan simplePlan = UiLayoutCalculator.BuildShortModePackedLayout(
             new ShortModeLabelLayout(18, true),

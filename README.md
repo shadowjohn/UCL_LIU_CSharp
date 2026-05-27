@@ -22,7 +22,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.12。這個分支的目標是
 | 貼上模式 | 已封裝 retry、timeout、try/finally 還原剪貼簿 | 已有大量 App 特例 |
 | 字碼表 | 支援 `liu.json`、`liu.cin`、`liu-uni.tab` 自動轉換 | 支援來源較多，含 RIME/fcitx/小小輸入法等 |
 | 自定詞庫 | 支援 `custom.json`、右下角選單、`,,,BOX`、單例視窗 | v1.63-v1.65 已完整支援 |
-| UI 效能 | 已降低短版模式與 foreground process 查詢熱路徑負擔 | Python 版後期另有多輪 Win11/位置修正 |
+| UI 效能 | 已降低短版模式與 foreground process 查詢熱路徑負擔；短版啟動即套用 packed layout，`肥` / `半` / `╳` chrome 尺寸與長版一致，並移除按鈕 focus 後的按下視覺殘留 | Python 版後期另有多輪 Win11/位置修正 |
 | TSF Bridge | 已移植為手動 `TSF出字模式`，透過 named pipe 呼叫外掛 DLL，失敗 fallback Unicode `SendInput`；右下角選單可檢查/註冊/解除註冊 | v1.67 實驗性支援 |
 | 打字音效 | 支援 `wavs\*.wav`、開關、10%-100% 音量、特殊鍵音效、防長按連發 | 已支援音效與音量設定 |
 | 同音/注音 | 支援新版 `pinyi.txt` 同音字、`';` 注音查詢、出字後提示注音 | 已支援 |
@@ -195,7 +195,7 @@ C# 版已追上的重點：
 - 新版 `pinyi.txt` 同音字、`';` 注音查詢、出字後提示注音
 - 啟動預設肥/英與 `Shift+Space` 半全形切換設定
 - TSF Bridge 外掛式手動出字模式、狀態檢查、UAC 註冊/解除註冊導引
-- 短版 UI 熱路徑降載
+- 短版 UI 熱路徑降載、啟動 packed layout、chrome button focus 視覺修正
 - foreground process 查詢短暫 cache
 - 可用 .NET SDK 執行的核心測試
 

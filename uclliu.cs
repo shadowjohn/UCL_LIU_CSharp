@@ -736,6 +736,7 @@ namespace uclliu
             add_configured_apps(sendkey_paste_big5_apps, config["DEFAULT"]["SEND_KIND_2_BIG5"]);
             add_configured_apps(sendkey_not_use_ucl_apps, config["DEFAULT"]["SEND_KIND_3_NOUCL"]);
 
+            clear_input_labels_for_mode_change();
             update_UI();
             //不管如何，先存一次
             saveConfig();
@@ -821,6 +822,8 @@ namespace uclliu
             f.Width = 10;
             f.Height = 10;
             bool isShortMode = config["DEFAULT"]["SHORT_MODE"] == "1";
+            double zoom = Convert.ToDouble(config["DEFAULT"]["ZOOM"]);
+            int chromeButtonWidth = Convert.ToInt32(40 * zoom);
 
             //Control c_type_label = f.LP.GetControlFromPosition(3, 1);
             f.LP.CellBorderStyle = isShortMode
@@ -830,11 +833,11 @@ namespace uclliu
             f.LP.AutoSize = true;
             f.LP.Width = 10;
             f.LP.Height = 10;
-            f.LP.RowStyles[0] = new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+            f.LP.RowStyles[0] = new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, chromeButtonWidth);
             //btn_UCL
-            set_column_width(0, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+            set_column_width(0, chromeButtonWidth);
             //btn_HALF
-            set_column_width(1, Convert.ToInt32(40 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
+            set_column_width(1, chromeButtonWidth);
 
             //btn_gamemode
             if (isShortMode)
@@ -881,7 +884,7 @@ namespace uclliu
             }
 
             // 肥
-            f.btn_UCL.Font = isShortMode ? GUI_FONT_20 : GUI_FONT_16;
+            f.btn_UCL.Font = GUI_FONT_16;
             int controlBorderSize = isShortMode ? 1 : 0;
             BorderStyle labelBorderStyle = isShortMode ? BorderStyle.FixedSingle : BorderStyle.None;
             Padding mainChromePadding = isShortMode
@@ -896,14 +899,16 @@ namespace uclliu
             f.btn_UCL.Padding = mainChromePadding;
             f.btn_UCL.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.btn_UCL.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
+            f.btn_UCL.MinimumSize = isShortMode ? new Size(chromeButtonWidth, chromeButtonWidth) : Size.Empty;
 
             // 半全
-            f.btn_HALF.Font = isShortMode ? GUI_FONT_20 : GUI_FONT_16;
+            f.btn_HALF.Font = GUI_FONT_16;
             f.btn_HALF.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_HALF.Margin = new System.Windows.Forms.Padding(0);
             f.btn_HALF.Padding = mainChromePadding;
             f.btn_HALF.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.btn_HALF.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
+            f.btn_HALF.MinimumSize = isShortMode ? new Size(chromeButtonWidth, chromeButtonWidth) : Size.Empty;
 
             // 輸五
             f.type_label.Font = GUI_FONT_18;
@@ -941,12 +946,13 @@ namespace uclliu
             f.btn_gamemode.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
             // X
-            f.btn_X.Font = isShortMode ? GUI_FONT_14 : GUI_FONT_16;
+            f.btn_X.Font = GUI_FONT_16;
             f.btn_X.Margin = new System.Windows.Forms.Padding(0);
             f.btn_X.Padding = closeChromePadding;
             f.btn_X.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_X.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.btn_X.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
+            f.btn_X.MinimumSize = isShortMode ? new Size(chromeButtonWidth, chromeButtonWidth) : Size.Empty;
             f.btn_UCL.TextAlign = ContentAlignment.MiddleCenter;
             f.btn_HALF.TextAlign = ContentAlignment.MiddleCenter;
             f.btn_simple.TextAlign = ContentAlignment.MiddleCenter;
