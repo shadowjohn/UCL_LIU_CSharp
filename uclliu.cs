@@ -20,6 +20,7 @@ namespace uclliu
         private readonly SelectedTextTransformCommand selectedTextTransformCommand = new SelectedTextTransformCommand();
         private readonly SelectedTextTransformDispatcher selectedTextTransformDispatcher;
         private readonly DeferredTextOutputDispatcher deferredTextOutputDispatcher;
+        private readonly UiLabelUpdateBatcher labelUpdateBatcher;
         private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
         private readonly KeyboardHookLatencyMonitor keyboardHookLatencyMonitor = new KeyboardHookLatencyMonitor(KeyboardHookPerformancePolicy.SlowHookThresholdMilliseconds, KeyboardHookPerformancePolicy.SlowHookLogIntervalMilliseconds);
         private readonly AsyncPerformanceLogger performanceLogger;
@@ -77,6 +78,8 @@ namespace uclliu
         int same_sound_max_word = 6; //一頁最多5字
         bool is_has_more_page = false; //是否還有下頁
         public bool is_display_sp = false; //是否顯示簡根
+        private ShortModeWordLayoutKind currentWordLayoutKind = ShortModeWordLayoutKind.Hint;
+        private bool currentWordHasMorePage = false;
         //# GUI Font
         public Font GUI_FONT_12 = new Font("roman", 12, FontStyle.Bold);
         public Font GUI_FONT_14 = new Font("roman", 14, FontStyle.Bold);
@@ -100,6 +103,7 @@ namespace uclliu
             tsfBridgeManager = new TsfBridgeManager(my.pwd());
             selectedTextTransformDispatcher = new SelectedTextTransformDispatcher(post_ui_action, set_is_send_ucl, debug_print);
             deferredTextOutputDispatcher = new DeferredTextOutputDispatcher(post_ui_action);
+            labelUpdateBatcher = new UiLabelUpdateBatcher(post_form_ui_action, apply_label_update_batch);
             performanceLogger = new AsyncPerformanceLogger(my.pwd() + "\\UCLLIU_performance.log");
         }
         //感謝台灣碼農
@@ -447,7 +451,11 @@ namespace uclliu
             //f.word_label.Visible = false;
             //f.type_label.Vset_visible(False)
             f.btn_gamemode.Visible = false;
+            play_ucl_label = "";
+            ucl_find_data = new List<string>();
+            is_need_use_phone = false;
             config["DEFAULT"]["SHORT_MODE"] = "1";
+            clear_input_labels_for_mode_change();
             update_UI();
             saveConfig();
         }
@@ -456,9 +464,27 @@ namespace uclliu
             //f.word_label.Visible = false;
             //f.type_label.Vset_visible(False)
             f.btn_gamemode.Visible = true;
+            play_ucl_label = "";
+            ucl_find_data = new List<string>();
+            is_need_use_phone = false;
             config["DEFAULT"]["SHORT_MODE"] = "0";
+            clear_input_labels_for_mode_change();
             update_UI();
             saveConfig();
+        }
+        private void clear_input_labels_for_mode_change()
+        {
+            currentWordLayoutKind = ShortModeWordLayoutKind.Hint;
+            currentWordHasMorePage = false;
+            if (f == null || f.IsDisposed)
+            {
+                return;
+            }
+
+            f.type_label.Text = "";
+            f.type_label.ForeColor = Color.Black;
+            f.word_label.Text = "";
+            f.word_label.ForeColor = Color.Black;
         }
         public string about_uclliu()
         {
@@ -809,15 +835,7 @@ namespace uclliu
             if (config["DEFAULT"]["SHORT_MODE"] == "1")
             {
                 //短
-                //type_label
-                //加入，判斷有多少字，改多長
-                int _tape_label_width = get_short_mode_width(f.type_label.Text);
-                set_column_width(2, _tape_label_width);
-                //word_label
-                debug_print("_tape_label_width : " + _tape_label_width.ToString());
-                int _word_label_width = get_short_mode_width(f.word_label.Text);
-                set_column_width(3, _word_label_width);
-                debug_print("_word_label_width : " + _word_label_width.ToString());
+                apply_short_mode_columns(currentWordLayoutKind, currentWordHasMorePage);
                 //btn_gamemode
                 set_column_width(5, 0);
 
@@ -825,6 +843,8 @@ namespace uclliu
             else
             {
                 //tape_label
+                f.type_label.Visible = true;
+                f.word_label.Visible = true;
                 set_column_width(2, Convert.ToInt32(150 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
                 //word_label
                 set_column_width(3, Convert.ToInt32(350 * Convert.ToDouble(config["DEFAULT"]["ZOOM"])));
@@ -912,8 +932,8 @@ namespace uclliu
             f.btn_HALF.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             f.btn_gamemode.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             f.btn_X.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            f.type_label.AutoSize = true;
-            f.word_label.AutoSize = true;
+            f.type_label.AutoSize = false;
+            f.word_label.AutoSize = false;
             f.Visible = true;
             //f.Refresh();
             f.ResumeLayout();
@@ -926,34 +946,61 @@ namespace uclliu
             }
 
             f.LP.SuspendLayout();
-            set_column_width(2, get_short_mode_width(f.type_label.Text));
-            set_column_width(3, get_short_mode_width(f.word_label.Text));
-            f.LP.ResumeLayout(false);
+            apply_short_mode_columns(currentWordLayoutKind, currentWordHasMorePage);
+            f.LP.ResumeLayout(true);
+        }
+        private void apply_short_mode_columns(ShortModeWordLayoutKind wordLayoutKind, bool wordHasMorePage)
+        {
+            double zoom = Convert.ToDouble(config["DEFAULT"]["ZOOM"]);
+            int maxWidth = get_short_mode_max_width();
+            ShortModeLabelLayout typeLayout = UiLayoutCalculator.ShortModeTypeLayout(f.type_label.Text, zoom, maxWidth);
+            ShortModeLabelLayout wordLayout = UiLayoutCalculator.ShortModeWordLayout(f.word_label.Text, zoom, wordLayoutKind, wordHasMorePage, maxWidth);
+
+            f.type_label.Visible = typeLayout.Visible;
+            f.word_label.Visible = wordLayout.Visible;
+            set_column_width(2, typeLayout.Width);
+            set_column_width(3, wordLayout.Width);
         }
         private void queue_type_label_update(string text, Color foreColor)
         {
-            post_form_ui_action(delegate
-            {
-                f.type_label.Text = text;
-                f.type_label.ForeColor = foreColor;
-                update_short_mode_columns();
-            });
+            labelUpdateBatcher.QueueType(text, foreColor);
         }
         private void queue_word_label_update(string text)
         {
-            queue_word_label_update(text, null);
+            queue_word_label_update(text, null, ShortModeWordLayoutKind.Hint, false);
         }
         private void queue_word_label_update(string text, Color? foreColor)
         {
-            post_form_ui_action(delegate
+            queue_word_label_update(text, foreColor, ShortModeWordLayoutKind.Hint, false);
+        }
+        private void queue_word_label_update(string text, Color? foreColor, ShortModeWordLayoutKind layoutKind, bool hasMorePage)
+        {
+            labelUpdateBatcher.QueueWord(text, foreColor, layoutKind, hasMorePage);
+        }
+        private void apply_label_update_batch(UiLabelUpdateSnapshot snapshot)
+        {
+            if (snapshot == null)
             {
-                f.word_label.Text = text;
-                if (foreColor.HasValue)
+                return;
+            }
+
+            if (snapshot.UpdateType)
+            {
+                f.type_label.Text = snapshot.TypeText;
+                f.type_label.ForeColor = snapshot.TypeColor;
+            }
+            if (snapshot.UpdateWord)
+            {
+                f.word_label.Text = snapshot.WordText;
+                if (snapshot.WordHasColor)
                 {
-                    f.word_label.ForeColor = foreColor.Value;
+                    f.word_label.ForeColor = snapshot.WordColor;
                 }
-                update_short_mode_columns();
-            });
+                currentWordLayoutKind = snapshot.WordLayoutKind;
+                currentWordHasMorePage = snapshot.WordHasMorePage;
+            }
+
+            update_short_mode_columns();
         }
         private void post_form_ui_action(Action action)
         {
@@ -992,10 +1039,9 @@ namespace uclliu
 
             invoker();
         }
-        private int get_short_mode_width(string text)
+        private int get_short_mode_max_width()
         {
-            int maxWidth = Math.Max(0, Screen.PrimaryScreen.WorkingArea.Width - 160);
-            return UiLayoutCalculator.ShortModeTextWidth(text, Convert.ToDouble(config["DEFAULT"]["ZOOM"]), 28, 0, maxWidth);
+            return Math.Max(0, Screen.PrimaryScreen.WorkingArea.Width - 160);
         }
         private void set_column_width(int index, int width)
         {
@@ -1617,7 +1663,7 @@ namespace uclliu
                 {
                     tmp = string.Format("{0} ...", tmp);
                 }
-                queue_word_label_update(tmp, is_need_use_phone ? Color.FromArgb(0, 127, 255) : Color.Black);
+                queue_word_label_update(tmp, is_need_use_phone ? Color.FromArgb(0, 127, 255) : Color.Black, ShortModeWordLayoutKind.Candidates, is_has_more_page);
                 debug_print(string.Format("word_label lens: {0} ", tmp.Length));
                 int lt = tmp.Length;
             }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Text;
 using uclliu;
@@ -23,6 +24,8 @@ internal static class Program
         failed += Run("short root setting toggles and persists SP", TestShortRootSettingTogglesAndPersistsSp);
         failed += Run("short root setting reads normalized config", TestShortRootSettingReadsNormalizedConfig);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
+        failed += Run("short mode uses python-style compact label metrics", TestShortModeUsesPythonStyleCompactLabelMetrics);
+        failed += Run("label update batcher coalesces short mode layout", TestLabelUpdateBatcherCoalescesShortModeLayout);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
         failed += Run("simple ini writes readable sections", TestSimpleIniWritesReadableSections);
@@ -283,6 +286,66 @@ internal static class Program
         AssertEqual(84, UiLayoutCalculator.ShortModeTextWidth("abc", 1.0, 28, 0, 900));
         AssertEqual(900, UiLayoutCalculator.ShortModeTextWidth(new string('字', 100), 1.0, 28, 0, 900));
         AssertEqual(42, UiLayoutCalculator.ShortModeTextWidth("abc", 0.5, 28, 0, 900));
+    }
+
+    private static void TestShortModeUsesPythonStyleCompactLabelMetrics()
+    {
+        ShortModeLabelLayout emptyType = UiLayoutCalculator.ShortModeTypeLayout("", 1.0, 900);
+        AssertEqual(0, emptyType.Width);
+        AssertTrue(!emptyType.Visible, "empty type label should be hidden in short mode");
+
+        ShortModeLabelLayout typeLayout = UiLayoutCalculator.ShortModeTypeLayout("abc", 1.0, 900);
+        AssertEqual(54, typeLayout.Width);
+        AssertTrue(typeLayout.Visible, "typed roots should be visible in short mode");
+
+        ShortModeLabelLayout hintLayout = UiLayoutCalculator.ShortModeWordLayout("簡根：D", 1.0, ShortModeWordLayoutKind.Hint, false, 900);
+        AssertEqual(60, hintLayout.Width);
+        AssertTrue(hintLayout.Visible, "short root hint should be visible in short mode");
+
+        ShortModeLabelLayout candidateLayout = UiLayoutCalculator.ShortModeWordLayout("0A 1B", 1.0, ShortModeWordLayoutKind.Candidates, false, 900);
+        AssertEqual(60, candidateLayout.Width);
+
+        ShortModeLabelLayout pagedCandidateLayout = UiLayoutCalculator.ShortModeWordLayout("0A 1B ...", 1.0, ShortModeWordLayoutKind.Candidates, true, 900);
+        AssertEqual(117, pagedCandidateLayout.Width);
+    }
+
+    private static void TestLabelUpdateBatcherCoalescesShortModeLayout()
+    {
+        int scheduled = 0;
+        int applied = 0;
+        Action pending = null;
+        UiLabelUpdateSnapshot appliedSnapshot = null;
+        UiLabelUpdateBatcher batcher = new UiLabelUpdateBatcher(
+            delegate(Action action)
+            {
+                scheduled++;
+                pending = action;
+            },
+            delegate(UiLabelUpdateSnapshot snapshot)
+            {
+                applied++;
+                appliedSnapshot = snapshot;
+            });
+
+        batcher.QueueType("abc", Color.Black);
+        batcher.QueueWord("0A 1B", Color.FromArgb(0, 127, 255), ShortModeWordLayoutKind.Candidates, true);
+        batcher.QueueType("abcd", Color.Red);
+
+        AssertEqual(1, scheduled);
+        AssertTrue(pending != null, "batcher should schedule one pending flush");
+
+        pending();
+
+        AssertEqual(1, applied);
+        AssertTrue(appliedSnapshot.UpdateType, "type label should be updated");
+        AssertTrue(appliedSnapshot.UpdateWord, "word label should be updated");
+        AssertEqual("abcd", appliedSnapshot.TypeText);
+        AssertEqual("0A 1B", appliedSnapshot.WordText);
+        AssertEqual(Color.Red.ToArgb(), appliedSnapshot.TypeColor.ToArgb());
+        AssertEqual(Color.FromArgb(0, 127, 255).ToArgb(), appliedSnapshot.WordColor.ToArgb());
+        AssertTrue(appliedSnapshot.WordHasColor, "word color should be carried by the batch");
+        AssertEqual((int)ShortModeWordLayoutKind.Candidates, (int)appliedSnapshot.WordLayoutKind);
+        AssertTrue(appliedSnapshot.WordHasMorePage, "more-page state should be carried by the batch");
     }
 
     private static void TestCustomRootValidation()

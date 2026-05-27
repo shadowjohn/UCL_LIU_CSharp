@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-05-27 - 短版模式 UI 修整
+
+### 問題觀察
+
+- 使用者回報 `,,,s` 短版模式在重新計算縮放空間後顯示異常，loading 很重，打字候選與已輸入字根展開得不自然。
+- 對照 Python 版後發現短版模式會把空的 type/word label 隱藏，並用較緊湊的寬度比例：type label 約 18px/字、簡根提示約 15px/字、候選列表約 12px/字，有分頁時約 13px/字。
+
+### 根因判斷
+
+- C# 版 `,,,s` 先排入非同步 label 清空，接著同步 `update_UI()`，短版欄寬可能拿到舊的 `,,,s` 或候選文字來重算。
+- `type_label` 與 `word_label` 各自 `BeginInvoke` 更新，每次都呼叫 `update_short_mode_columns()`，等於一鍵可能重排兩次 TableLayout。
+- 短版欄寬原本統一用 28px/字，遠寬於 Python 版，造成候選與簡根提示被展得很開。
+
+### 實作紀錄
+
+- 新增 `ShortModeLabelLayout` / `ShortModeWordLayoutKind`，將短版 type、候選、簡根提示寬度規則集中到 `UiLayoutCalculator`。
+- 新增 `UiLabelUpdateBatcher`，同一輪 type/word label 更新合併成一次 UI flush，避免每鍵重複 layout。
+- `run_short()` / `run_long()` 切換時先同步清空 label 狀態，再做 layout，避免使用舊文字重算短版寬度。
+- 短版空 label 會收成 0 寬並隱藏；label `AutoSize` 關閉，改由 TableLayout 欄寬控制。
+
+### 驗證紀錄
+
+- 先新增短版 layout 與 UI label batcher 核心測試並確認紅燈。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-27 - 瀏覽器輸入崩潰修正
 
 ### 問題觀察
