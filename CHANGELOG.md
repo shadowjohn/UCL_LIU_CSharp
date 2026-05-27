@@ -4,6 +4,14 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ---
 
+## [Unreleased] - 2026-05-27
+
+### Fixed
+
+- 修正候選字存在時按 numpad 數字或特殊鍵可能在 `LowLevelKeyboardProc` 觸發 `System.FormatException`，導致瀏覽器輸入時卡頓後崩潰。
+
+---
+
 ## [0.12] - 2026-05-27
 
 ### Added

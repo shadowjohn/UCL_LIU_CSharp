@@ -411,11 +411,14 @@ namespace uclliu
                 { // #0~9 .=110
                     //ucl.debug_print("有後選字時，按數字鍵出字: ucl.ucl_find_data.Count : " + ucl.ucl_find_data.Count.ToString());
                     //ucl.debug_print("有後選字時，按數字鍵出字:  Convert.ToInt32(  Convert.ToString((char)ea) ) : " + Convert.ToInt32(Convert.ToString((char)ea)).ToString());
-                    if (ucl.ucl_find_data.Count >= 1 && Convert.ToInt32(Convert.ToString((char)ea)) < ucl.ucl_find_data.Count)
+                    int candidateIndex;
+                    if (ucl.ucl_find_data.Count >= 1
+                        && KeyboardCandidateSelection.TryGetCandidateIndex(ea, out candidateIndex)
+                        && candidateIndex < ucl.ucl_find_data.Count)
                     {
                         //# send data        
                         //肥模式，打字時，如果後選字有如 0 1 2 3 4…按數字鍵，也可以出字
-                        string data = ucl.ucl_find_data[Convert.ToInt32(Convert.ToString((char)ea))];
+                        string data = ucl.ucl_find_data[candidateIndex];
                         ucl.queue_senddata_with_labels(data);
                         //todo
                         //ucl.show_sp_to_label(data.decode('utf-8'));

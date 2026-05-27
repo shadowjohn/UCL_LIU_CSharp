@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-05-27 - 瀏覽器輸入崩潰修正
+
+### 問題觀察
+
+- 使用者回報在瀏覽器標題/輸入框打字時，一頓一頓後肥米當掉。
+- `UCLLIU_performance.log` 顯示 Brave 期間有 slow keyboard hook 紀錄。
+- Windows Event Log 顯示根因是 `System.FormatException`，發生在 `Form1.LowLevelKeyboardProc()`。
+
+### 根因判斷
+
+- 候選字存在時，舊程式用 `Convert.ToInt32(Convert.ToString((char)ea))` 把 virtual-key code 轉候選索引。
+- 上排數字鍵可碰巧轉成 `"0"`~`"9"`，但 numpad 數字鍵 virtual-key code 96~105 轉成字元會變成非數字，例如 `98 -> 'b'`，因此拋出 `FormatException`。
+- 例外發生在 low-level keyboard hook callback 內，未被局部處理時會造成 WinForms 程式崩潰。
+
+### 實作紀錄
+
+- 新增 `KeyboardCandidateSelection.TryGetCandidateIndex()`，只接受上排 `0-9` 與 numpad `0-9`。
+- `Form1.LowLevelKeyboardProc()` 候選快選改用該 helper，不再直接對 virtual-key char 做 `Convert.ToInt32()`。
+- 新增核心測試覆蓋上排數字、numpad 數字與非數字 virtual-key。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `KeyboardCandidateSelection`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過；`tsf_bridge\x64\UclTsfBridge.dll` 因目前 TSF 已被 Brave/Notepad++ 等程序載入而鎖住，未覆蓋該 DLL，但主程式 `uclliu.exe` 已更新。
+
+---
+
 ## 2026-05-27 - v0.12 版號與主線整理
 
 ### 任務目標

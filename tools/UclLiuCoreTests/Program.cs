@@ -65,6 +65,8 @@ internal static class Program
         failed += Run("shift release clears state even when ctrl space is enabled", TestShiftReleaseClearsStateWithCtrlSpace);
         failed += Run("shift release toggles input only for standalone shift mode", TestShiftReleaseToggleRules);
         failed += Run("shift release ignores stale standalone shift", TestShiftReleaseIgnoresStaleStandaloneShift);
+        failed += Run("candidate selection maps top row and numpad digits", TestCandidateSelectionMapsTopRowAndNumpadDigits);
+        failed += Run("candidate selection rejects non digit virtual keys", TestCandidateSelectionRejectsNonDigitVirtualKeys);
         failed += Run("pinyi v001 same sound skips phonetic code and bopomofo tokens", TestPinyiV001SkipsPhoneCodeAndBopomofo);
         failed += Run("pinyi v001 same sound sorts by closest token index", TestPinyiV001SortsByClosestTokenIndex);
         failed += Run("pinyi legacy same sound keeps whole matching lines", TestPinyiLegacyKeepsWholeMatchingLines);
@@ -898,6 +900,30 @@ internal static class Program
 
         AssertTrue(staleShift.ShouldClearShiftState, "stale shift release should still clear state");
         AssertTrue(!staleShift.ShouldToggleInputMode, "stale standalone shift should not toggle input under high load");
+    }
+
+    private static void TestCandidateSelectionMapsTopRowAndNumpadDigits()
+    {
+        int index;
+
+        AssertTrue(KeyboardCandidateSelection.TryGetCandidateIndex(48, out index), "top row 0 should map");
+        AssertEqual(0, index);
+        AssertTrue(KeyboardCandidateSelection.TryGetCandidateIndex(57, out index), "top row 9 should map");
+        AssertEqual(9, index);
+        AssertTrue(KeyboardCandidateSelection.TryGetCandidateIndex(96, out index), "numpad 0 should map");
+        AssertEqual(0, index);
+        AssertTrue(KeyboardCandidateSelection.TryGetCandidateIndex(105, out index), "numpad 9 should map");
+        AssertEqual(9, index);
+    }
+
+    private static void TestCandidateSelectionRejectsNonDigitVirtualKeys()
+    {
+        int index;
+
+        AssertTrue(!KeyboardCandidateSelection.TryGetCandidateIndex(37, out index), "left arrow should not map");
+        AssertTrue(!KeyboardCandidateSelection.TryGetCandidateIndex(98 + 1000, out index), "invalid vk should not map");
+        AssertTrue(!KeyboardCandidateSelection.TryGetCandidateIndex(107, out index), "numpad plus should not map");
+        AssertTrue(!KeyboardCandidateSelection.TryGetCandidateIndex(109, out index), "numpad minus should not map");
     }
 
     private static void TestPinyiV001SkipsPhoneCodeAndBopomofo()

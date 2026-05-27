@@ -61,4 +61,25 @@ namespace uclliu
             return new ShiftKeyReleaseDecision(true, shouldToggle);
         }
     }
+
+    public static class KeyboardCandidateSelection
+    {
+        public static bool TryGetCandidateIndex(int virtualKeyCode, out int index)
+        {
+            if (virtualKeyCode >= 48 && virtualKeyCode <= 57)
+            {
+                index = virtualKeyCode - 48;
+                return true;
+            }
+
+            if (virtualKeyCode >= 96 && virtualKeyCode <= 105)
+            {
+                index = virtualKeyCode - 96;
+                return true;
+            }
+
+            index = -1;
+            return false;
+        }
+    }
 }
