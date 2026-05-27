@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-05-27 - 短版 chrome 文字垂直置中
+
+### 問題觀察
+
+- 使用者回報短版 `肥`、`半`、`X` 看起來偏低，長版反而比較舒服。
+
+### 根因判斷
+
+- 短版把 `肥` / `半` 放大到 20pt 並塞進 40x40 flat button，WinForms/Button 對中文字型 fallback 的 baseline 會讓實際黑色像素中心偏下。
+- 實測 `DrawToBitmap` 後，`肥` / `半` 在 0 padding 時文字中心約低 2.5px，`X` 約低 1.5px。
+
+### 實作紀錄
+
+- 新增 `ChromeButtonTextAlignment`，集中管理短版 chrome 的文字 padding。
+- 短版 `肥` / `半` 使用 bottom padding 5px，`X` 使用 bottom padding 2px；長版維持 `Padding.Empty`。
+- 新增測試固定短版 chrome padding 規則，避免後續字級調整時回退。
+
+### 驗證紀錄
+
+- 先新增測試確認缺少 helper 時紅燈。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-27 - 短版切回長版崩潰修正
 
 ### 問題觀察

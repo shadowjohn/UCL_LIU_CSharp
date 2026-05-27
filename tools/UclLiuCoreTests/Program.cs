@@ -29,6 +29,7 @@ internal static class Program
         failed += Run("short mode measured layout keeps candidates readable", TestShortModeMeasuredLayoutKeepsCandidatesReadable);
         failed += Run("short mode layout change detects only real column changes", TestShortModeLayoutChangeDetectsOnlyRealColumnChanges);
         failed += Run("short mode packed layout removes hidden column gaps", TestShortModePackedLayoutRemovesHiddenColumnGaps);
+        failed += Run("short mode chrome text padding nudges button text upward", TestShortModeChromeTextPaddingNudgesButtonTextUpward);
         failed += Run("long mode transition restores columns before showing game button", TestLongModeTransitionRestoresColumnsBeforeShowingGameButton);
         failed += Run("label update batcher coalesces short mode layout", TestLabelUpdateBatcherCoalescesShortModeLayout);
         failed += Run("output hint composer ignores stale candidate labels", TestOutputHintComposerIgnoresStaleCandidateLabels);
@@ -388,6 +389,21 @@ internal static class Program
         AssertEqual(4, simplePlan.SimpleColumn);
         AssertEqual(5, simplePlan.CloseColumn);
         AssertEqual(2, simplePlan.CloseColumnSpan);
+    }
+
+    private static void TestShortModeChromeTextPaddingNudgesButtonTextUpward()
+    {
+        Padding mainPadding = ChromeButtonTextAlignment.ShortModePadding(ChromeButtonTextKind.MainCjk, 1.0);
+        Padding closePadding = ChromeButtonTextAlignment.ShortModePadding(ChromeButtonTextKind.Close, 1.0);
+        Padding longPadding = ChromeButtonTextAlignment.LongModePadding();
+
+        AssertEqual(0, mainPadding.Left);
+        AssertEqual(0, mainPadding.Top);
+        AssertEqual(0, mainPadding.Right);
+        AssertEqual(5, mainPadding.Bottom);
+        AssertEqual(2, closePadding.Bottom);
+        AssertEqual(0, longPadding.Bottom);
+        AssertEqual(6, ChromeButtonTextAlignment.ShortModePadding(ChromeButtonTextKind.MainCjk, 1.2).Bottom);
     }
 
     private static void TestLongModeTransitionRestoresColumnsBeforeShowingGameButton()

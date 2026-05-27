@@ -884,10 +884,16 @@ namespace uclliu
             f.btn_UCL.Font = isShortMode ? GUI_FONT_20 : GUI_FONT_16;
             int controlBorderSize = isShortMode ? 1 : 0;
             BorderStyle labelBorderStyle = isShortMode ? BorderStyle.FixedSingle : BorderStyle.None;
+            Padding mainChromePadding = isShortMode
+                ? ChromeButtonTextAlignment.ShortModePadding(ChromeButtonTextKind.MainCjk, Convert.ToDouble(config["DEFAULT"]["ZOOM"]))
+                : ChromeButtonTextAlignment.LongModePadding();
+            Padding closeChromePadding = isShortMode
+                ? ChromeButtonTextAlignment.ShortModePadding(ChromeButtonTextKind.Close, Convert.ToDouble(config["DEFAULT"]["ZOOM"]))
+                : ChromeButtonTextAlignment.LongModePadding();
 
             f.btn_UCL.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_UCL.Margin = new System.Windows.Forms.Padding(0);
-            f.btn_UCL.Padding = new System.Windows.Forms.Padding(0);
+            f.btn_UCL.Padding = mainChromePadding;
             f.btn_UCL.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.btn_UCL.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
@@ -895,7 +901,7 @@ namespace uclliu
             f.btn_HALF.Font = isShortMode ? GUI_FONT_20 : GUI_FONT_16;
             f.btn_HALF.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_HALF.Margin = new System.Windows.Forms.Padding(0);
-            f.btn_HALF.Padding = new System.Windows.Forms.Padding(0);
+            f.btn_HALF.Padding = mainChromePadding;
             f.btn_HALF.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.btn_HALF.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
@@ -937,7 +943,7 @@ namespace uclliu
             // X
             f.btn_X.Font = isShortMode ? GUI_FONT_14 : GUI_FONT_16;
             f.btn_X.Margin = new System.Windows.Forms.Padding(0);
-            f.btn_X.Padding = new System.Windows.Forms.Padding(0);
+            f.btn_X.Padding = closeChromePadding;
             f.btn_X.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_X.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.btn_X.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
