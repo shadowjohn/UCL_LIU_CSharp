@@ -1,7 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.IO;
-using System.Text;
 using System.Threading;
 
 namespace uclliu
@@ -117,39 +115,4 @@ namespace uclliu
         }
     }
 
-    public sealed class AsyncPerformanceLogger
-    {
-        private readonly string logPath;
-
-        public AsyncPerformanceLogger(string logPath)
-        {
-            this.logPath = logPath;
-        }
-
-        public void Log(string message)
-        {
-            if (string.IsNullOrWhiteSpace(logPath) || string.IsNullOrWhiteSpace(message))
-            {
-                return;
-            }
-
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                try
-                {
-                    string directory = Path.GetDirectoryName(logPath);
-                    if (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
-                    {
-                        Directory.CreateDirectory(directory);
-                    }
-
-                    string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + message + Environment.NewLine;
-                    File.AppendAllText(logPath, line, Encoding.UTF8);
-                }
-                catch
-                {
-                }
-            });
-        }
-    }
 }

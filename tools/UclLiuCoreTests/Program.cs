@@ -53,7 +53,8 @@ internal static class Program
         failed += Run("unicode sendinput sends each character as separate action", TestUnicodeSendInputSendsEachCharacterAsSeparateAction);
         failed += Run("keyboard hook only treats marked injected keys as UCL output", TestKeyboardHookOnlyTreatsMarkedInjectedKeysAsUclOutput);
         failed += Run("keyboard hook performance policy raises priority and cache duration", TestKeyboardHookPerformancePolicy);
-        failed += Run("keyboard hook latency monitor logs slow callbacks with throttle", TestKeyboardHookLatencyMonitor);
+        failed += Run("keyboard hook latency monitor detects slow callbacks with throttle", TestKeyboardHookLatencyMonitor);
+        failed += Run("performance log file sink is retired", TestPerformanceLogFileSinkIsRetired);
         failed += Run("clipboard paste restores original text after send failure", TestClipboardPasteRestoresOriginalTextAfterSendFailure);
         failed += Run("clipboard paste reports set clipboard failure before send", TestClipboardPasteReportsSetClipboardFailureBeforeSend);
         failed += Run("selected text transform copies selection and restores clipboard", TestSelectedTextTransformCopiesSelectionAndRestoresClipboard);
@@ -841,6 +842,13 @@ internal static class Program
         AssertTrue(monitor.ShouldLogElapsedMilliseconds(20, firstTick), "slow callback should log");
         AssertTrue(!monitor.ShouldLogElapsedMilliseconds(80, firstTick + KeyboardHookLatencyMonitor.MillisecondsToTicks(500)), "slow callback should be throttled");
         AssertTrue(monitor.ShouldLogElapsedMilliseconds(80, firstTick + KeyboardHookLatencyMonitor.MillisecondsToTicks(1000)), "slow callback should log after throttle interval");
+    }
+
+    private static void TestPerformanceLogFileSinkIsRetired()
+    {
+        Type loggerType = typeof(KeyboardHookLatencyMonitor).Assembly.GetType("uclliu.AsyncPerformanceLogger");
+
+        AssertTrue(loggerType == null, "AsyncPerformanceLogger should be removed with UCLLIU_performance.log");
     }
 
     private static void TestClipboardPasteRestoresOriginalTextAfterSendFailure()

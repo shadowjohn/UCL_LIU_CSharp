@@ -24,7 +24,6 @@ namespace uclliu
         private readonly OutputHintComposer outputHintComposer = new OutputHintComposer();
         private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
         private readonly KeyboardHookLatencyMonitor keyboardHookLatencyMonitor = new KeyboardHookLatencyMonitor(KeyboardHookPerformancePolicy.SlowHookThresholdMilliseconds, KeyboardHookPerformancePolicy.SlowHookLogIntervalMilliseconds);
-        private readonly AsyncPerformanceLogger performanceLogger;
         public readonly TsfBridgeManager tsfBridgeManager;
         private const int ShortModeTextPadding = 8;
         public string VERSION = UclLiuAppInfo.Version;
@@ -106,7 +105,6 @@ namespace uclliu
             selectedTextTransformDispatcher = new SelectedTextTransformDispatcher(post_ui_action, set_is_send_ucl, debug_print);
             deferredTextOutputDispatcher = new DeferredTextOutputDispatcher(post_ui_action);
             labelUpdateBatcher = new UiLabelUpdateBatcher(post_form_ui_action, apply_label_update_batch);
-            performanceLogger = new AsyncPerformanceLogger(my.pwd() + "\\UCLLIU_performance.log");
         }
         //感謝台灣碼農
         public string simple2trad(string data)
@@ -1574,7 +1572,6 @@ namespace uclliu
                 + " hf=" + flag_is_hf.ToString()
                 + " label=" + play_ucl_label
                 + " process=" + foregroundProcessNameCache;
-            performanceLogger.Log(logMessage);
             debug_print("PERF " + logMessage);
         }
         public bool type_label_set_text(string last_word_label_txt = "")
