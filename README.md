@@ -253,10 +253,25 @@ dotnet run --project .\tools\UclLiuCoreTests\UclLiuCoreTests.csproj
 完整舊專案 build：
 
 ```powershell
-& 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' .\uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"
+& 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' .\uclliu.csproj /t:Rebuild /p:Configuration=Debug /p:Platform=AnyCPU
 ```
 
 若開發機缺 `.NETFramework,Version=v4.5.2` reference assemblies，完整 build 會在環境檢查階段失敗；核心測試仍可用 .NET SDK 驗證純邏輯。
+
+發行打包：
+
+```powershell
+& .\tools\package-release.ps1 -Version v0.13 -Configuration Release -OutputDirectory .\artifacts
+```
+
+GitHub Actions 會在 `master` push / PR 時自動跑核心測試與 Release build，並上傳 artifact。推送 `v*` tag 時會自動建立或更新 GitHub Release：
+
+```powershell
+git tag v0.13
+git push origin v0.13
+```
+
+自動 Release 會上傳兩個檔案：`uclliu-v0.13.zip` 是推薦下載包，含 TSF Bridge、同音/注音資料與音效素材；`uclliu.exe` 是單檔版，不含 TSF Bridge。
 
 ## 專案檔案
 
@@ -275,6 +290,8 @@ dotnet run --project .\tools\UclLiuCoreTests\UclLiuCoreTests.csproj
 | `UclLiuAppInfo.cs` | 版本、作者、exe 詳細資料欄位 |
 | `UiLayoutCalculator.cs` | 可測試的 UI 寬度計算 |
 | `tools/UclLiuCoreTests` | 核心測試 harness |
+| `tools/package-release.ps1` | 本機與 GitHub Actions 共用的發行打包腳本 |
+| `.github/workflows/build-and-release.yml` | GitHub Actions 測試、編譯、打包與 tag Release |
 | `wavs` | Python 版後期打字音效 wav 素材 |
 | `tsf_bridge` | Python 版 TSF Bridge DLL 與註冊/解除註冊腳本 |
 | `CHANGELOG.md` | C# 版近期變更 |

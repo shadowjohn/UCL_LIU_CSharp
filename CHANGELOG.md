@@ -8,6 +8,8 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ### Added
 
+- 新增 GitHub Actions 自動測試、Release build、打包與 tag 發行流程；推送 `v*` tag 時會自動建立或更新 GitHub Release。
+- 新增 `tools/package-release.ps1`，本機與 GitHub Actions 共用同一套打包邏輯，產出推薦下載包與單檔版 `uclliu.exe`。
 - C# 字碼表自動轉換補上 Python 版常見外部來源：`wuxiami.txt`、`liur_trad.dict.yaml` / `liur_Trad.dict.yaml`、`terry_boshiamy.txt`、`fcitx_boshiamy.txt`、`uniliu.txt`。
 - `LiuTableConverter` 新增 RIME YAML 與鬆散文字碼表匯入流程，會先產生 `liu.cin`，再沿用既有 `liu.cin -> liu.json` 路徑。
 - 載入 `liu.json` 時會將字根 key 正規化為小寫並合併同碼候選，對齊 Python 版後期韓語/特殊碼表相容處理。
@@ -18,10 +20,12 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - README 補充短版 UI chrome 尺寸、啟動 packed layout 與 focus 視覺修正狀態。
 - README 更新 C# / Python 成熟度評估與字碼表支援清單。
 - README 補充 TSF Bridge 推薦下載 `uclliu.zip`、啟用流程與 Windows 鍵盤配置成功狀態說明。
+- README 補充 GitHub Actions 自動發行與本機打包指令。
 
 ### Fixed
 
 - 修正候選字存在時按 numpad 數字或特殊鍵可能在 `LowLevelKeyboardProc` 觸發 `System.FormatException`，導致瀏覽器輸入時卡頓後崩潰。
+- 修正 solution 的 `Release|Any CPU` 未勾選專案 build，避免 CI 顯示成功但沒有產生 Release 版 exe。
 - 移除 slow keyboard hook 的 `UCLLIU_performance.log` 檔案寫入；節流偵測保留，Debug 模式仍可看到 `PERF ...` 訊息。
 - 修正 `,,,s` 短版模式切換後使用舊 label 重算寬度、每鍵重複 layout、候選/簡根欄展開過寬，導致 UI 顯示異常與打字卡頓。
 - 修正短版模式出字後注音提示讀取舊候選 label，造成 `0覺,音:...` 類殘留；短版欄寬未變時不再觸發 TableLayout 重排。
