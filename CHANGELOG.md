@@ -4,7 +4,11 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ---
 
-## [Unreleased] - 2026-05-27
+## [Unreleased]
+
+---
+
+## [0.13] - 2026-05-27
 
 ### Added
 
@@ -19,8 +23,9 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - README 補上 v0.12 與 v0.11 的 Microsoft WDSI 病毒碼掃描提交連結。
 - README 補充短版 UI chrome 尺寸、啟動 packed layout 與 focus 視覺修正狀態。
 - README 更新 C# / Python 成熟度評估與字碼表支援清單。
-- README 補充 TSF Bridge 推薦下載 `uclliu.zip`、啟用流程與 Windows 鍵盤配置成功狀態說明。
+- README 補充 TSF Bridge 推薦下載 `uclliu-v0.13.zip`、啟用流程與 Windows 鍵盤配置成功狀態說明。
 - README 補充 GitHub Actions 自動發行與本機打包指令。
+- README 補上 v0.13 推薦下載包檔案列表，明列 `pinyi.txt`、`tsf_bridge` 與自備 `wavs` 音效使用方式。
 
 ### Fixed
 
@@ -35,6 +40,10 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 修正 `,,,l` 從短版切回長版時，先顯示「正常模式」按鈕再復原欄位，造成 `TableLayoutPanel` 在 `X` 跨欄狀態下拋出 `System.ArgumentException` 崩潰。
 - 修正短版模式 `肥` / `半` / `╳` 按鈕文字視覺中心偏低，加入短版專用 bottom padding 微調，長版維持原本對齊。
 - 修正短版模式 chrome 按鈕 focus 後殘留按下視覺狀態，並讓短版啟動時立即套用 packed layout，避免一開始留下長版空白欄位。
+
+### Removed
+
+- 官方 repo / release 不再封入來源授權未確認的 `wavs/*.wav`；程式仍支援使用者自行放入合法授權音效。
 
 ---
 

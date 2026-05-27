@@ -230,7 +230,7 @@ internal static class Program
     {
         string expected = "UCLLIU 肥米輸入法 C# 版\n\n"
             + "作者：羽山秋人 (https://3wa.tw)\n"
-            + "版本：0.12\n\n"
+            + "版本：0.13\n\n"
             + "熱鍵提示：\n\n"
             + "「,,,VERSION」目前版本\n"
             + "「'ucl」同音字查詢\n"
@@ -247,7 +247,7 @@ internal static class Program
             + "「,,,Z」框字的文字變成字根\n"
             + "「,,,BOX」開啟自定詞庫\n";
 
-        AssertEqual("0.12", UclLiuAppInfo.Version);
+        AssertEqual("0.13", UclLiuAppInfo.Version);
         AssertEqual("UCLLIU 肥米輸入法 C# 版", UclLiuAppInfo.AboutTitle);
         AssertEqual("Fastest Chinese Input Method", UclLiuAppInfo.FileDescription);
         AssertEqual("UCLLIU Input Method", UclLiuAppInfo.ProductName);

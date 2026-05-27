@@ -359,3 +359,6 @@ dist/
 !tsf_bridge/x86/
 !tsf_bridge/x64/UclTsfBridge.dll
 !tsf_bridge/x86/UclTsfBridge.dll
+
+# Local typing sound packs are user-supplied; do not publish wav assets unless their license is explicit.
+wavs/*.wav
