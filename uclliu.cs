@@ -880,7 +880,7 @@ namespace uclliu
             }
 
             // 肥
-            f.btn_UCL.Font = GUI_FONT_16;
+            f.btn_UCL.Font = isShortMode ? GUI_FONT_20 : GUI_FONT_16;
             int controlBorderSize = isShortMode ? 1 : 0;
             BorderStyle labelBorderStyle = isShortMode ? BorderStyle.FixedSingle : BorderStyle.None;
 
@@ -891,7 +891,7 @@ namespace uclliu
             f.btn_UCL.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
             // 半全
-            f.btn_HALF.Font = GUI_FONT_16;
+            f.btn_HALF.Font = isShortMode ? GUI_FONT_20 : GUI_FONT_16;
             f.btn_HALF.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_HALF.Margin = new System.Windows.Forms.Padding(0);
             f.btn_HALF.Padding = new System.Windows.Forms.Padding(0);
@@ -918,7 +918,7 @@ namespace uclliu
             f.word_label.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
             // 簡
-            f.btn_simple.Font = GUI_FONT_18;
+            f.btn_simple.Font = isShortMode ? GUI_FONT_16 : GUI_FONT_18;
             f.btn_simple.Margin = new System.Windows.Forms.Padding(0);
             f.btn_simple.Padding = new System.Windows.Forms.Padding(0);
             f.btn_simple.FlatAppearance.BorderSize = controlBorderSize;
@@ -934,7 +934,7 @@ namespace uclliu
             f.btn_gamemode.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
             // X
-            f.btn_X.Font = GUI_FONT_16;
+            f.btn_X.Font = isShortMode ? GUI_FONT_14 : GUI_FONT_16;
             f.btn_X.Margin = new System.Windows.Forms.Padding(0);
             f.btn_X.Padding = new System.Windows.Forms.Padding(0);
             f.btn_X.FlatAppearance.BorderSize = controlBorderSize;

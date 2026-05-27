@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-05-27 - 短版模式 chrome 字級微調
+
+### 問題觀察
+
+- 使用者回報短版最左側 `肥` 的寬高感覺偏小。
+
+### 根因判斷
+
+- Python 版 `肥` / `半` 使用較大的 `GUI_FONT_22` 搭配 40x40 按鈕；C# 版短版仍使用 `GUI_FONT_16`，視覺上會顯得 chrome 偏小。
+- C# WinForms Button 內部可用空間比純文字框小，實測 22pt 在目前 fallback 字型下偏擠，因此採用 20pt 作為 C# 視覺等價值。
+
+### 實作紀錄
+
+- 短版 `肥` / `半` 改用 `GUI_FONT_20`，長版仍維持 `GUI_FONT_16`。
+- 短版 `X` 改用 Python 版比例較接近的 `GUI_FONT_14`，簡繁按鈕短版維持 `GUI_FONT_16`。
+
+### 驗證紀錄
+
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過。
+- 實機截圖確認短版 `肥 半 X` chrome 比例較飽滿。
+
+---
+
 ## 2026-05-27 - 短版模式候選寬度與字型量測修正
 
 ### 問題觀察
