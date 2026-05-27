@@ -25,6 +25,7 @@ internal static class Program
         failed += Run("short root setting reads normalized config", TestShortRootSettingReadsNormalizedConfig);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("short mode uses python-style compact label metrics", TestShortModeUsesPythonStyleCompactLabelMetrics);
+        failed += Run("short mode measured layout keeps candidates readable", TestShortModeMeasuredLayoutKeepsCandidatesReadable);
         failed += Run("short mode layout change detects only real column changes", TestShortModeLayoutChangeDetectsOnlyRealColumnChanges);
         failed += Run("short mode packed layout removes hidden column gaps", TestShortModePackedLayoutRemovesHiddenColumnGaps);
         failed += Run("label update batcher coalesces short mode layout", TestLabelUpdateBatcherCoalescesShortModeLayout);
@@ -310,6 +311,25 @@ internal static class Program
 
         ShortModeLabelLayout pagedCandidateLayout = UiLayoutCalculator.ShortModeWordLayout("0A 1B ...", 1.0, ShortModeWordLayoutKind.Candidates, true, 900);
         AssertEqual(117, pagedCandidateLayout.Width);
+    }
+
+    private static void TestShortModeMeasuredLayoutKeepsCandidatesReadable()
+    {
+        ShortModeLabelLayout asciiTypeLayout = UiLayoutCalculator.ShortModeMeasuredTypeLayout("ucl", 34, 1.0, 8, 900);
+        AssertEqual(54, asciiTypeLayout.Width);
+
+        ShortModeLabelLayout wideTypeLayout = UiLayoutCalculator.ShortModeMeasuredTypeLayout("WWW", 69, 1.0, 8, 900);
+        AssertEqual(77, wideTypeLayout.Width);
+
+        ShortModeLabelLayout oneCandidateLayout = UiLayoutCalculator.ShortModeMeasuredWordLayout("0肥", 39, 1.0, 8, ShortModeWordLayoutKind.Candidates, false, 900);
+        AssertEqual(47, oneCandidateLayout.Width);
+        AssertTrue(oneCandidateLayout.Visible, "candidate should be visible in short mode");
+
+        ShortModeLabelLayout twoCandidateLayout = UiLayoutCalculator.ShortModeMeasuredWordLayout("0你 1條", 85, 1.0, 8, ShortModeWordLayoutKind.Candidates, false, 900);
+        AssertEqual(93, twoCandidateLayout.Width);
+
+        ShortModeLabelLayout cappedLayout = UiLayoutCalculator.ShortModeMeasuredWordLayout("0你 1條", 85, 1.0, 8, ShortModeWordLayoutKind.Candidates, false, 80);
+        AssertEqual(80, cappedLayout.Width);
     }
 
     private static void TestShortModeLayoutChangeDetectsOnlyRealColumnChanges()

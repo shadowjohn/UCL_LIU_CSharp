@@ -26,6 +26,7 @@ namespace uclliu
         private readonly KeyboardHookLatencyMonitor keyboardHookLatencyMonitor = new KeyboardHookLatencyMonitor(KeyboardHookPerformancePolicy.SlowHookThresholdMilliseconds, KeyboardHookPerformancePolicy.SlowHookLogIntervalMilliseconds);
         private readonly AsyncPerformanceLogger performanceLogger;
         public readonly TsfBridgeManager tsfBridgeManager;
+        private const int ShortModeTextPadding = 8;
         public string VERSION = UclLiuAppInfo.Version;
         public FileStream lockFileString;
         public string CUSTOM_JSON_FILE
@@ -904,6 +905,7 @@ namespace uclliu
             f.type_label.Padding = new System.Windows.Forms.Padding(0);
             f.type_label.BorderStyle = labelBorderStyle;
             f.type_label.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            f.type_label.TextAlign = isShortMode ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
             f.type_label.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
             // 字
@@ -912,6 +914,7 @@ namespace uclliu
             f.word_label.Padding = new System.Windows.Forms.Padding(0);
             f.word_label.BorderStyle = labelBorderStyle;
             f.word_label.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            f.word_label.TextAlign = isShortMode ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
             f.word_label.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
 
             // 簡
@@ -937,6 +940,11 @@ namespace uclliu
             f.btn_X.FlatAppearance.BorderSize = controlBorderSize;
             f.btn_X.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             f.btn_X.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
+            f.btn_UCL.TextAlign = ContentAlignment.MiddleCenter;
+            f.btn_HALF.TextAlign = ContentAlignment.MiddleCenter;
+            f.btn_simple.TextAlign = ContentAlignment.MiddleCenter;
+            f.btn_gamemode.TextAlign = ContentAlignment.MiddleCenter;
+            f.btn_X.TextAlign = ContentAlignment.MiddleCenter;
 
             f.LP.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
             f.LP.Dock = DockStyle.Fill;
@@ -966,8 +974,20 @@ namespace uclliu
         {
             double zoom = Convert.ToDouble(config["DEFAULT"]["ZOOM"]);
             int maxWidth = get_short_mode_max_width();
-            ShortModeLabelLayout typeLayout = UiLayoutCalculator.ShortModeTypeLayout(f.type_label.Text, zoom, maxWidth);
-            ShortModeLabelLayout wordLayout = UiLayoutCalculator.ShortModeWordLayout(f.word_label.Text, zoom, wordLayoutKind, wordHasMorePage, maxWidth);
+            ShortModeLabelLayout typeLayout = UiLayoutCalculator.ShortModeMeasuredTypeLayout(
+                f.type_label.Text,
+                measure_short_mode_text_width(f.type_label.Text, GUI_FONT_18),
+                zoom,
+                ShortModeTextPadding,
+                maxWidth);
+            ShortModeLabelLayout wordLayout = UiLayoutCalculator.ShortModeMeasuredWordLayout(
+                f.word_label.Text,
+                measure_short_mode_text_width(f.word_label.Text, GUI_FONT_18),
+                zoom,
+                ShortModeTextPadding,
+                wordLayoutKind,
+                wordHasMorePage,
+                maxWidth);
             int buttonWidth = Convert.ToInt32(40 * zoom);
             ShortModePackedLayoutPlan plan = UiLayoutCalculator.BuildShortModePackedLayout(
                 typeLayout,
@@ -1164,6 +1184,19 @@ namespace uclliu
         private int get_short_mode_max_width()
         {
             return Math.Max(0, Screen.PrimaryScreen.WorkingArea.Width - 160);
+        }
+        private int measure_short_mode_text_width(string text, Font font)
+        {
+            if (String.IsNullOrEmpty(text))
+            {
+                return 0;
+            }
+            Size size = TextRenderer.MeasureText(
+                text,
+                font,
+                Size.Empty,
+                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+            return size.Width;
         }
         private void set_column_width(int index, int width)
         {

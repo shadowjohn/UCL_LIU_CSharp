@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-05-27 - 短版模式候選寬度與字型量測修正
+
+### 問題觀察
+
+- 使用者回報短版模式輸入三碼時只顯示兩碼，候選字欄在短版下看不清楚。
+- 對照 Python 版截圖，短版應能清楚顯示 `ucl 0肥`、`pns 0你 1條` 等狀態。
+
+### 根因判斷
+
+- C# 版短版候選欄沿用 Python GTK 的每字寬估算，`0肥` 只配置 24px，但 WinForms 實測 `roman` 18 bold 約需 39px。
+- `new Font("roman", ...)` 在目前 Windows 環境實際落到 `Microsoft Sans Serif`，與 Python/Pango 的 fallback 字型鏈不同，不能只靠字數估寬。
+
+### 實作紀錄
+
+- 短版欄寬改為取「Python 估算寬」與「`TextRenderer.MeasureText` 實測寬 + padding」兩者較大值。
+- 短版 type/word label 改為置中顯示，長版仍維持靠左。
+- 新增測試覆蓋 `ucl`、`WWW`、`0肥`、`0你 1條` 等短版寬度案例。
+
+### 驗證紀錄
+
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 通過。
+- 量測 probe 確認 `ucl 0肥`、`pns 0你 1條` 可完整顯示，空短版仍維持 `肥 半 X`。
+
+---
+
 ## 2026-05-27 - 短版模式間距壓縮
 
 ### 問題觀察

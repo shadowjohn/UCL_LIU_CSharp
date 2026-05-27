@@ -121,11 +121,53 @@ namespace uclliu
             return ShortModeLayout(text, zoom, charWidth, maxWidth);
         }
 
+        public static ShortModeLabelLayout ShortModeMeasuredTypeLayout(string text, int measuredTextWidth, double zoom, int padding, int maxWidth)
+        {
+            return ShortModeMeasuredLayout(text, measuredTextWidth, zoom, padding, 18, maxWidth);
+        }
+
+        public static ShortModeLabelLayout ShortModeMeasuredWordLayout(string text, int measuredTextWidth, double zoom, int padding, ShortModeWordLayoutKind kind, bool hasMorePage, int maxWidth)
+        {
+            int charWidth = 15;
+            if (kind == ShortModeWordLayoutKind.Candidates)
+            {
+                charWidth = hasMorePage ? 13 : 12;
+            }
+
+            return ShortModeMeasuredLayout(text, measuredTextWidth, zoom, padding, charWidth, maxWidth);
+        }
+
         private static ShortModeLabelLayout ShortModeLayout(string text, double zoom, int charWidth, int maxWidth)
         {
             bool visible = !String.IsNullOrEmpty(text);
             int width = visible ? ShortModeTextWidth(text, zoom, charWidth, 0, maxWidth) : 0;
             return new ShortModeLabelLayout(width, visible);
+        }
+
+        private static ShortModeLabelLayout ShortModeMeasuredLayout(string text, int measuredTextWidth, double zoom, int padding, int fallbackCharWidth, int maxWidth)
+        {
+            bool visible = !String.IsNullOrEmpty(text);
+            if (!visible)
+            {
+                return new ShortModeLabelLayout(0, false);
+            }
+            if (measuredTextWidth < 0)
+            {
+                measuredTextWidth = 0;
+            }
+            if (padding < 0)
+            {
+                padding = 0;
+            }
+
+            int fallbackWidth = ShortModeTextWidth(text, zoom, fallbackCharWidth, 0, maxWidth);
+            int measuredWidth = measuredTextWidth + Convert.ToInt32(padding * zoom);
+            int width = Math.Max(fallbackWidth, measuredWidth);
+            if (width > maxWidth)
+            {
+                width = maxWidth;
+            }
+            return new ShortModeLabelLayout(width, true);
         }
 
         public static bool HasShortModeLayoutChange(ShortModeColumnState current, ShortModeColumnState next)
