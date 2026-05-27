@@ -25,7 +25,9 @@ internal static class Program
         failed += Run("short root setting reads normalized config", TestShortRootSettingReadsNormalizedConfig);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("short mode uses python-style compact label metrics", TestShortModeUsesPythonStyleCompactLabelMetrics);
+        failed += Run("short mode layout change detects only real column changes", TestShortModeLayoutChangeDetectsOnlyRealColumnChanges);
         failed += Run("label update batcher coalesces short mode layout", TestLabelUpdateBatcherCoalescesShortModeLayout);
+        failed += Run("output hint composer ignores stale candidate labels", TestOutputHintComposerIgnoresStaleCandidateLabels);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
         failed += Run("simple ini writes readable sections", TestSimpleIniWritesReadableSections);
@@ -309,6 +311,18 @@ internal static class Program
         AssertEqual(117, pagedCandidateLayout.Width);
     }
 
+    private static void TestShortModeLayoutChangeDetectsOnlyRealColumnChanges()
+    {
+        ShortModeColumnState current = new ShortModeColumnState(54, true, 60, true);
+        ShortModeColumnState same = new ShortModeColumnState(54, true, 60, true);
+        ShortModeColumnState changedWidth = new ShortModeColumnState(72, true, 60, true);
+        ShortModeColumnState changedVisibility = new ShortModeColumnState(54, false, 60, true);
+
+        AssertTrue(!UiLayoutCalculator.HasShortModeLayoutChange(current, same), "same short mode columns should not request layout");
+        AssertTrue(UiLayoutCalculator.HasShortModeLayoutChange(current, changedWidth), "width change should request layout");
+        AssertTrue(UiLayoutCalculator.HasShortModeLayoutChange(current, changedVisibility), "visibility change should request layout");
+    }
+
     private static void TestLabelUpdateBatcherCoalescesShortModeLayout()
     {
         int scheduled = 0;
@@ -346,6 +360,24 @@ internal static class Program
         AssertTrue(appliedSnapshot.WordHasColor, "word color should be carried by the batch");
         AssertEqual((int)ShortModeWordLayoutKind.Candidates, (int)appliedSnapshot.WordLayoutKind);
         AssertTrue(appliedSnapshot.WordHasMorePage, "more-page state should be carried by the batch");
+    }
+
+    private static void TestOutputHintComposerIgnoresStaleCandidateLabels()
+    {
+        OutputHintComposer composer = new OutputHintComposer();
+
+        composer.BeginOutput();
+        AssertEqual("音:ㄐㄩㄝˊ", composer.SetPhoneHint("ㄐㄩㄝˊ"));
+        AssertEqual("音:ㄐㄩㄝˊ", composer.CurrentHint);
+
+        composer.BeginOutput();
+        AssertEqual("簡根：JW", composer.SetShortRootHint("簡根：JW"));
+        AssertEqual("簡根：JW,音:ㄐㄩㄝˊ", composer.SetPhoneHint("ㄐㄩㄝˊ"));
+        AssertEqual("簡根：JW,音:ㄐㄩㄝˊ", composer.CurrentHint);
+
+        composer.BeginOutput();
+        AssertEqual("", composer.CurrentHint);
+        AssertEqual("音:ㄐㄩㄝˊ", composer.SetPhoneHint("ㄐㄩㄝˊ"));
     }
 
     private static void TestCustomRootValidation()

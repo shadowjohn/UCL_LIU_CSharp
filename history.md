@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-05-27 - 短版模式提示殘留與 layout 熱路徑修正
+
+### 問題觀察
+
+- 使用者截圖顯示短版模式出字後出現 `0覺,音:ㄐㄩㄝˊ或...`，代表舊候選 label 被拿來組合注音提示。
+- 使用者回報打字時 CPU loading 仍偏高，短版 UI 更新卡卡。
+
+### 根因判斷
+
+- `show_phone_to_label()` 直接讀取 `f.word_label.Text`，但 C# 版已把 UI label 更新延後到 `BeginInvoke`，因此可能讀到上一輪候選字文字。
+- 短版 label 文字更新即使欄寬與顯示狀態沒有變化，仍會進入 TableLayout 重排，對高頻打字路徑不划算。
+
+### 實作紀錄
+
+- 新增 `OutputHintComposer`，出字提示改用邏輯狀態組合「簡根」與「音」，不再讀 UI label 文字。
+- `prepare_senddata_text()` 與短/長版切換時重置提示 composer，避免跨次出字殘留。
+- 新增 `ShortModeColumnState` 與 layout diff 判斷；短版只有欄寬或可見狀態真的改變時才 `SuspendLayout` / `ResumeLayout`。
+
+### 驗證紀錄
+
+- 新增測試覆蓋「注音提示不能吃到舊候選 label」與「短版同欄寬更新不要求 layout」。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
 ## 2026-05-27 - 短版模式 UI 修整
 
 ### 問題觀察

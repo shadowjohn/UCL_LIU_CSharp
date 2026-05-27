@@ -21,6 +21,22 @@ namespace uclliu
         public bool Visible { get; private set; }
     }
 
+    public struct ShortModeColumnState
+    {
+        public ShortModeColumnState(int typeWidth, bool typeVisible, int wordWidth, bool wordVisible)
+        {
+            TypeWidth = typeWidth;
+            TypeVisible = typeVisible;
+            WordWidth = wordWidth;
+            WordVisible = wordVisible;
+        }
+
+        public int TypeWidth { get; private set; }
+        public bool TypeVisible { get; private set; }
+        public int WordWidth { get; private set; }
+        public bool WordVisible { get; private set; }
+    }
+
     public static class UiLayoutCalculator
     {
         public static int ShortModeTextWidth(string text, double zoom, int charWidth, int minWidth, int maxWidth)
@@ -75,6 +91,50 @@ namespace uclliu
             bool visible = !String.IsNullOrEmpty(text);
             int width = visible ? ShortModeTextWidth(text, zoom, charWidth, 0, maxWidth) : 0;
             return new ShortModeLabelLayout(width, visible);
+        }
+
+        public static bool HasShortModeLayoutChange(ShortModeColumnState current, ShortModeColumnState next)
+        {
+            return current.TypeWidth != next.TypeWidth
+                || current.TypeVisible != next.TypeVisible
+                || current.WordWidth != next.WordWidth
+                || current.WordVisible != next.WordVisible;
+        }
+    }
+
+    public sealed class OutputHintComposer
+    {
+        private string currentHint = "";
+
+        public string CurrentHint
+        {
+            get { return currentHint; }
+        }
+
+        public void BeginOutput()
+        {
+            currentHint = "";
+        }
+
+        public string SetShortRootHint(string hint)
+        {
+            currentHint = hint ?? "";
+            return currentHint;
+        }
+
+        public string SetPhoneHint(string phone)
+        {
+            string phoneHint = "音:" + (phone ?? "");
+            if (String.IsNullOrEmpty(currentHint) || currentHint == "注:")
+            {
+                currentHint = phoneHint;
+            }
+            else
+            {
+                currentHint = currentHint + "," + phoneHint;
+            }
+
+            return currentHint;
         }
     }
 

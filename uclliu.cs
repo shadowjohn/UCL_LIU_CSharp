@@ -21,6 +21,7 @@ namespace uclliu
         private readonly SelectedTextTransformDispatcher selectedTextTransformDispatcher;
         private readonly DeferredTextOutputDispatcher deferredTextOutputDispatcher;
         private readonly UiLabelUpdateBatcher labelUpdateBatcher;
+        private readonly OutputHintComposer outputHintComposer = new OutputHintComposer();
         private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
         private readonly KeyboardHookLatencyMonitor keyboardHookLatencyMonitor = new KeyboardHookLatencyMonitor(KeyboardHookPerformancePolicy.SlowHookThresholdMilliseconds, KeyboardHookPerformancePolicy.SlowHookLogIntervalMilliseconds);
         private readonly AsyncPerformanceLogger performanceLogger;
@@ -476,6 +477,7 @@ namespace uclliu
         {
             currentWordLayoutKind = ShortModeWordLayoutKind.Hint;
             currentWordHasMorePage = false;
+            outputHintComposer.BeginOutput();
             if (f == null || f.IsDisposed)
             {
                 return;
@@ -945,9 +947,7 @@ namespace uclliu
                 return;
             }
 
-            f.LP.SuspendLayout();
             apply_short_mode_columns(currentWordLayoutKind, currentWordHasMorePage);
-            f.LP.ResumeLayout(true);
         }
         private void apply_short_mode_columns(ShortModeWordLayoutKind wordLayoutKind, bool wordHasMorePage)
         {
@@ -955,11 +955,48 @@ namespace uclliu
             int maxWidth = get_short_mode_max_width();
             ShortModeLabelLayout typeLayout = UiLayoutCalculator.ShortModeTypeLayout(f.type_label.Text, zoom, maxWidth);
             ShortModeLabelLayout wordLayout = UiLayoutCalculator.ShortModeWordLayout(f.word_label.Text, zoom, wordLayoutKind, wordHasMorePage, maxWidth);
+            ShortModeColumnState current = get_current_short_mode_column_state();
+            ShortModeColumnState next = new ShortModeColumnState(typeLayout.Width, typeLayout.Visible, wordLayout.Width, wordLayout.Visible);
+            if (!UiLayoutCalculator.HasShortModeLayoutChange(current, next))
+            {
+                return;
+            }
 
-            f.type_label.Visible = typeLayout.Visible;
-            f.word_label.Visible = wordLayout.Visible;
-            set_column_width(2, typeLayout.Width);
-            set_column_width(3, wordLayout.Width);
+            f.LP.SuspendLayout();
+            try
+            {
+                if (f.type_label.Visible != typeLayout.Visible)
+                {
+                    f.type_label.Visible = typeLayout.Visible;
+                }
+                if (f.word_label.Visible != wordLayout.Visible)
+                {
+                    f.word_label.Visible = wordLayout.Visible;
+                }
+                set_column_width(2, typeLayout.Width);
+                set_column_width(3, wordLayout.Width);
+            }
+            finally
+            {
+                f.LP.ResumeLayout(true);
+            }
+        }
+        private ShortModeColumnState get_current_short_mode_column_state()
+        {
+            return new ShortModeColumnState(
+                get_column_width(2),
+                f.type_label.Visible,
+                get_column_width(3),
+                f.word_label.Visible);
+        }
+        private int get_column_width(int index)
+        {
+            if (index < 0 || index >= f.LP.ColumnStyles.Count)
+            {
+                return 0;
+            }
+
+            return Convert.ToInt32(f.LP.ColumnStyles[index].Width);
         }
         private void queue_type_label_update(string text, Color foreColor)
         {
@@ -1075,7 +1112,7 @@ namespace uclliu
             string sp = "簡根：" + my.strtoupper(word_to_sp(data));
             //#word_label.set_label(sp)
             //#word_label.modify_font(pango.FontDescription(GUI_FONT_18))
-            type_label_set_text(sp);
+            type_label_set_text(outputHintComposer.SetShortRootHint(sp));
         }
         public void show_phone_to_label(string data)
         {
@@ -1099,15 +1136,7 @@ namespace uclliu
             }
 
             string readPhone = String.Join("或", phones.ToArray());
-            string label = f.word_label.Text;
-            if (String.IsNullOrEmpty(label) || label == "注:")
-            {
-                type_label_set_text("音:" + readPhone);
-            }
-            else
-            {
-                type_label_set_text(label + ",音:" + readPhone);
-            }
+            type_label_set_text(outputHintComposer.SetPhoneHint(readPhone));
         }
         public string find_ucl_in_uclcode(string chinese_data)
         {
@@ -1840,6 +1869,7 @@ namespace uclliu
             is_need_use_phone = false;
             play_ucl_label = "";
             ucl_find_data = new List<string>();
+            outputHintComposer.BeginOutput();
             type_label_set_text();
 
             if (is_simple())

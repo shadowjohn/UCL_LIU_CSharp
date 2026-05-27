@@ -10,6 +10,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 - 修正候選字存在時按 numpad 數字或特殊鍵可能在 `LowLevelKeyboardProc` 觸發 `System.FormatException`，導致瀏覽器輸入時卡頓後崩潰。
 - 修正 `,,,s` 短版模式切換後使用舊 label 重算寬度、每鍵重複 layout、候選/簡根欄展開過寬，導致 UI 顯示異常與打字卡頓。
+- 修正短版模式出字後注音提示讀取舊候選 label，造成 `0覺,音:...` 類殘留；短版欄寬未變時不再觸發 TableLayout 重排。
 
 ---
 
