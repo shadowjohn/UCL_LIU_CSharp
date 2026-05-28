@@ -362,3 +362,5 @@ dist/
 
 # Local typing sound packs are user-supplied; do not publish wav assets unless their license is explicit.
 wavs/*.wav
+/liu.cin
+/liu.json
