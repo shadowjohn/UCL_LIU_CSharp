@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-05-28 - 0.14 管理員重啟與 TSF 啟用導引
+
+### 問題觀察
+
+- Python 版在非系統管理員權限時，右下角選單會提供「以系統管理員身分執行肥米」；C# 版雖已有 TSF Bridge 狀態與註冊選單，但缺少同等的重啟導引。
+- C# 版原本選 `TSF出字模式` 會直接把 `DEFAULT_OUTPUT_TYPE` 切成 `TSF`，沒有先檢查 DLL、註冊狀態與目前權限。
+
+### 實作紀錄
+
+- 新增 `TsfBridgeActivationPolicy`，集中判斷 TSF 是否可啟用：缺 DLL、非管理員、未註冊、可使用。
+- 新增 `ElevatedRestartRequestBuilder`，固定 `runas` 重啟參數與命令列 quoting。
+- 右下角主選單在非管理員時顯示「★以系統管理員身分重新啟動肥米」。
+- `TSF出字模式`、註冊與解除註冊流程在非管理員或未註冊時會提示下一步，不再默默切換。
+- 版本資訊、README 與 CHANGELOG 更新為 v0.14。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少管理員重啟選單文字、TSF 啟用決策與重啟參數 builder。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- 依使用者偏好先停止正在執行的 `uclliu.exe`，再用 Visual Studio 18 MSBuild 重建 Debug 通過；保留既有 `Form1.lParam` 未使用警告，另有 Edge WebView2 鎖住 Debug 輸出中的 `tsf_bridge\x64\UclTsfBridge.dll` clean 警告。
+- 重建後已重新啟動 `bin\Debug\uclliu.exe`。
+
+---
+
 ## 2026-05-28 - 忽略本機字碼表輸出檔
 
 ### 決策紀錄

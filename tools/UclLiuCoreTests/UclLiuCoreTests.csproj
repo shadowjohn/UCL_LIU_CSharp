@@ -11,6 +11,7 @@
     <Compile Include="..\..\ChromeButton.cs" Link="ChromeButton.cs" />
     <Compile Include="..\..\ChromeButtonTextAlignment.cs" Link="ChromeButtonTextAlignment.cs" />
     <Compile Include="..\..\CustomDictionaryStore.cs" Link="CustomDictionaryStore.cs" />
+    <Compile Include="..\..\ElevatedRestart.cs" Link="ElevatedRestart.cs" />
     <Compile Include="..\..\ForegroundProcessSnapshot.cs" Link="ForegroundProcessSnapshot.cs" />
     <Compile Include="..\..\KeyboardHookPerformance.cs" Link="KeyboardHookPerformance.cs" />
     <Compile Include="..\..\KeyboardHookState.cs" Link="KeyboardHookState.cs" />

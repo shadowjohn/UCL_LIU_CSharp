@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
@@ -1330,12 +1332,125 @@ namespace uclliu
                     break;
                 case "【●】TSF出字模式":
                 case "【　】TSF出字模式":
-                    ucl.DEFAULT_OUTPUT_TYPE = "TSF";
+                    change_to_tsf_output_mode();
                     break;
             }
 
             //Console.WriteLine(ucl.DEFAULT_OUTPUT_TYPE);
             //Console.WriteLine(((MenuItem)sender).Text);
+        }
+        private void change_to_tsf_output_mode()
+        {
+            TsfBridgeStatus status = ucl.tsfBridgeManager.GetStatus();
+            TsfBridgeActivationDecision decision = TsfBridgeActivationPolicy.Evaluate(status);
+            if (decision.CanActivate)
+            {
+                ucl.DEFAULT_OUTPUT_TYPE = "TSF";
+                return;
+            }
+
+            if (decision.ShouldRestartAsAdministrator)
+            {
+                restart_as_administrator_with_prompt(decision.Title, decision.Message + "\n\n是否現在重新以系統管理員身分啟動肥米？");
+                return;
+            }
+
+            if (decision.ShouldStartRegistration)
+            {
+                DialogResult result = MessageBox.Show(
+                    this,
+                    decision.Message + "\n\n是否現在開啟 UAC 註冊 TSF Bridge？",
+                    decision.Title,
+                    MessageBoxButtons.OKCancel,
+                    MessageBoxIcon.Warning);
+                if (result == DialogResult.OK)
+                {
+                    string message;
+                    bool ok = ucl.tsfBridgeManager.TryRegister(out message);
+                    MessageBox.Show(this, message, "註冊 TSF Bridge", MessageBoxButtons.OK, ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                }
+                return;
+            }
+
+            MessageBox.Show(this, decision.Message, decision.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        private void menu_restart_as_admin(object sender, EventArgs e)
+        {
+            if (TsfBridgeManager.IsAdministrator())
+            {
+                MessageBox.Show(this, "肥米目前已經是系統管理員權限。", "系統管理員權限", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            restart_as_administrator_with_prompt(
+                "以系統管理員身分重新啟動肥米",
+                "將以系統管理員身分重新啟動肥米。\n\n原本這個肥米視窗會在新實例啟動後關閉。");
+        }
+        private bool restart_as_administrator_with_prompt(string title, string message)
+        {
+            DialogResult result = MessageBox.Show(
+                this,
+                message,
+                title,
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Warning);
+            if (result != DialogResult.OK)
+            {
+                return false;
+            }
+
+            string restartMessage;
+            bool started = try_restart_as_administrator(out restartMessage);
+            if (!started)
+            {
+                MessageBox.Show(this, restartMessage, title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            ucl.debug_print("Restarting as administrator");
+            notifyIcon1.Dispose();
+            Application.Exit();
+            return true;
+        }
+        private bool try_restart_as_administrator(out string message)
+        {
+            string[] commandLineArgs = Environment.GetCommandLineArgs();
+            string[] restartArgs = new string[Math.Max(commandLineArgs.Length - 1, 0)];
+            if (restartArgs.Length > 0)
+            {
+                Array.Copy(commandLineArgs, 1, restartArgs, 0, restartArgs.Length);
+            }
+
+            ElevatedRestartRequest request = ElevatedRestartRequestBuilder.Build(
+                Application.ExecutablePath,
+                restartArgs,
+                AppDomain.CurrentDomain.BaseDirectory);
+
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.FileName = request.FileName;
+            startInfo.Arguments = request.Arguments;
+            startInfo.WorkingDirectory = request.WorkingDirectory;
+            startInfo.Verb = request.Verb;
+            startInfo.UseShellExecute = true;
+
+            try
+            {
+                Process.Start(startInfo);
+                message = "已啟動系統管理員權限的肥米。";
+                return true;
+            }
+            catch (Win32Exception ex)
+            {
+                message = ex.NativeErrorCode == 1223
+                    ? "已取消系統管理員權限啟動。"
+                    : "無法以系統管理員身分啟動肥米：" + ex.Message;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                message = "無法以系統管理員身分啟動肥米：" + ex.Message;
+                return false;
+            }
         }
         private void menu_tsf_bridge_status(object sender, EventArgs e)
         {
@@ -1344,6 +1459,14 @@ namespace uclliu
         }
         private void menu_tsf_bridge_register(object sender, EventArgs e)
         {
+            if (!TsfBridgeManager.IsAdministrator())
+            {
+                restart_as_administrator_with_prompt(
+                    "註冊 TSF Bridge",
+                    "註冊 TSF Bridge 需要系統管理員權限。\n\n是否現在重新以系統管理員身分啟動肥米？");
+                return;
+            }
+
             DialogResult result = MessageBox.Show(
                 this,
                 "將開啟 UAC 註冊 UCLLIU TSF Bridge。\n\n註冊完成後，請到 Windows 輸入法設定加入 UCLLIU TSF Bridge，再從肥米選單切到 TSF出字模式。",
@@ -1361,6 +1484,14 @@ namespace uclliu
         }
         private void menu_tsf_bridge_unregister(object sender, EventArgs e)
         {
+            if (!TsfBridgeManager.IsAdministrator())
+            {
+                restart_as_administrator_with_prompt(
+                    "解除註冊 TSF Bridge",
+                    "解除註冊 TSF Bridge 需要系統管理員權限。\n\n是否現在重新以系統管理員身分啟動肥米？");
+                return;
+            }
+
             DialogResult result = MessageBox.Show(
                 this,
                 "將開啟 UAC 解除註冊 UCLLIU TSF Bridge。\n\n若正在使用 TSF 輸入法，請先切回其他 Windows 輸入法。",
@@ -1533,7 +1664,13 @@ namespace uclliu
         private void rebuild_tray_menu()
         {
             cMenu.MenuItems.Clear();
+            TsfBridgeStatus tsfStatus = ucl.tsfBridgeManager.GetStatus();
+
             cMenu.MenuItems.Add("1.關於肥米輸入法", this.menu_about_UCL_Click);
+            if (!tsfStatus.IsAdministrator)
+            {
+                cMenu.MenuItems.Add(TrayMenuText.RestartAsAdministrator(), this.menu_restart_as_admin);
+            }
 
             switch (ucl.flag_is_gamemode)
             {
@@ -1553,7 +1690,6 @@ namespace uclliu
             cSubMenu.MenuItems.Add(TrayMenuText.OutputModeTsf(ucl.DEFAULT_OUTPUT_TYPE), this.menu_change_senddata_kind);
             cMenu.MenuItems.Add(cSubMenu);
 
-            TsfBridgeStatus tsfStatus = ucl.tsfBridgeManager.GetStatus();
             bool isTsfRegistered = tsfStatus.Registry != null && tsfStatus.Registry.IsRegistered;
             MenuItem tsfMenu = new MenuItem();
             tsfMenu.Text = "4.TSF Bridge 管理";

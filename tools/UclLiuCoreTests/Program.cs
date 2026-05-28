@@ -24,10 +24,16 @@ internal static class Program
         failed += Run("foreground process snapshot normalizes process name", TestForegroundProcessSnapshotNormalizesProcessName);
         failed += Run("tray menu text marks current output mode", TestTrayMenuTextMarksCurrentOutputMode);
         failed += Run("tray menu text marks boolean settings", TestTrayMenuTextMarksBooleanSettings);
+        failed += Run("tray menu text shows administrator restart action", TestTrayMenuTextShowsAdministratorRestartAction);
         failed += Run("tray menu opens on left and right click", TestTrayMenuOpensOnLeftAndRightClick);
         failed += Run("chrome button does not keep focus", TestChromeButtonDoesNotKeepFocus);
         failed += Run("tsf bridge assets prefer architecture subfolder", TestTsfBridgeAssetsPreferArchitectureSubfolder);
+        failed += Run("tsf bridge activation reports missing dll", TestTsfBridgeActivationReportsMissingDll);
+        failed += Run("tsf bridge activation requires administrator restart", TestTsfBridgeActivationRequiresAdministratorRestart);
+        failed += Run("tsf bridge activation prompts registration after administrator", TestTsfBridgeActivationPromptsRegistrationAfterAdministrator);
+        failed += Run("tsf bridge activation allows ready administrator status", TestTsfBridgeActivationAllowsReadyAdministratorStatus);
         failed += Run("tsf bridge command text is stable", TestTsfBridgeCommandText);
+        failed += Run("elevated restart request quotes executable arguments", TestElevatedRestartRequestQuotesArguments);
         failed += Run("short root setting toggles and persists SP", TestShortRootSettingTogglesAndPersistsSp);
         failed += Run("short root setting reads normalized config", TestShortRootSettingReadsNormalizedConfig);
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
@@ -232,7 +238,7 @@ internal static class Program
     {
         string expected = "UCLLIU 肥米輸入法 C# 版\n\n"
             + "作者：羽山秋人 (https://3wa.tw)\n"
-            + "版本：0.13\n\n"
+            + "版本：0.14\n\n"
             + "熱鍵提示：\n\n"
             + "「,,,VERSION」目前版本\n"
             + "「'ucl」同音字查詢\n"
@@ -249,7 +255,7 @@ internal static class Program
             + "「,,,Z」框字的文字變成字根\n"
             + "「,,,BOX」開啟自定詞庫\n";
 
-        AssertEqual("0.13", UclLiuAppInfo.Version);
+        AssertEqual("0.14", UclLiuAppInfo.Version);
         AssertEqual("UCLLIU 肥米輸入法 C# 版", UclLiuAppInfo.AboutTitle);
         AssertEqual("Fastest Chinese Input Method", UclLiuAppInfo.FileDescription);
         AssertEqual("UCLLIU Input Method", UclLiuAppInfo.ProductName);
@@ -292,6 +298,11 @@ internal static class Program
     {
         AssertEqual("5.【●】使用 CTRL+SPACE 切換輸入法", TrayMenuText.ToggleItem("5.", true, "使用 CTRL+SPACE 切換輸入法"));
         AssertEqual("5.【　】使用 CTRL+SPACE 切換輸入法", TrayMenuText.ToggleItem("5.", false, "使用 CTRL+SPACE 切換輸入法"));
+    }
+
+    private static void TestTrayMenuTextShowsAdministratorRestartAction()
+    {
+        AssertEqual("★以系統管理員身分重新啟動肥米", TrayMenuText.RestartAsAdministrator());
     }
 
     private static void TestTrayMenuOpensOnLeftAndRightClick()
@@ -341,10 +352,126 @@ internal static class Program
         }
     }
 
+    private static void TestTsfBridgeActivationReportsMissingDll()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "uclliu-tsf-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(dir, "tsf_bridge"));
+        try
+        {
+            TsfBridgeActivationDecision decision = TsfBridgeActivationPolicy.Evaluate(CreateTsfStatus(dir, false, false));
+
+            AssertEqual(TsfBridgeActivationKind.MissingBridgeDll.ToString(), decision.Kind.ToString());
+            AssertTrue(!decision.CanActivate, "missing DLL should not allow TSF mode");
+            AssertContains(decision.Message, "找不到");
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    private static void TestTsfBridgeActivationRequiresAdministratorRestart()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "uclliu-tsf-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(dir, "tsf_bridge"));
+        try
+        {
+            WriteTsfBridgeFixture(dir);
+            TsfBridgeActivationDecision decision = TsfBridgeActivationPolicy.Evaluate(CreateTsfStatus(dir, true, false));
+
+            AssertEqual(TsfBridgeActivationKind.NeedsAdministratorRestart.ToString(), decision.Kind.ToString());
+            AssertTrue(!decision.CanActivate, "non-admin TSF activation should be blocked");
+            AssertTrue(decision.ShouldRestartAsAdministrator, "non-admin TSF activation should offer restart");
+            AssertContains(decision.Message, "系統管理員");
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    private static void TestTsfBridgeActivationPromptsRegistrationAfterAdministrator()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "uclliu-tsf-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(dir, "tsf_bridge"));
+        try
+        {
+            WriteTsfBridgeFixture(dir);
+            TsfBridgeActivationDecision decision = TsfBridgeActivationPolicy.Evaluate(CreateTsfStatus(dir, false, true));
+
+            AssertEqual(TsfBridgeActivationKind.NeedsRegistration.ToString(), decision.Kind.ToString());
+            AssertTrue(!decision.CanActivate, "unregistered TSF bridge should not enable TSF mode yet");
+            AssertTrue(decision.ShouldStartRegistration, "unregistered TSF bridge should offer registration");
+            AssertContains(decision.Message, "尚未註冊");
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    private static void TestTsfBridgeActivationAllowsReadyAdministratorStatus()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "uclliu-tsf-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(dir, "tsf_bridge"));
+        try
+        {
+            WriteTsfBridgeFixture(dir);
+            TsfBridgeActivationDecision decision = TsfBridgeActivationPolicy.Evaluate(CreateTsfStatus(dir, true, true));
+
+            AssertEqual(TsfBridgeActivationKind.Ready.ToString(), decision.Kind.ToString());
+            AssertTrue(decision.CanActivate, "registered admin TSF bridge should allow TSF mode");
+            AssertTrue(!decision.ShouldRestartAsAdministrator, "ready TSF bridge should not offer restart");
+            AssertTrue(!decision.ShouldStartRegistration, "ready TSF bridge should not offer registration");
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
     private static void TestTsfBridgeCommandText()
     {
         AssertEqual("TSF Bridge 已註冊", TrayMenuText.TsfBridgeStatus(true));
         AssertEqual("TSF Bridge 未註冊", TrayMenuText.TsfBridgeStatus(false));
+    }
+
+    private static void TestElevatedRestartRequestQuotesArguments()
+    {
+        ElevatedRestartRequest request = ElevatedRestartRequestBuilder.Build(
+            @"C:\Program Files\UCL LIU\uclliu.exe",
+            new string[] { "--profile", "John Ho", "quote\"me" },
+            @"C:\Program Files\UCL LIU");
+
+        AssertEqual(@"C:\Program Files\UCL LIU\uclliu.exe", request.FileName);
+        AssertEqual("\"--profile\" \"John Ho\" \"quote\\\"me\"", request.Arguments);
+        AssertEqual(@"C:\Program Files\UCL LIU", request.WorkingDirectory);
+        AssertEqual("runas", request.Verb);
+    }
+
+    private static void WriteTsfBridgeFixture(string baseDirectory)
+    {
+        string bridgeDirectory = Path.Combine(baseDirectory, "tsf_bridge");
+        Directory.CreateDirectory(bridgeDirectory);
+        File.WriteAllText(Path.Combine(bridgeDirectory, "UclTsfBridge.dll"), "");
+        File.WriteAllText(Path.Combine(bridgeDirectory, "register_tsf_bridge.bat"), "");
+        File.WriteAllText(Path.Combine(bridgeDirectory, "unregister_tsf_bridge.bat"), "");
+    }
+
+    private static TsfBridgeStatus CreateTsfStatus(string baseDirectory, bool isRegistered, bool isAdministrator)
+    {
+        TsfBridgeAssets assets = TsfBridgeAssetLocator.Locate(baseDirectory);
+        return new TsfBridgeStatus
+        {
+            Assets = assets,
+            Registry = new TsfBridgeRegistryStatus
+            {
+                IsRegistered = isRegistered,
+                RegisteredPath = isRegistered ? assets.BridgeDllPath : "",
+                RegistryLocation = isRegistered ? "LocalMachine / Registry64" : ""
+            },
+            IsAdministrator = isAdministrator
+        };
     }
 
     private static void TestShortRootSettingTogglesAndPersistsSp()

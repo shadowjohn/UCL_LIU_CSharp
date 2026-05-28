@@ -2,7 +2,7 @@ namespace uclliu
 {
     public static class UclLiuAppInfo
     {
-        public const string Version = "0.13";
+        public const string Version = "0.14";
         public const string AboutTitle = "UCLLIU 肥米輸入法 C# 版";
         public const string ProductName = "UCLLIU Input Method";
         public const string FileDescription = "Fastest Chinese Input Method";

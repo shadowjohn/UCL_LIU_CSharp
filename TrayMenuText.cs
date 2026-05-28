@@ -14,6 +14,11 @@ namespace uclliu
             return prefix + "【" + Mark(enabled) + "】" + text;
         }
 
+        public static string RestartAsAdministrator()
+        {
+            return "★以系統管理員身分重新啟動肥米";
+        }
+
         public static string OutputModeDefault(string outputType)
         {
             return "【" + Mark(IsOutputType(outputType, "DEFAULT")) + "】正常出字模式（Unicode）";

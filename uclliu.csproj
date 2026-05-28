@@ -126,6 +126,7 @@
     <Compile Include="AltTabWindowStyle.cs" />
     <Compile Include="ChromeButton.cs" />
     <Compile Include="ChromeButtonTextAlignment.cs" />
+    <Compile Include="ElevatedRestart.cs" />
     <Compile Include="ForegroundProcessSnapshot.cs" />
     <Compile Include="KeyboardHookPerformance.cs" />
     <Compile Include="KeyboardHookState.cs" />

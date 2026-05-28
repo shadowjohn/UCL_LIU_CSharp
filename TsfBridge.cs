@@ -132,6 +132,81 @@ namespace uclliu
         }
     }
 
+    public enum TsfBridgeActivationKind
+    {
+        Ready,
+        MissingBridgeDll,
+        NeedsAdministratorRestart,
+        NeedsRegistration
+    }
+
+    public sealed class TsfBridgeActivationDecision
+    {
+        public TsfBridgeActivationKind Kind { get; internal set; }
+        public string Title { get; internal set; }
+        public string Message { get; internal set; }
+
+        public bool CanActivate
+        {
+            get { return Kind == TsfBridgeActivationKind.Ready; }
+        }
+
+        public bool ShouldRestartAsAdministrator
+        {
+            get { return Kind == TsfBridgeActivationKind.NeedsAdministratorRestart; }
+        }
+
+        public bool ShouldStartRegistration
+        {
+            get { return Kind == TsfBridgeActivationKind.NeedsRegistration; }
+        }
+    }
+
+    public static class TsfBridgeActivationPolicy
+    {
+        public static TsfBridgeActivationDecision Evaluate(TsfBridgeStatus status)
+        {
+            if (status == null || status.Assets == null || !status.Assets.HasBridgeDll)
+            {
+                return Decision(
+                    TsfBridgeActivationKind.MissingBridgeDll,
+                    "找不到 TSF Bridge",
+                    "找不到 UCLLIU TSF Bridge DLL。\n\n請確認 tsf_bridge 目錄與 UclTsfBridge.dll 和 uclliu.exe 放在同一層。");
+            }
+
+            if (!status.IsAdministrator)
+            {
+                return Decision(
+                    TsfBridgeActivationKind.NeedsAdministratorRestart,
+                    "需要系統管理員權限",
+                    "「TSF出字模式」需要系統管理員權限才能啟用與設定。\n\n請重新以系統管理員身分啟動肥米，再進行 TSF Bridge 註冊與輸入法設定。");
+            }
+
+            if (status.Registry == null || !status.Registry.IsRegistered)
+            {
+                return Decision(
+                    TsfBridgeActivationKind.NeedsRegistration,
+                    "TSF Bridge 尚未註冊",
+                    "UCLLIU TSF Bridge 尚未註冊。\n\n請先註冊 TSF Bridge，再到 Windows 輸入法設定加入 UCLLIU TSF Bridge。");
+            }
+
+            return Decision(
+                TsfBridgeActivationKind.Ready,
+                "TSF Bridge 可使用",
+                "TSF Bridge 已註冊，可以切換到 TSF出字模式。");
+        }
+
+        private static TsfBridgeActivationDecision Decision(TsfBridgeActivationKind kind, string title, string message)
+        {
+            return new TsfBridgeActivationDecision
+            {
+                Kind = kind,
+                Title = title,
+                Message = message
+            };
+        }
+    }
+
     public sealed class TsfBridgeManager
     {
         private readonly string baseDirectory;
