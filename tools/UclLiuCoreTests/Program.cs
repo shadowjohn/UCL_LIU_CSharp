@@ -85,6 +85,8 @@ internal static class Program
         failed += Run("shift release ignores stale standalone shift", TestShiftReleaseIgnoresStaleStandaloneShift);
         failed += Run("candidate selection maps top row and numpad digits", TestCandidateSelectionMapsTopRowAndNumpadDigits);
         failed += Run("candidate selection rejects non digit virtual keys", TestCandidateSelectionRejectsNonDigitVirtualKeys);
+        failed += Run("phone candidate space defers to first candidate commit", TestPhoneCandidateSpaceDefersToFirstCandidateCommit);
+        failed += Run("phone candidate shift space pages before half full toggle", TestPhoneCandidateShiftSpacePagesBeforeHalfFullToggle);
         failed += Run("pinyi v001 same sound skips phonetic code and bopomofo tokens", TestPinyiV001SkipsPhoneCodeAndBopomofo);
         failed += Run("pinyi v001 same sound sorts by closest token index", TestPinyiV001SortsByClosestTokenIndex);
         failed += Run("pinyi legacy same sound keeps whole matching lines", TestPinyiLegacyKeepsWholeMatchingLines);
@@ -1309,6 +1311,21 @@ internal static class Program
         AssertTrue(!KeyboardCandidateSelection.TryGetCandidateIndex(109, out index), "numpad minus should not map");
     }
 
+    private static void TestPhoneCandidateSpaceDefersToFirstCandidateCommit()
+    {
+        AssertTrue(PhoneCandidateKeyRules.ShouldCommitFirstCandidateOnSpace(true, 1), "space should commit first phone candidate when candidates are visible");
+        AssertTrue(!PhoneCandidateKeyRules.ShouldCommitFirstCandidateOnSpace(true, 0), "space should remain a tone query key before candidates are visible");
+        AssertTrue(!PhoneCandidateKeyRules.ShouldCommitFirstCandidateOnSpace(false, 1), "non-phone candidate lists keep existing space behavior");
+    }
+
+    private static void TestPhoneCandidateShiftSpacePagesBeforeHalfFullToggle()
+    {
+        AssertTrue(PhoneCandidateKeyRules.ShouldPageOnShiftSpace(true, true, true), "phone candidates with more pages should page before half/full toggle");
+        AssertTrue(!PhoneCandidateKeyRules.ShouldPageOnShiftSpace(true, false, true), "phone candidates without more pages should not consume shift+space");
+        AssertTrue(!PhoneCandidateKeyRules.ShouldPageOnShiftSpace(false, true, true), "non-phone candidates should keep existing shift+space behavior");
+        AssertTrue(!PhoneCandidateKeyRules.ShouldPageOnShiftSpace(true, true, false), "disabled shift+space shortcut should not page");
+    }
+
     private static void TestPinyiV001SkipsPhoneCodeAndBopomofo()
     {
         string[] lines = new string[]
@@ -1367,12 +1384,14 @@ internal static class Program
             "ㄝ ㄦ ㄡ ㄥ ㄢ ㄅ ㄉ ˇ ˋ ㄓ ˊ ˙ ㄚ ㄞ ㄤ ㄇ ㄖ ㄏ ㄎ ㄍ ㄑ ㄕ ㄘ ㄛ ㄨ ㄜ ㄠ ㄩ ㄙ ㄟ ㄣ ㄆ ㄐ ㄋ ㄔ ㄧ ㄒ ㄊ ㄌ ㄗ ㄈ",
             "zo 非 飛 菲",
             "zo6 肥 淝 腓",
+            "a ㄇ",
             "u ㄧ 一 壹 衣"
         });
 
         AssertEqual("ㄈㄟˊ", table.KeyboardToPhoneCode("zo6"));
         AssertEqual("zo6", table.PhoneCodeToKeyboard("ㄈㄟˊ"));
         AssertSequence(new string[] { "肥", "淝", "腓" }, table.FindCandidatesByPhoneCode("ㄈㄟˊ").ToArray());
+        AssertSequence(new string[] { "ㄇ" }, table.FindCandidatesByPhoneCode("ㄇ").ToArray());
         AssertSequence(new string[] { "一", "壹", "衣" }, table.FindCandidatesByPhoneCode("ㄧ").ToArray());
     }
 

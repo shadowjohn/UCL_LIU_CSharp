@@ -380,6 +380,13 @@ namespace uclliu
             {
                 //# Press shift and space
                 //# switch 半/全
+                if (PhoneCandidateKeyRules.ShouldPageOnShiftSpace(ucl.is_need_use_phone, ucl.has_more_candidate_page(), true)
+                    && ucl.try_page_next_phone_candidates())
+                {
+                    ucl.flag_is_play_otherkey = true;
+                    return NO;
+                }
+
                 //ucl.hf_btn_click(hf_btn);
                 btn_HALF.PerformClick(); //trigger click
                 ucl.flag_is_play_otherkey = true;

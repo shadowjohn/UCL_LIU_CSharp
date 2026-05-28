@@ -88,11 +88,21 @@ namespace uclliu
 
                 string keyboardCode = tokens[0].ToLowerInvariant();
                 string phoneCode = KeyboardToPhoneCode(keyboardCode, phoneByKeyboard);
+                bool hasNonBopomofoCandidate = false;
+                for (int j = 1; j < tokens.Length; j++)
+                {
+                    if (tokens[j].Length > 0 && !IsBopomofoToken(tokens[j]))
+                    {
+                        hasNonBopomofoCandidate = true;
+                        break;
+                    }
+                }
+
                 List<string> candidates = new List<string>();
                 for (int j = 1; j < tokens.Length; j++)
                 {
                     string word = tokens[j];
-                    if (word.Length == 0 || IsBopomofoToken(word))
+                    if (word.Length == 0 || (hasNonBopomofoCandidate && IsBopomofoToken(word)))
                     {
                         continue;
                     }

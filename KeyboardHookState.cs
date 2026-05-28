@@ -82,4 +82,17 @@ namespace uclliu
             return false;
         }
     }
+
+    public static class PhoneCandidateKeyRules
+    {
+        public static bool ShouldCommitFirstCandidateOnSpace(bool phoneMode, int candidateCount)
+        {
+            return phoneMode && candidateCount > 0;
+        }
+
+        public static bool ShouldPageOnShiftSpace(bool phoneMode, bool hasMorePage, bool halfFullShortcutEnabled)
+        {
+            return halfFullShortcutEnabled && phoneMode && hasMorePage;
+        }
+    }
 }

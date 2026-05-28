@@ -75,6 +75,7 @@ namespace uclliu
         public bool is_need_use_phone = false;
         public PhoneCodeTable phone_code_table = PhoneCodeTable.Empty();
         public List<string> ucl_find_data = new List<string>();
+        private List<string> phone_candidate_page_source = new List<string>();
         int same_sound_index = 0; //用來放第幾頁
         int same_sound_max_word = 6; //一頁最多5字
         bool is_has_more_page = false; //是否還有下頁
@@ -412,6 +413,7 @@ namespace uclliu
             is_need_use_phone = true;
             play_ucl_label = "";
             ucl_find_data = new List<string>();
+            phone_candidate_page_source = new List<string>();
             same_sound_index = 0;
             is_has_more_page = false;
             type_label_set_text("注:");
@@ -421,10 +423,28 @@ namespace uclliu
         public void stop_phone_mode()
         {
             is_need_use_phone = false;
+            phone_candidate_page_source = new List<string>();
             if (play_ucl_label.Length == 0)
             {
                 type_label_set_text();
             }
+        }
+        public bool has_more_candidate_page()
+        {
+            return is_has_more_page;
+        }
+        public bool try_page_next_phone_candidates()
+        {
+            if (!is_need_use_phone || !is_has_more_page || phone_candidate_page_source.Count == 0)
+            {
+                return false;
+            }
+
+            int nextIndex;
+            ucl_find_data = PinyiCandidateSelector.PageCandidates(phone_candidate_page_source, same_sound_index, same_sound_max_word, out is_has_more_page, out nextIndex);
+            same_sound_index = nextIndex;
+            word_label_set_text();
+            return true;
         }
         public void run_big_small(double kind)
         {
@@ -453,6 +473,7 @@ namespace uclliu
             f.btn_gamemode.Visible = false;
             play_ucl_label = "";
             ucl_find_data = new List<string>();
+            phone_candidate_page_source = new List<string>();
             is_need_use_phone = false;
             config["DEFAULT"]["SHORT_MODE"] = "1";
             clear_input_labels_for_mode_change();
@@ -465,6 +486,7 @@ namespace uclliu
             //f.type_label.Vset_visible(False)
             play_ucl_label = "";
             ucl_find_data = new List<string>();
+            phone_candidate_page_source = new List<string>();
             is_need_use_phone = false;
             config["DEFAULT"]["SHORT_MODE"] = "0";
             clear_input_labels_for_mode_change();
@@ -1402,6 +1424,11 @@ namespace uclliu
 
             if (key == ' ')
             {
+                if (PhoneCandidateKeyRules.ShouldCommitFirstCandidateOnSpace(is_need_use_phone, ucl_find_data.Count))
+                {
+                    return false;
+                }
+
                 type_label_set_text("", false);
                 return true;
             }
@@ -1723,13 +1750,15 @@ namespace uclliu
             if (kind == "phone")
             {
                 List<string> phoneCandidates = phone_code_table.FindCandidatesByPhoneCode(play_ucl_label);
+                phone_candidate_page_source = new List<string>(phoneCandidates);
                 int nextIndex;
-                ucl_find_data = PinyiCandidateSelector.PageCandidates(phoneCandidates, same_sound_index, same_sound_max_word, out is_has_more_page, out nextIndex);
+                ucl_find_data = PinyiCandidateSelector.PageCandidates(phone_candidate_page_source, same_sound_index, same_sound_max_word, out is_has_more_page, out nextIndex);
                 same_sound_index = nextIndex;
                 word_label_set_text();
                 return phoneCandidates.Count > 0;
             }
 
+            phone_candidate_page_source = new List<string>();
             string c = play_ucl_label.ToLower().Trim();
             is_need_use_pinyi = false;
             if (c.Length > 1 && c.Substring(0, 1) == "'")
@@ -1997,6 +2026,7 @@ namespace uclliu
             is_need_use_phone = false;
             play_ucl_label = "";
             ucl_find_data = new List<string>();
+            phone_candidate_page_source = new List<string>();
             outputHintComposer.BeginOutput();
             type_label_set_text();
 

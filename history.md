@@ -2,6 +2,66 @@
 
 ---
 
+## 2026-05-28 - C# 注音查詢保留單獨注音符號候選
+
+### 問題觀察
+
+- 使用者回報 Python 版輸入 `';a` 後按空白，會出現 `ㄇ` 候選；C# 版只顯示輸入區 `ㄇ`，候選區沒有反應。
+- 重新追 Python 流程後確認：空白不是追加聲調碼，而是觸發目前注音 `ㄇ` 的查詢。
+- C# 版 `PhoneCodeTable.Parse()` 原本會過濾所有注音符號 token。`pinyi.txt` 的 `a ㄇ` 這類只有注音符號本身的列，會因此變成沒有候選。
+
+### 實作紀錄
+
+- `PhoneCodeTable.Parse()` 改為：同列有真正漢字候選時，仍過濾注音標籤；若整列只有注音符號候選，保留該注音符號。
+- 測試補上 `a ㄇ` 應可由 `FindCandidatesByPhoneCode("ㄇ")` 查到，同時保留 `u ㄧ 一 壹 衣` 不把 `ㄧ` 混入候選。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：`FindCandidatesByPhoneCode("ㄇ")` 預期 1 個候選但得到 0。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
+## 2026-05-28 - C# 注音候選空白出字與 Shift+Space 換頁
+
+### 問題觀察
+
+- 對照 Python 版後確認，注音查詢 `';zo6` 顯示候選後，空白應出第一候選，`Shift+Space` 應在有下一頁時先換頁。
+- C# 版原本在 `Form1` 前段先把空白交給 `handle_phone_key(" ")`，導致已有候選時仍被當成一聲輸入處理，沒有走外層空白出字分支。
+- C# 版 `Shift+Space` 分支只做半全形切換，沒有先檢查注音候選是否有下一頁；而且注音查詢只保存當頁候選，無法翻到下一頁。
+
+### 實作紀錄
+
+- 新增 `PhoneCandidateKeyRules`，固定注音候選空白與 `Shift+Space` 的鍵盤決策。
+- `handle_phone_key(" ")` 在注音候選已出現時回傳 `false`，讓既有外層空白分支送出第一候選並清掉注音狀態。
+- 注音查詢保存完整候選清單 `phone_candidate_page_source`，新增 `try_page_next_phone_candidates()` 供 `Shift+Space` 翻到下一頁。
+- `Form1` 的 `Shift+Space` 分支在切半全形前先處理注音候選換頁；成功換頁時保留 Shift 狀態，方便連續按空白翻頁。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `PhoneCandidateKeyRules`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `MSBuild.exe uclliu.sln /t:Rebuild /p:Configuration=Debug /p:Platform="Any CPU"` 不在 PATH；改用 Visual Studio 2022 MSBuild 絕對路徑搭配臨時 `OutDir` 建置通過，僅保留既有 `Form1.lParam` 未使用警告。
+
+---
+
+## 2026-05-28 - 同音 / 注音查詢候選鍵盤行為對照
+
+### 研究紀錄
+
+- 對照 Python 版 `D:\GD\UCL_LIU\uclliu.pyw` 與 C# 版 `Form1.cs` / `uclliu.cs`。
+- Python 同音查詢 `'<root>`：空白先進入同音候選，後續空白會呼叫 `use_pinyi()` 換同音候選頁；數字鍵可選候選；`v/r/s/f` 不是同音候選選字鍵；`Shift+Space` 分頁分支依賴 `ucl_find_data_orin_arr`，同音查詢未更新此來源，不能視為可靠支援。
+- Python 注音查詢 `';zo6`：數字鍵可選候選；空白在已有候選時會出第一候選，在未出候選時作為一聲查詢；`v/r/s/f` 是注音鍵或被候選狀態吞掉，不是候選選字鍵；`Shift+Space` 透過 `ucl_find_data_orin_arr` 換頁。
+- C# 目前同音查詢大致保留空白換頁與數字選字，但缺少 `Shift+Space` 換頁分支，`v/r/s/f` 仍會走一般字根後綴而不是同音候選選字。
+- C# 目前注音查詢數字鍵可選候選，但空白先被 `handle_phone_key(" ")` 吃掉，已有候選時不會出第一候選；`Shift+Space` 只切半全形，沒有候選換頁；`v/r/s/f` 不支援候選選字。
+
+### 後續判斷
+
+- 若要對齊 Python，優先補 C# 注音候選的空白出第一候選與 `Shift+Space` 換頁。
+- 同音查詢的 `Shift+Space` 與 `v/r/s/f` 若要支援，會比 Python 版多一步規格決策，不能直接說是既有 Python 行為。
+
+---
+
 ## 2026-05-27 - 短版 chrome 文字垂直置中
 
 ### 問題觀察
