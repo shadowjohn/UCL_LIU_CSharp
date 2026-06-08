@@ -1,7 +1,5 @@
 # 開發對話紀錄
 
----
-
 ## 2026-07-07 - v0.16 版號與 Benson9954029 作者名單
 
 ### 實作紀錄
@@ -13,6 +11,35 @@
 ### 驗證紀錄
 
 - `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+
+---
+
+## 2026-06-08 - TSF 出字模式缺 pipe timeout 卡頓修正
+
+### 問題觀察
+
+- 使用者回報 C# 版肥米用 TSF / TSR 打字時體感卡頓。
+- 檢查目前執行中的 `uclliu.exe` 後，確認是前一晚啟動的舊程序；INI 仍為 `TSF_BRIDGE_TIMEOUT_MS=80`。
+- 探查 `\\.\pipe\` 發現只有部分前景程序有 `uclliu_tsf_bridge_<pid>`，全域 `uclliu_tsf_bridge` 不存在。
+- 以 VirtualBox 作為 foreground 時，該 PID 沒有 TSF pipe；舊流程會先等 `uclliu_tsf_bridge_<pid>` timeout，再等全域 pipe timeout，最壞約 160ms/字後才 fallback。
+
+### 根因判斷
+
+- `TsfBridgeOutput.TryCommitText()` 每次出字都直接 `Connect(timeout)`，沒有先判斷 named pipe 是否存在。
+- 當使用者處於 `TSF出字模式`，但目前前景程式沒有切到 UCLLIU TSF Bridge，或 global pipe 不存在時，缺 pipe 被當成慢連線處理，造成同步 fallback 前的延遲。
+
+### 實作紀錄
+
+- `ITsfBridgePipeClientFactory` 新增 `PipeExists()`。
+- 真實 named pipe client factory 在 connect 前用 `File.Exists(@"\\.\pipe\" + pipeName)` 檢查 pipe 是否存在；不存在就跳過，不吃 timeout。
+- 核心測試補上「PID pipe 不存在時跳過 PID pipe，global pipe 存在時仍可使用；兩者都不存在時不建立 pipe client」。
+
+### 驗證紀錄
+
+- 實測舊狀態：`uclliu_tsf_bridge` global pipe 連線會 timeout，無 pipe foreground 會卡住 timeout。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- 使用 Visual Studio 18 MSBuild 建置通過，僅保留既有 `Form1.lParam` unused warning。
+- 已停止舊 `uclliu.exe`，同步 patched exe 到 `bin\Debug\uclliu.exe`，並啟動 `bin\Debug\uclliu.exe` 供實機測試。
 
 ---
 

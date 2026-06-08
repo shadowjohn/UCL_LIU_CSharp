@@ -524,6 +524,7 @@ namespace uclliu
 
     internal interface ITsfBridgePipeClientFactory
     {
+        bool PipeExists(string pipeName);
         ITsfBridgePipeClient Create(string pipeName);
     }
 
@@ -569,6 +570,12 @@ namespace uclliu
             for (int i = 0; i < candidates.Length; i++)
             {
                 string pipeName = candidates[i];
+                if (!pipeClientFactory.PipeExists(pipeName))
+                {
+                    lastError = "TSF bridge pipe " + pipeName + " unavailable";
+                    continue;
+                }
+
                 try
                 {
                     using (ITsfBridgePipeClient client = pipeClientFactory.Create(pipeName))
@@ -620,6 +627,18 @@ namespace uclliu
 
     internal sealed class NamedPipeTsfBridgeClientFactory : ITsfBridgePipeClientFactory
     {
+        public bool PipeExists(string pipeName)
+        {
+            try
+            {
+                return File.Exists(@"\\.\pipe\" + pipeName);
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
         public ITsfBridgePipeClient Create(string pipeName)
         {
             return new NamedPipeTsfBridgeClient(pipeName);

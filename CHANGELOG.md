@@ -2,6 +2,12 @@
 
 C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGELOG](https://github.com/shadowjohn/UCL_LIU/blob/master/CHANGELOG.md)。
 
+## Unreleased
+
+### Fixed
+
+- 修正 `TSF出字模式` 在前景程式沒有對應 `uclliu_tsf_bridge_<pid>` pipe、且全域 pipe 不存在時，每次出字都等待 named pipe timeout 才 fallback，造成打字明顯卡頓；現在會先檢查 pipe 是否存在，不存在就立即 fallback。
+
 ---
 
 ## [0.16] - 2026-07-07

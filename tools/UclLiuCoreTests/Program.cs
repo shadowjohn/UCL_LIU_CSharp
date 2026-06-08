@@ -77,6 +77,7 @@ internal static class Program
         failed += Run("tsf bridge protocol escapes json and parses ok", TestTsfBridgeProtocolEscapesJsonAndParsesOk);
         failed += Run("tsf bridge output tries pid pipe before global pipe", TestTsfBridgeOutputTriesPidPipeBeforeGlobalPipe);
         failed += Run("tsf bridge output does not try global pipe after commit failure", TestTsfBridgeOutputDoesNotTryGlobalPipeAfterCommitFailure);
+        failed += Run("tsf bridge output skips missing pipes before connect", TestTsfBridgeOutputSkipsMissingPipesBeforeConnect);
         failed += Run("window message char output posts each character to focused control", TestWindowMessageCharOutputPostsToFocusedControl);
         failed += Run("output router forces paste for PTT browser titles", TestOutputRouterForcesPasteForPttBrowserTitles);
         failed += Run("output router forces paste for Windows 11 Notepad", TestOutputRouterForcesPasteForWindows11Notepad);
@@ -1286,6 +1287,31 @@ internal static class Program
         AssertSequence(new string[] { "uclliu_tsf_bridge_123" }, factory.CreatedPipes.ToArray());
     }
 
+    private static void TestTsfBridgeOutputSkipsMissingPipesBeforeConnect()
+    {
+        FakeTsfBridgePipeClientFactory factory = new FakeTsfBridgePipeClientFactory();
+        factory.UseExplicitPipeExistence = true;
+        factory.ExistingPipes.Add("uclliu_tsf_bridge");
+        factory.Responses["uclliu_tsf_bridge"] = "{\"ok\":true}\n";
+        TsfBridgeOutput output = new TsfBridgeOutput(factory);
+
+        string error;
+        bool ok = output.TryCommitText("肥", 123, 80, out error);
+
+        AssertTrue(ok, "global pipe should still be tried when pid pipe is missing");
+        AssertSequence(new string[] { "uclliu_tsf_bridge" }, factory.CreatedPipes.ToArray());
+
+        factory = new FakeTsfBridgePipeClientFactory();
+        factory.UseExplicitPipeExistence = true;
+        output = new TsfBridgeOutput(factory);
+
+        ok = output.TryCommitText("肥", 456, 80, out error);
+
+        AssertTrue(!ok, "missing TSF pipes should fail without connecting");
+        AssertEqual(0, factory.CreatedPipes.Count);
+        AssertContains(error, "unavailable");
+    }
+
     private static void TestOutputRouterForcesPasteForPttBrowserTitles()
     {
         List<string> empty = new List<string>();
@@ -1869,7 +1895,14 @@ internal static class Program
     {
         public readonly Dictionary<string, string> Responses = new Dictionary<string, string>(StringComparer.Ordinal);
         public readonly List<string> CreatedPipes = new List<string>();
+        public readonly HashSet<string> ExistingPipes = new HashSet<string>(StringComparer.Ordinal);
+        public bool UseExplicitPipeExistence;
         public string LastRequest;
+
+        public bool PipeExists(string pipeName)
+        {
+            return !UseExplicitPipeExistence || ExistingPipes.Contains(pipeName);
+        }
 
         public ITsfBridgePipeClient Create(string pipeName)
         {
