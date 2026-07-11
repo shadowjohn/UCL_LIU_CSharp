@@ -36,6 +36,27 @@ function Write-CandidateNotice {
         [System.Text.UTF8Encoding]::new($false))
 }
 
+function Seed-OldArtifacts {
+    param([string]$Output, [string]$Version)
+
+    New-Item -ItemType Directory -Path (Join-Path $Output "package") -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $Output "package\old-marker.txt"), "old package")
+    [System.IO.File]::WriteAllBytes((Join-Path $Output ("uclliu-v" + $Version + ".zip")), [byte[]](9, 8, 7))
+    [System.IO.File]::WriteAllBytes((Join-Path $Output "uclliu.exe"), [byte[]](6, 5, 4))
+    [System.IO.File]::WriteAllText((Join-Path $Output "release-notes.md"), "old notes")
+}
+
+function Assert-OldArtifacts {
+    param([string]$Output, [string]$Version)
+
+    if ([System.IO.File]::ReadAllText((Join-Path $Output "package\old-marker.txt")) -ne "old package" -or
+        [Convert]::ToBase64String([System.IO.File]::ReadAllBytes((Join-Path $Output ("uclliu-v" + $Version + ".zip")))) -ne "CQgH" -or
+        [Convert]::ToBase64String([System.IO.File]::ReadAllBytes((Join-Path $Output "uclliu.exe"))) -ne "BgUE" -or
+        [System.IO.File]::ReadAllText((Join-Path $Output "release-notes.md")) -ne "old notes") {
+        throw "既有發行檔未完整回復：$Output"
+    }
+}
+
 try {
     $build = Join-Path $projectRoot "bin\Release"
     New-Item -ItemType Directory -Path $build | Out-Null
@@ -74,6 +95,42 @@ try {
     }
 
     Write-CandidateNotice -Hash $candidateHash
+
+    $rollbackOutput = Join-Path $projectRoot "rollback-success"
+    Seed-OldArtifacts -Output $rollbackOutput -Version "rollback-success"
+    $env:UCLLIU_PACKAGE_TEST_FAILURE = "after-backup"
+    try {
+        Assert-PackageFails -Name "rollback-success" -ExpectedMessage "測試注入"
+    } finally {
+        Remove-Item Env:UCLLIU_PACKAGE_TEST_FAILURE -ErrorAction SilentlyContinue
+    }
+    Assert-OldArtifacts -Output $rollbackOutput -Version "rollback-success"
+    if (Get-ChildItem -LiteralPath $rollbackOutput -Filter ".package-stage-*" -Force) {
+        throw "完整回復後不應殘留暫存目錄。"
+    }
+
+    $incompleteOutput = Join-Path $projectRoot "rollback-incomplete"
+    Seed-OldArtifacts -Output $incompleteOutput -Version "rollback-incomplete"
+    $env:UCLLIU_PACKAGE_TEST_FAILURE = "after-backup-restore-zip"
+    $failureMessage = ""
+    try {
+        & $packageScript -ProjectRoot $projectRoot -OutputDirectory $incompleteOutput -Version "rollback-incomplete" *> $null
+        throw "回復失敗注入未生效。"
+    } catch {
+        $failureMessage = $_.Exception.Message
+    } finally {
+        Remove-Item Env:UCLLIU_PACKAGE_TEST_FAILURE -ErrorAction SilentlyContinue
+    }
+    if ($failureMessage -notmatch '舊檔保留於：(?<path>.+)$') {
+        throw "回復失敗錯誤未明示備份路徑：$failureMessage"
+    }
+    $preservedBackup = $Matches["path"]
+    $preservedZip = Join-Path $preservedBackup "uclliu-vrollback-incomplete.zip"
+    if (-not (Test-Path -LiteralPath $preservedZip) -or
+        [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($preservedZip)) -ne "CQgH") {
+        throw "未回復的舊 zip 未保留在回報路徑。"
+    }
+
     & $packageScript -ProjectRoot $projectRoot -OutputDirectory $positiveOutput -Version "atomic" *> $null
 
     $extract = Join-Path $projectRoot "extract"

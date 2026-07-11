@@ -64,6 +64,9 @@ if (-not $resolvedStagingRoot.StartsWith($outputPrefix, [System.StringComparison
 }
 New-Item -ItemType Directory -Path $resolvedStagingRoot | Out-Null
 
+$publishStarted = $false
+$publishCompleted = $false
+$rollbackCompleted = $false
 try {
 $packageRoot = Join-Path $resolvedStagingRoot "package"
 New-Item -ItemType Directory -Path $packageRoot | Out-Null
@@ -203,33 +206,57 @@ foreach ($artifact in $artifacts) {
 $backedUp = [System.Collections.Generic.List[object]]::new()
 $published = [System.Collections.Generic.List[object]]::new()
 try {
+    $publishStarted = $true
     foreach ($artifact in $artifacts) {
         if (Test-Path -LiteralPath $artifact.Final) {
             Move-Item -LiteralPath $artifact.Final -Destination $artifact.Backup
             $backedUp.Add($artifact)
         }
     }
+    if ($env:UCLLIU_PACKAGE_TEST_FAILURE -in @("after-backup", "after-backup-restore-zip")) {
+        throw "測試注入：備份完成後停止發布。"
+    }
     foreach ($artifact in $artifacts) {
         Move-Item -LiteralPath $artifact.Staged -Destination $artifact.Final
         $published.Add($artifact)
     }
+    $publishCompleted = $true
 } catch {
+    $publishError = $_
+    $rollbackErrors = [System.Collections.Generic.List[string]]::new()
     for ($i = $published.Count - 1; $i -ge 0; $i--) {
-        if (Test-Path -LiteralPath $published[$i].Final) {
-            Remove-Item -LiteralPath $published[$i].Final -Recurse -Force
+        try {
+            if (Test-Path -LiteralPath $published[$i].Final) {
+                Remove-Item -LiteralPath $published[$i].Final -Recurse -Force
+            }
+        } catch {
+            $rollbackErrors.Add($_.Exception.Message)
         }
     }
     for ($i = $backedUp.Count - 1; $i -ge 0; $i--) {
-        Move-Item -LiteralPath $backedUp[$i].Backup -Destination $backedUp[$i].Final
+        try {
+            if ($env:UCLLIU_PACKAGE_TEST_FAILURE -eq "after-backup-restore-zip" -and
+                [string]::Equals($backedUp[$i].Backup, (Join-Path $previousRoot $zipFileName), [System.StringComparison]::OrdinalIgnoreCase)) {
+                throw "測試注入：略過舊 zip 回復。"
+            }
+            Move-Item -LiteralPath $backedUp[$i].Backup -Destination $backedUp[$i].Final
+        } catch {
+            $rollbackErrors.Add($_.Exception.Message)
+        }
     }
-    throw
+    if ($rollbackErrors.Count -eq 0) {
+        $rollbackCompleted = $true
+        throw $publishError
+    }
+    throw "封裝發布失敗且回復不完整；舊檔保留於：$previousRoot"
 }
 
 Write-Host "Package zip: $zipPath"
 Write-Host "Single exe:  $singleExePath"
 Write-Host "Notes:       $notesPath"
 } finally {
-    if (Test-Path -LiteralPath $resolvedStagingRoot) {
+    if ((-not $publishStarted -or $publishCompleted -or $rollbackCompleted) -and
+        (Test-Path -LiteralPath $resolvedStagingRoot)) {
         Remove-Item -LiteralPath $resolvedStagingRoot -Recurse -Force
     }
 }
