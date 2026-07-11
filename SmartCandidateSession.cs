@@ -5,6 +5,8 @@ namespace uclliu
 {
     public sealed class SmartCandidateSession
     {
+        private const int MaxContextScalars = 3;
+        private const int MaxChineseRunScalars = MaxContextScalars + SmartCandidateMemory.MaxCandidateLength;
         private readonly SmartCandidateTable _table;
         private readonly SmartCandidateMemory _memory;
         private readonly int _pageSize;
@@ -80,21 +82,24 @@ namespace uclliu
                 return;
             }
 
-            for (int i = 0; i < text.Length; i++)
+            for (int i = 0; i < text.Length;)
             {
-                char value = text[i];
-                if (IsChinese(value))
+                int scalarLength = GetScalarLength(text, i);
+                int scalar = scalarLength == 2 ? char.ConvertToUtf32(text, i) : text[i];
+                string scalarText = text.Substring(i, scalarLength);
+                i += scalarLength;
+                if (IsChinese(scalar))
                 {
-                    _chineseRun += value;
-                    Context = AppendContext(Context, value.ToString());
+                    _chineseRun = AppendBoundedScalars(_chineseRun, scalarText, MaxChineseRunScalars);
+                    Context = AppendBoundedScalars(Context, scalarText, MaxContextScalars);
                     _memory.ObserveSequence(_chineseRun);
                     RefreshCandidates();
                 }
-                else if (value == '，')
+                else if (scalar == '，')
                 {
                     RefreshCandidates();
                 }
-                else if (IsSentenceBoundary(value))
+                else if (IsSentenceBoundary(scalar))
                 {
                     ClearContext();
                 }
@@ -151,7 +156,13 @@ namespace uclliu
 
         public bool ShouldFlush(DateTime utcNow, TimeSpan idle)
         {
-            return _memory.IsDirty && utcNow - LastActivityUtc >= idle;
+            if (utcNow - LastActivityUtc < idle)
+            {
+                return false;
+            }
+
+            EndContext();
+            return _memory.IsDirty;
         }
 
         private void RefreshCandidates()
@@ -162,10 +173,10 @@ namespace uclliu
                 return;
             }
 
-            int maxLength = Math.Min(3, Context.Length);
+            int maxLength = Math.Min(MaxContextScalars, CountScalars(Context));
             for (int length = maxLength; length >= 1; length--)
             {
-                string key = Context.Substring(Context.Length - length, length);
+                string key = TakeLastScalars(Context, length);
                 List<string> merged = _memory.GetPredictions(key);
                 MergeUnique(merged, _table.Find(key));
                 if (merged.Count > 0)
@@ -195,10 +206,45 @@ namespace uclliu
             Cancel();
         }
 
-        private static string AppendContext(string context, string text)
+        private static string AppendBoundedScalars(string current, string value, int maxScalars)
         {
-            string result = context + text;
-            return result.Length <= 3 ? result : result.Substring(result.Length - 3);
+            return TakeLastScalars(current + value, maxScalars);
+        }
+
+        private static string TakeLastScalars(string value, int count)
+        {
+            int scalarCount = CountScalars(value);
+            if (scalarCount <= count)
+            {
+                return value;
+            }
+
+            int skip = scalarCount - count;
+            int index = 0;
+            while (skip-- > 0)
+            {
+                index += GetScalarLength(value, index);
+            }
+            return value.Substring(index);
+        }
+
+        private static int CountScalars(string value)
+        {
+            int count = 0;
+            for (int i = 0; i < value.Length; count++)
+            {
+                i += GetScalarLength(value, i);
+            }
+            return count;
+        }
+
+        private static int GetScalarLength(string value, int index)
+        {
+            return char.IsHighSurrogate(value[index])
+                && index + 1 < value.Length
+                && char.IsLowSurrogate(value[index + 1])
+                ? 2
+                : 1;
         }
 
         private static void MergeUnique(List<string> target, IEnumerable<string> source)
@@ -212,14 +258,17 @@ namespace uclliu
             }
         }
 
-        private static bool IsChinese(char value)
+        private static bool IsChinese(int value)
         {
             return (value >= '\u3400' && value <= '\u4dbf')
                 || (value >= '\u4e00' && value <= '\u9fff')
-                || (value >= '\uf900' && value <= '\ufaff');
+                || (value >= '\uf900' && value <= '\ufaff')
+                || (value >= 0x20000 && value <= 0x2ebef)
+                || (value >= 0x2f800 && value <= 0x2fa1f)
+                || (value >= 0x30000 && value <= 0x323af);
         }
 
-        private static bool IsSentenceBoundary(char value)
+        private static bool IsSentenceBoundary(int value)
         {
             return value == '。' || value == '！' || value == '？' || value == '；' || value == '\r' || value == '\n';
         }

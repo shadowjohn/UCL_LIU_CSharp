@@ -119,6 +119,8 @@ internal static class Program
         failed += Run("smart candidate session handles punctuation and cancellation boundaries", TestSmartCandidateSessionHandlesBoundaries);
         failed += Run("smart candidate session distinguishes cancel and end context", TestSmartCandidateSessionCancelAndEndContext);
         failed += Run("smart candidate session flushes dirty memory only when idle", TestSmartCandidateSessionFlushRules);
+        failed += Run("smart candidate session handles supplementary CJK scalars", TestSmartCandidateSessionHandlesSupplementaryCjk);
+        failed += Run("smart candidate session bounds comma preserved Chinese run", TestSmartCandidateSessionBoundsChineseRun);
         failed += Run("smart candidate key rules require shifted top row digits", TestSmartCandidateKeyRules);
 
         if (failed > 0)
@@ -1931,9 +1933,63 @@ internal static class Program
         TimeSpan idle = TimeSpan.FromMinutes(3);
 
         AssertTrue(!session.ShouldFlush(session.LastActivityUtc.Add(idle).AddTicks(-1), idle), "dirty memory should wait for full idle threshold");
+        AssertEqual("王小", session.Context);
         AssertTrue(session.ShouldFlush(session.LastActivityUtc.Add(idle), idle), "dirty memory should flush at idle threshold");
+        AssertEqual("", session.Context);
         memory.MarkSaved();
         AssertTrue(!session.ShouldFlush(session.LastActivityUtc.AddHours(1), idle), "clean memory should not flush");
+
+        SmartCandidateSession cleanSession = new SmartCandidateSession(
+            SmartCandidateTable.Parse(new string[] { "王\t小明" }),
+            new SmartCandidateMemory());
+        cleanSession.ObserveCommittedText("王");
+        AssertTrue(!cleanSession.ShouldFlush(cleanSession.LastActivityUtc.Add(idle), idle), "clean idle session should not request a save");
+        AssertEqual("", cleanSession.Context);
+        AssertSequence(new string[0], ToArray(cleanSession.VisibleCandidates));
+    }
+
+    private static void TestSmartCandidateSessionHandlesSupplementaryCjk()
+    {
+        string extensionB = char.ConvertFromUtf32(0x20000);
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+        SmartCandidateSession session = new SmartCandidateSession(
+            SmartCandidateTable.Parse(new string[] { extensionB + "\t中" }),
+            memory);
+
+        session.ObserveCommittedText(extensionB);
+        AssertEqual(extensionB, session.Context);
+        AssertSequence(new string[] { "中" }, ToArray(session.VisibleCandidates));
+        AssertEqual("中", session.Select(1));
+        AssertTrue(memory.GetPredictions(extensionB).Contains("中"), "supplementary CJK context should learn a selected continuation");
+
+        session.ObserveCommittedText(extensionB + "王");
+        AssertEqual("中" + extensionB + "王", session.Context);
+    }
+
+    private static void TestSmartCandidateSessionBoundsChineseRun()
+    {
+        SmartCandidateSession session = new SmartCandidateSession(
+            SmartCandidateTable.Parse(new string[] { "王王王\t最近候選" }),
+            new SmartCandidateMemory());
+        for (int i = 0; i < 100; i++)
+        {
+            session.ObserveCommittedText("王，");
+        }
+
+        AssertEqual("王王王", session.Context);
+        bool foundRecentPrediction = session.VisibleCandidates.Contains("最近候選");
+        while (!foundRecentPrediction && session.NextPage())
+        {
+            foundRecentPrediction = session.VisibleCandidates.Contains("最近候選");
+        }
+        AssertTrue(foundRecentPrediction, "recent suffix should still reach its table prediction");
+        System.Reflection.FieldInfo runField = typeof(SmartCandidateSession).GetField(
+            "_chineseRun",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        AssertTrue(runField != null, "bounded Chinese run field should exist");
+        string run = (string)runField.GetValue(session);
+        int runScalars = System.Globalization.StringInfo.ParseCombiningCharacters(run).Length;
+        AssertEqual(3 + SmartCandidateMemory.MaxCandidateLength, runScalars);
     }
 
     private static void TestSmartCandidateKeyRules()
