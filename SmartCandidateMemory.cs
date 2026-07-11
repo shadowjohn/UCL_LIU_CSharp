@@ -38,14 +38,22 @@ namespace uclliu
                 return;
             }
 
-            int firstSuffix = Math.Max(1, text.Length - MaxCandidateLength);
-            for (int suffixStart = firstSuffix; suffixStart < text.Length; suffixStart++)
+            List<int> scalarStarts;
+            if (!TryGetScalarStarts(text, out scalarStarts))
             {
-                string candidate = text.Substring(suffixStart);
+                return;
+            }
+
+            int firstSuffix = Math.Max(1, scalarStarts.Count - MaxCandidateLength);
+            for (int suffixStart = firstSuffix; suffixStart < scalarStarts.Count; suffixStart++)
+            {
+                int suffixIndex = scalarStarts[suffixStart];
+                string candidate = text.Substring(suffixIndex);
                 int maxContextLength = Math.Min(3, suffixStart);
                 for (int contextLength = 1; contextLength <= maxContextLength; contextLength++)
                 {
-                    AddScore(_predictions, text.Substring(suffixStart - contextLength, contextLength), candidate, 1);
+                    int contextIndex = scalarStarts[suffixStart - contextLength];
+                    AddScore(_predictions, text.Substring(contextIndex, suffixIndex - contextIndex), candidate, 1);
                 }
             }
         }
@@ -149,7 +157,8 @@ namespace uclliu
 
         private void AddScore(Dictionary<string, Dictionary<string, Entry>> scope, string key, string candidate, int amount)
         {
-            if (string.IsNullOrEmpty(key) || key.Length > MaxKeyLength || string.IsNullOrEmpty(candidate) || candidate.Length > MaxCandidateLength)
+            if (string.IsNullOrEmpty(key) || !HasValidScalarLength(key, MaxKeyLength)
+                || string.IsNullOrEmpty(candidate) || !HasValidScalarLength(candidate, MaxCandidateLength))
             {
                 return;
             }
@@ -336,7 +345,9 @@ namespace uclliu
             }
             foreach (CandidateEntryData item in data)
             {
-                if (item == null || string.IsNullOrEmpty(item.Key) || item.Key.Length > MaxKeyLength || string.IsNullOrEmpty(item.Candidate) || item.Candidate.Length > MaxCandidateLength || item.Score <= 0)
+                if (item == null || string.IsNullOrEmpty(item.Key) || !HasValidScalarLength(item.Key, MaxKeyLength)
+                    || string.IsNullOrEmpty(item.Candidate) || !HasValidScalarLength(item.Candidate, MaxCandidateLength)
+                    || item.Score <= 0)
                 {
                     continue;
                 }
@@ -363,6 +374,61 @@ namespace uclliu
                 nextOrder = Math.Max(nextOrder, itemOrder == long.MaxValue ? long.MaxValue : itemOrder + 1);
                 TrimBucket(scope, item.Key, candidates);
             }
+        }
+
+        private static bool TryGetScalarStarts(string value, out List<int> starts)
+        {
+            starts = new List<int>();
+            for (int i = 0; i < value.Length;)
+            {
+                starts.Add(i);
+                if (char.IsHighSurrogate(value[i]))
+                {
+                    if (i + 1 >= value.Length || !char.IsLowSurrogate(value[i + 1]))
+                    {
+                        return false;
+                    }
+                    i += 2;
+                }
+                else
+                {
+                    if (char.IsLowSurrogate(value[i]))
+                    {
+                        return false;
+                    }
+                    i++;
+                }
+            }
+            return true;
+        }
+
+        private static bool HasValidScalarLength(string value, int maxLength)
+        {
+            int count = 0;
+            for (int i = 0; i < value.Length;)
+            {
+                if (++count > maxLength)
+                {
+                    return false;
+                }
+                if (char.IsHighSurrogate(value[i]))
+                {
+                    if (i + 1 >= value.Length || !char.IsLowSurrogate(value[i + 1]))
+                    {
+                        return false;
+                    }
+                    i += 2;
+                }
+                else
+                {
+                    if (char.IsLowSurrogate(value[i]))
+                    {
+                        return false;
+                    }
+                    i++;
+                }
+            }
+            return true;
         }
 
         private sealed class Entry

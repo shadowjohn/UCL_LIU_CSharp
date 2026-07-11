@@ -113,6 +113,7 @@ internal static class Program
         failed += Run("smart candidate memory save atomically replaces file", TestSmartCandidateMemorySaveAtomicallyReplacesFile);
         failed += Run("smart candidate memory caps candidates and scope", TestSmartCandidateMemoryCapsCandidatesAndScope);
         failed += Run("smart candidate memory loads compatible literal JSON", TestSmartCandidateMemoryLoadsCompatibleLiteralJson);
+        failed += Run("smart candidate memory learns supplementary scalar sequences", TestSmartCandidateMemoryLearnsSupplementaryScalarSequences);
         failed += Run("smart candidate session pages and selects one based candidates", TestSmartCandidateSessionPagesAndSelects);
         failed += Run("smart candidate session uses longest suffix and memory first", TestSmartCandidateSessionUsesLongestSuffixAndMemoryFirst);
         failed += Run("smart candidate session learns continuous Chinese commits", TestSmartCandidateSessionLearnsContinuousChineseCommits);
@@ -1816,6 +1817,76 @@ internal static class Program
         finally
         {
             File.Delete(path);
+        }
+    }
+
+    private static void TestSmartCandidateMemoryLearnsSupplementaryScalarSequences()
+    {
+        string a = char.ConvertFromUtf32(0x20000);
+        string b = char.ConvertFromUtf32(0x20001);
+        string c = char.ConvertFromUtf32(0x20002);
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+
+        memory.ObserveSequence(a + b + c + "明");
+
+        AssertSequence(new string[] { b + c + "明" }, memory.GetPredictions(a).ToArray());
+        AssertSequence(new string[] { c + "明" }, memory.GetPredictions(a + b).ToArray());
+        AssertSequence(new string[] { "明" }, memory.GetPredictions(a + b + c).ToArray());
+        AssertValidUtf16(memory.GetPredictions(a));
+        AssertValidUtf16(memory.GetPredictions(a + b));
+        AssertValidUtf16(memory.GetPredictions(a + b + c));
+
+        string sixtyFourScalars = RepeatText(a, SmartCandidateMemory.MaxCandidateLength);
+        string sixtyFiveScalars = sixtyFourScalars + a;
+        memory.RecordPredictionChoice(sixtyFourScalars, sixtyFourScalars);
+        memory.RecordPredictionChoice(sixtyFiveScalars, "拒絕");
+        memory.RecordPredictionChoice("cap", sixtyFiveScalars);
+        AssertSequence(new string[] { sixtyFourScalars }, memory.GetPredictions(sixtyFourScalars).ToArray());
+        AssertSequence(new string[0], memory.GetPredictions(sixtyFiveScalars).ToArray());
+        AssertSequence(new string[0], memory.GetPredictions("cap").ToArray());
+
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            SmartCandidateMemoryStore.SaveAtomic(path, memory);
+            SmartCandidateMemory loaded = SmartCandidateMemoryStore.Load(path);
+            AssertSequence(new string[] { sixtyFourScalars }, loaded.GetPredictions(sixtyFourScalars).ToArray());
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    private static string RepeatText(string value, int count)
+    {
+        StringBuilder result = new StringBuilder(value.Length * count);
+        for (int i = 0; i < count; i++)
+        {
+            result.Append(value);
+        }
+        return result.ToString();
+    }
+
+    private static void AssertValidUtf16(IEnumerable<string> values)
+    {
+        foreach (string value in values)
+        {
+            for (int i = 0; i < value.Length; i++)
+            {
+                if (char.IsHighSurrogate(value[i]))
+                {
+                    AssertTrue(i + 1 < value.Length && char.IsLowSurrogate(value[i + 1]), "high surrogate must keep its low surrogate");
+                    i++;
+                }
+                else
+                {
+                    AssertTrue(!char.IsLowSurrogate(value[i]), "low surrogate must keep its high surrogate");
+                }
+            }
         }
     }
 
