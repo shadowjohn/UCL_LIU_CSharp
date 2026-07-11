@@ -121,4 +121,17 @@ namespace uclliu
             return new HalfFullShortcutDecision(shouldToggle, shouldToggle);
         }
     }
+
+    public static class SmartCandidateKeyRules
+    {
+        public static int SelectionNumber(int virtualKey, bool shiftDown)
+        {
+            return shiftDown && virtualKey >= 49 && virtualKey <= 53 ? virtualKey - 48 : 0;
+        }
+
+        public static bool ShouldPageOnShiftSpace(bool visible, bool hasNextPage)
+        {
+            return visible && hasNextPage;
+        }
+    }
 }

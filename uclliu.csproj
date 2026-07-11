@@ -142,6 +142,7 @@
     <Compile Include="SimpleIni.cs" />
     <Compile Include="SmartCandidateTable.cs" />
     <Compile Include="SmartCandidateMemory.cs" />
+    <Compile Include="SmartCandidateSession.cs" />
     <Compile Include="ShortRootDisplaySetting.cs" />
     <Compile Include="TextOutput.cs" />
     <Compile Include="TableLayoutModeTransition.cs" />

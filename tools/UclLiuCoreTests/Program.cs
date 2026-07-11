@@ -113,6 +113,13 @@ internal static class Program
         failed += Run("smart candidate memory save atomically replaces file", TestSmartCandidateMemorySaveAtomicallyReplacesFile);
         failed += Run("smart candidate memory caps candidates and scope", TestSmartCandidateMemoryCapsCandidatesAndScope);
         failed += Run("smart candidate memory loads compatible literal JSON", TestSmartCandidateMemoryLoadsCompatibleLiteralJson);
+        failed += Run("smart candidate session pages and selects one based candidates", TestSmartCandidateSessionPagesAndSelects);
+        failed += Run("smart candidate session uses longest suffix and memory first", TestSmartCandidateSessionUsesLongestSuffixAndMemoryFirst);
+        failed += Run("smart candidate session learns continuous Chinese commits", TestSmartCandidateSessionLearnsContinuousChineseCommits);
+        failed += Run("smart candidate session handles punctuation and cancellation boundaries", TestSmartCandidateSessionHandlesBoundaries);
+        failed += Run("smart candidate session distinguishes cancel and end context", TestSmartCandidateSessionCancelAndEndContext);
+        failed += Run("smart candidate session flushes dirty memory only when idle", TestSmartCandidateSessionFlushRules);
+        failed += Run("smart candidate key rules require shifted top row digits", TestSmartCandidateKeyRules);
 
         if (failed > 0)
         {
@@ -1808,6 +1815,142 @@ internal static class Program
         {
             File.Delete(path);
         }
+    }
+
+    private static void TestSmartCandidateSessionPagesAndSelects()
+    {
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+        SmartCandidateSession session = new SmartCandidateSession(SmartCandidateTable.Parse(new string[]
+        {
+            "王\t小明\t先生\t小姐\t同學\t老師\t主任"
+        }), memory);
+
+        session.ObserveCommittedText("王");
+
+        AssertSequence(new string[] { "小明", "先生", "小姐", "同學", "老師" }, ToArray(session.VisibleCandidates));
+        IList<string> visibleCopy = session.VisibleCandidates;
+        bool readOnly = false;
+        try
+        {
+            visibleCopy.Add("不應加入");
+        }
+        catch (NotSupportedException)
+        {
+            readOnly = true;
+        }
+        AssertTrue(readOnly, "visible candidates should be read-only");
+        AssertTrue(session.HasNextPage, "first page should report another page");
+        AssertTrue(session.NextPage(), "next page should be available");
+        AssertSequence(new string[] { "主任" }, ToArray(session.VisibleCandidates));
+        session.EndContext();
+        session.ObserveCommittedText("王");
+        AssertEqual("小明", session.Select(1));
+        AssertEqual("王小明", session.Context);
+        AssertEqual("", session.Select(9));
+        AssertEqual("王小明", session.Context);
+        AssertEqual("小明", memory.GetPredictions("王")[0]);
+    }
+
+    private static void TestSmartCandidateSessionUsesLongestSuffixAndMemoryFirst()
+    {
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+        memory.RecordPredictionChoice("甲乙王", "記憶");
+        memory.RecordPredictionChoice("甲乙王", "重複");
+        SmartCandidateSession session = new SmartCandidateSession(SmartCandidateTable.Parse(new string[]
+        {
+            "王\t短後綴",
+            "乙王\t中後綴",
+            "甲乙王\t重複\t表格"
+        }), memory);
+
+        session.ObserveCommittedText("甲乙王");
+
+        AssertSequence(new string[] { "記憶", "重複", "表格" }, ToArray(session.VisibleCandidates));
+        AssertTrue(session.Enabled && session.ContinuousEnabled, "available table should enable continuous predictions by default");
+        session.ContinuousEnabled = false;
+        AssertSequence(new string[0], ToArray(session.VisibleCandidates));
+        session.ContinuousEnabled = true;
+        AssertSequence(new string[] { "記憶", "重複", "表格" }, ToArray(session.VisibleCandidates));
+    }
+
+    private static void TestSmartCandidateSessionLearnsContinuousChineseCommits()
+    {
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+        SmartCandidateSession session = new SmartCandidateSession(SmartCandidateTable.Empty(), memory);
+        session.Enabled = true;
+
+        session.ObserveCommittedText("王");
+        session.ObserveCommittedText("小");
+        session.ObserveCommittedText("明");
+
+        AssertTrue(memory.GetPredictions("王").Contains("小明"), "separate commits should learn the whole Chinese run");
+    }
+
+    private static void TestSmartCandidateSessionHandlesBoundaries()
+    {
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+        SmartCandidateSession session = new SmartCandidateSession(SmartCandidateTable.Parse(new string[] { "王\t小明" }), memory);
+        session.ObserveCommittedText("王");
+
+        session.ObserveCommittedText("，");
+        AssertEqual("王", session.Context);
+        AssertSequence(new string[] { "小明" }, ToArray(session.VisibleCandidates));
+        session.ObserveCommittedText("A");
+        AssertSequence(new string[0], ToArray(session.VisibleCandidates));
+        AssertSequence(new string[0], memory.GetPredictions("A").ToArray());
+        session.ObserveCommittedText("小");
+        AssertSequence(new string[0], memory.GetPredictions("王").ToArray());
+        session.ObserveCommittedText("。");
+        AssertEqual("", session.Context);
+        session.ObserveCommittedText("王");
+        session.ObserveCommittedText("\r\n");
+        AssertEqual("", session.Context);
+    }
+
+    private static void TestSmartCandidateSessionCancelAndEndContext()
+    {
+        SmartCandidateSession session = new SmartCandidateSession(
+            SmartCandidateTable.Parse(new string[] { "王\t小明" }),
+            new SmartCandidateMemory());
+        session.ObserveCommittedText("王");
+
+        session.Cancel();
+        AssertEqual("王", session.Context);
+        AssertSequence(new string[0], ToArray(session.VisibleCandidates));
+        session.EndContext();
+        AssertEqual("", session.Context);
+        AssertSequence(new string[0], ToArray(session.VisibleCandidates));
+    }
+
+    private static void TestSmartCandidateSessionFlushRules()
+    {
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+        SmartCandidateSession session = new SmartCandidateSession(SmartCandidateTable.Empty(), memory);
+        session.Enabled = true;
+        session.ObserveCommittedText("王小");
+        TimeSpan idle = TimeSpan.FromMinutes(3);
+
+        AssertTrue(!session.ShouldFlush(session.LastActivityUtc.Add(idle).AddTicks(-1), idle), "dirty memory should wait for full idle threshold");
+        AssertTrue(session.ShouldFlush(session.LastActivityUtc.Add(idle), idle), "dirty memory should flush at idle threshold");
+        memory.MarkSaved();
+        AssertTrue(!session.ShouldFlush(session.LastActivityUtc.AddHours(1), idle), "clean memory should not flush");
+    }
+
+    private static void TestSmartCandidateKeyRules()
+    {
+        AssertEqual(1, SmartCandidateKeyRules.SelectionNumber(49, true));
+        AssertEqual(5, SmartCandidateKeyRules.SelectionNumber(53, true));
+        AssertEqual(0, SmartCandidateKeyRules.SelectionNumber(49, false));
+        AssertEqual(0, SmartCandidateKeyRules.SelectionNumber(54, true));
+        AssertTrue(SmartCandidateKeyRules.ShouldPageOnShiftSpace(true, true), "visible next page should win Shift+Space");
+        AssertTrue(!SmartCandidateKeyRules.ShouldPageOnShiftSpace(true, false), "last page should fall through");
+    }
+
+    private static string[] ToArray(IList<string> values)
+    {
+        string[] result = new string[values.Count];
+        values.CopyTo(result, 0);
+        return result;
     }
 
     private static byte[] BuildUnitab(string firstTwoKeys, int key3, int key4, int unicodeCodePoint)

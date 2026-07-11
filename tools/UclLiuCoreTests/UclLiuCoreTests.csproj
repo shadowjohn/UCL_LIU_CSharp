@@ -23,6 +23,7 @@
     <Compile Include="..\..\SimpleIni.cs" Link="SimpleIni.cs" />
     <Compile Include="..\..\SmartCandidateTable.cs" Link="SmartCandidateTable.cs" />
     <Compile Include="..\..\SmartCandidateMemory.cs" Link="SmartCandidateMemory.cs" />
+    <Compile Include="..\..\SmartCandidateSession.cs" Link="SmartCandidateSession.cs" />
     <Compile Include="..\..\ShortRootDisplaySetting.cs" Link="ShortRootDisplaySetting.cs" />
     <Compile Include="..\..\TextOutput.cs" Link="TextOutput.cs" />
     <Compile Include="..\..\TableLayoutModeTransition.cs" Link="TableLayoutModeTransition.cs" />
