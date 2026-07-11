@@ -1,6 +1,6 @@
 # UCL_LIU_CSharp
 
-C# / WinForms 版肥米輸入法，目前正式版本為 v0.16；`Feature_v0.17` 正在開發智慧候選字，尚未發佈。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
+C# / WinForms 版肥米輸入法，目前正式版本為 v0.16；`Feature_v0.17` 正在開發固定候選字與連續出字，尚未發佈。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
 
 目前 C# 版已進入可日用測試的現代化復刻狀態：已補上多來源字碼表自動轉換、自定詞庫、Unicode SendInput 出字、剪貼簿 fallback、打字音效、同音/注音查詢、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback、管理員重啟導引與核心測試。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
 
@@ -22,7 +22,7 @@ C# / WinForms 版肥米輸入法，目前正式版本為 v0.16；`Feature_v0.17`
 | 貼上模式 | 已封裝 retry、timeout、try/finally 還原剪貼簿 | 已有大量 App 特例 |
 | 字碼表 | 支援 `liu.json`、`liu.cin`、`liu-uni.tab`、RIME/fcitx/小小輸入法等來源自動轉換 | 支援來源較多，另含部分需手動整理的長尾碼表 |
 | 自定詞庫 | 支援 `custom.json`、右下角選單、`,,,BOX`、單例視窗 | v1.63-v1.65 已完整支援 |
-| 智慧候選字（v0.17 開發中） | 本機 `candidate.txt` 靜態詞組預測與連續出字；不自動下載 | C# 版新增功能 |
+| 固定候選字（v0.17 開發中） | 本機 `candidate.txt` 靜態詞組預測與連續出字，候選最多 3 字；不做個人學習、不自動下載 | C# 版新增功能 |
 | UI 效能 | 已降低短版模式與 foreground process 查詢熱路徑負擔；短版啟動即套用 packed layout，`肥` / `半` / `╳` chrome 尺寸與長版一致，並移除按鈕 focus 後的按下視覺殘留 | Python 版後期另有多輪 Win11/位置修正 |
 | TSF Bridge | 已移植為手動 `TSF出字模式`，透過 named pipe 呼叫外掛 DLL，失敗 fallback Unicode `SendInput`；右下角選單可檢查/註冊/解除註冊，非管理員時可導引重新以系統管理員啟動 | v1.67 實驗性支援 |
 | 打字音效 | 支援自備 `wavs\*.wav`、開關、10%-100% 音量、特殊鍵音效、防長按連發；官方發行檔不內含授權不明音效素材 | 已支援音效與音量設定 |
@@ -32,7 +32,7 @@ C# / WinForms 版肥米輸入法，目前正式版本為 v0.16；`Feature_v0.17`
 
 ## 低依賴狀態
 
-C# 版自 v0.16 起已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。v0.17 智慧候選字同樣只使用內建 .NET API 與本機資料檔，沒有增加 DLL 或 NuGet。主程式只使用 .NET Framework 4.5.2 內建 reference，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。TSF Bridge 的 C++ 原始碼也已納入 `tsf_bridge\UclTsfBridge`，可由本 repo 自行重建。
+C# 版自 v0.16 起已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。v0.17 固定候選字同樣只使用內建 .NET API 與本機資料檔，沒有增加 DLL 或 NuGet。主程式只使用 .NET Framework 4.5.2 內建 reference，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。TSF Bridge 的 C++ 原始碼也已納入 `tsf_bridge\UclTsfBridge`，可由本 repo 自行重建。
 
 TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預設出字流程；只有手動切到 `TSF出字模式` 時才會透過 named pipe 呼叫 `tsf_bridge\UclTsfBridge.dll`。
 
@@ -69,11 +69,11 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
    - `uniliu.txt`
 3. 可選：放入 `pinyi.txt` 啟用同音字與注音查詢。
 4. 可選：放入自有或合法授權的 `wavs\*.wav` 啟用打字音效。
-5. v0.17 開發版可選：將 repo 根目錄的 `candidate.txt` 手動下載到 `uclliu.exe` 同一目錄，啟用智慧候選字。
+5. v0.17 開發版可選：將 repo 根目錄的 `candidate.txt` 手動下載到 `uclliu.exe` 同一目錄，啟用固定候選字與連續出字。
 6. 可選：保留 `tsf_bridge` 目錄，右下角選單可註冊 TSF Bridge 並手動切到 `TSF出字模式`。
 7. 執行 `uclliu.exe`。
 
-因字碼表版權問題，本專案不提供上述字碼表。若使用 `liu.cin`、`liu-uni.tab` 或外部文字碼表，C# 版啟動時會自動產生 `liu.json`。
+因輸入字碼表版權問題，本專案不提供 `liu.json`、`liu.cin`、`liu-uni.tab` 等肥米字根資料；若使用 `liu.cin`、`liu-uni.tab` 或外部文字碼表，C# 版啟動時會自動產生 `liu.json`。`candidate.txt` 已另外納入 repo，並依 LGPL-2.1-or-later 提供。
 
 發行檔位置：
 
@@ -126,11 +126,11 @@ v0.16 推薦下載包 `uclliu-v0.16.zip` 內含：
 
 v0.16 推薦下載包已內含 `pinyi.txt`；若只下載單檔 `uclliu.exe`，需要自行補上 `pinyi.txt` 才會有同音字與注音查詢。
 
-## v0.17 智慧候選字（開發中）
+## v0.17 固定候選字（開發中）
 
-智慧候選字只讀取 `uclliu.exe` 同目錄的 `candidate.txt`，不會自動下載或連線查詢。缺少資料時，右下角 `12. 候選字相關` 只顯示「請先下載候選字」，點擊後開啟[專案 GitHub](https://github.com/shadowjohn/UCL_LIU_CSharp)，請手動下載 repo 根目錄的 `candidate.txt`；`13. 離開(Quit)` 為離開程式。
+固定候選字只讀取 `uclliu.exe` 同目錄的 `candidate.txt`，不會自動下載或連線查詢。缺少資料時，右下角 `12. 候選字相關` 只顯示「請先下載候選字」，點擊後開啟[專案 GitHub](https://github.com/shadowjohn/UCL_LIU_CSharp)，請手動下載 repo 根目錄的 `candidate.txt`；`13. 離開(Quit)` 為離開程式。
 
-資料存在時，選單只提供「候選字啟動」與「連續出字」兩個開關。總開關預設關閉，連續出字預設開啟；第一次升級到 policy v2 時套用一次，之後保留使用者設定。送字後每頁顯示最多 5 筆，可用 `Shift+1`～`Shift+5` 選字；有下一頁時 `Shift+Space` 優先翻頁，否則回到原本的半形／全形行為。Esc、新字根、切換英／肥模式與句尾會結束目前候選上下文。
+資料存在時，選單只提供「【　】啟動候選字表」與「【●】連續出字功能」兩個開關。總開關預設關閉，連續出字預設開啟；第一次升級到 policy v2 時套用一次，之後保留使用者設定。送字後每頁顯示最多 5 筆，可用 `Shift+1`～`Shift+5` 選字；有下一頁時 `Shift+Space` 優先翻頁，否則回到原本的半形／全形行為。Esc、Enter、新字根、切換英／肥模式與句尾會結束目前候選上下文。
 
 v0.17 僅使用 `candidate.txt` 的固定順序，常用候選優先來自上游詞頻，不做個人學習或智慧字根排序。舊有 `candidate_memory.json` 不讀取、不寫入也不自動刪除。候選最多 3 個 Unicode scalar，載入舊版或自訂表時超長候選會略過；與目前上下文直接重複的候選也不顯示，避免疊字與自我延伸。
 
