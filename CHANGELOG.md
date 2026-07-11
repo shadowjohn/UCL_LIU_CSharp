@@ -6,23 +6,26 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ### Added
 
-- v0.17 開發版加入智慧候選字：`candidate.txt` 詞組預測、一般輸入學習、智慧字根排序、每頁 5 筆、`Shift+1`～`Shift+5` 選字與 `Shift+Space` 優先翻頁。
-- 右下角加入 `12. 候選字相關`，提供候選字、連續出字、智慧字根三個開關與清除個人記憶；離開調整為 `13. 離開(Quit)`。
-- 個人記憶保存於本機 `candidate_memory.json`，閒置 3 分鐘或正常離開時原子寫入，並限制每個 key 16 筆、每類 1024 筆。
+- v0.17 開發版加入靜態候選字：`candidate.txt` 固定詞組預測、每頁 5 筆、`Shift+1`～`Shift+5` 選字與 `Shift+Space` 優先翻頁。
+- 右下角加入 `12. 候選字相關`，候選表存在時只提供總開關與連續出字開關；離開調整為 `13. 離開(Quit)`。
 - 新增 `build_and_run.bat`，只停止本 repo Debug exe，建置成功後才從 `bin\Debug` 啟動並回報 PID／版本。
 
 ### Changed
 
 - 開發版號更新為 `0.17`；遊戲／正常模式命令調整為 `,,,game` / `,,,normal`。
 - `candidate.txt` 會複製到本機 build output；完整 zip 包含候選資料與授權檔，單檔 exe 不包含，也不會自動下載。
+- v0.17 停用個人學習、智慧字根與記憶清除；既有 `candidate_memory.json` 保留但不讀寫，候選順序固定沿用上游詞頻。
+- 候選預設關閉、連續出字預設開啟；一次性 policy v2 migration 套用後會保留使用者後續切換。
 
 ### Data
 
 - `candidate.txt` 由 libchewing-data `dict/chewing/tsi.csv` 固定版本轉換，採 LGPL-2.1-or-later；來源、hash、修改與再散布聲明見 `THIRD_PARTY_CANDIDATE_DATA.md`。
+- 官方與自訂候選載入時皆限制最多 3 個 Unicode scalar；超長候選由轉換器與 runtime 個別略過。
 
 ### Fixed
 
 - 修正 `TSF出字模式` 在前景程式沒有對應 `uclliu_tsf_bridge_<pid>` pipe、且全域 pipe 不存在時，每次出字都等待 named pipe timeout 才 fallback，造成打字明顯卡頓；現在會先檢查 pipe 是否存在，不存在就立即 fallback。
+- 修正逐字觀察造成 `智 -> 慧、慧學、慧學習` 類自我延伸候選；v0.17 僅使用靜態表，並抑制與目前上下文直接重複的候選。
 
 ---
 

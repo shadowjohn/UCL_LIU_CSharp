@@ -60,7 +60,7 @@ namespace uclliu
                 for (int i = 1; i < fields.Length; i++)
                 {
                     string candidate = fields[i].Trim();
-                    if (candidate.Length > 0 && !rowCandidates.Contains(candidate))
+                    if (candidate.Length > 0 && CountScalars(candidate) <= 3 && !rowCandidates.Contains(candidate))
                     {
                         rowCandidates.Add(candidate);
                     }
@@ -99,6 +99,18 @@ namespace uclliu
                 return new List<string>();
             }
             return new List<string>(candidates);
+        }
+
+        private static int CountScalars(string value)
+        {
+            int count = 0;
+            for (int i = 0; i < value.Length; count++)
+            {
+                i += char.IsHighSurrogate(value[i])
+                    && i + 1 < value.Length
+                    && char.IsLowSurrogate(value[i + 1]) ? 2 : 1;
+            }
+            return count;
         }
     }
 }

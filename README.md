@@ -22,7 +22,7 @@ C# / WinForms 版肥米輸入法，目前正式版本為 v0.16；`Feature_v0.17`
 | 貼上模式 | 已封裝 retry、timeout、try/finally 還原剪貼簿 | 已有大量 App 特例 |
 | 字碼表 | 支援 `liu.json`、`liu.cin`、`liu-uni.tab`、RIME/fcitx/小小輸入法等來源自動轉換 | 支援來源較多，另含部分需手動整理的長尾碼表 |
 | 自定詞庫 | 支援 `custom.json`、右下角選單、`,,,BOX`、單例視窗 | v1.63-v1.65 已完整支援 |
-| 智慧候選字（v0.17 開發中） | 本機 `candidate.txt` 詞組預測、連續出字與智慧字根排序；不自動下載 | C# 版新增功能 |
+| 智慧候選字（v0.17 開發中） | 本機 `candidate.txt` 靜態詞組預測與連續出字；不自動下載 | C# 版新增功能 |
 | UI 效能 | 已降低短版模式與 foreground process 查詢熱路徑負擔；短版啟動即套用 packed layout，`肥` / `半` / `╳` chrome 尺寸與長版一致，並移除按鈕 focus 後的按下視覺殘留 | Python 版後期另有多輪 Win11/位置修正 |
 | TSF Bridge | 已移植為手動 `TSF出字模式`，透過 named pipe 呼叫外掛 DLL，失敗 fallback Unicode `SendInput`；右下角選單可檢查/註冊/解除註冊，非管理員時可導引重新以系統管理員啟動 | v1.67 實驗性支援 |
 | 打字音效 | 支援自備 `wavs\*.wav`、開關、10%-100% 音量、特殊鍵音效、防長按連發；官方發行檔不內含授權不明音效素材 | 已支援音效與音量設定 |
@@ -130,9 +130,9 @@ v0.16 推薦下載包已內含 `pinyi.txt`；若只下載單檔 `uclliu.exe`，�
 
 智慧候選字只讀取 `uclliu.exe` 同目錄的 `candidate.txt`，不會自動下載或連線查詢。缺少資料時，右下角 `12. 候選字相關` 只顯示「請先下載候選字」，點擊後開啟[專案 GitHub](https://github.com/shadowjohn/UCL_LIU_CSharp)，請手動下載 repo 根目錄的 `candidate.txt`；`13. 離開(Quit)` 為離開程式。
 
-資料存在時，選單提供「候選字啟動」、「連續出字」、「智慧字根」三個開關，以及「清除智慧選字記憶」。送字後每頁顯示最多 5 筆，可用 `Shift+1`～`Shift+5` 選字；有下一頁時 `Shift+Space` 優先翻頁，否則回到原本的半形／全形行為。Esc、新字根、切換英／肥模式會取消目前候選；句尾、Enter 與閒置 3 分鐘會結束上下文。
+資料存在時，選單只提供「候選字啟動」與「連續出字」兩個開關。總開關預設關閉，連續出字預設開啟；第一次升級到 policy v2 時套用一次，之後保留使用者設定。送字後每頁顯示最多 5 筆，可用 `Shift+1`～`Shift+5` 選字；有下一頁時 `Shift+Space` 優先翻頁，否則回到原本的半形／全形行為。Esc、新字根、切換英／肥模式與句尾會結束目前候選上下文。
 
-個人學習只保存在同目錄的 `candidate_memory.json`，不會上傳。一般出字會學習 1～3 字上下文，選過的詞組與同字根候選會優先；停止輸入 3 分鐘或正常離開時以暫存檔安全保存，損壞檔會備份成 `.broken`。每個 key 最多 16 個候選，詞組預測與智慧字根各最多 1024 筆，key 與候選各限 64 字元；選單清除只刪個人記憶，不刪 `candidate.txt`。
+v0.17 僅使用 `candidate.txt` 的固定順序，常用候選優先來自上游詞頻，不做個人學習或智慧字根排序。舊有 `candidate_memory.json` 不讀取、不寫入也不自動刪除。候選最多 3 個 Unicode scalar，載入舊版或自訂表時超長候選會略過；與目前上下文直接重複的候選也不顯示，避免疊字與自我延伸。
 
 `candidate.txt` 由 libchewing-data 的 `dict/chewing/tsi.csv` 轉換，檔案本身採 LGPL-2.1-or-later，不屬於本專案 MIT 授權；固定來源、SHA-256、轉換方式與再散布條件見 [第三方候選資料聲明](THIRD_PARTY_CANDIDATE_DATA.md) 與 [LGPL 全文](LICENSES/LGPL-2.1-or-later.txt)。未來完整 zip 會包含候選資料與授權檔，單獨 `uclliu.exe` 不包含；v0.17 尚未發佈，目前沒有 v0.17 release 下載連結。
 
@@ -235,14 +235,15 @@ show_phone_code = 0
 startup_default_ucl = 1
 enable_half_full = 1
 tsf_bridge_timeout_ms = 80
-smart_candidate_enable = 1
+smart_candidate_enable = 0
 smart_candidate_continuous = 1
-smart_root_enable = 1
+smart_root_enable = 0
+smart_candidate_policy_version = 2
 ```
 
 `send_kind_1_paste`、`send_kind_2_big5`、`send_kind_3_noucl` 可填入額外 process 名稱，用逗號分隔。
 `play_sound_enable` 控制打字音，`keyboard_volume` 會限制在 0-100；右下角選單提供 10%-100% 快速切換。`show_phone_code=1` 時出字後會提示注音讀音。`startup_default_ucl=0` 時啟動預設為英模式；`enable_half_full=1` 時可用 `Shift+Space` 切換半形 / 全形，按住 Shift 連按 Space 可連續切換，`enable_half_full=0` 時停用此快捷鍵。`tsf_bridge_timeout_ms` 控制 TSF Bridge pipe 等待時間，會限制在 10-1000ms，預設 80ms。
-`smart_candidate_enable`、`smart_candidate_continuous`、`smart_root_enable` 分別控制智慧候選總開關、連續出字與智慧字根排序。
+`smart_candidate_enable` 與 `smart_candidate_continuous` 分別控制候選總開關與連續出字。`smart_root_enable` 在 v0.17 保留相容但不顯示、不使用；`smart_candidate_policy_version=2` 用於一次性保守預設 migration。
 
 ## 與 Python 版主要差異
 

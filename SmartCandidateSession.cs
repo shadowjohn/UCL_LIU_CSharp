@@ -7,7 +7,6 @@ namespace uclliu
     public sealed class SmartCandidateSession
     {
         private const int MaxContextScalars = 3;
-        private const int MaxChineseRunScalars = MaxContextScalars + SmartCandidateMemory.MaxCandidateLength;
         private readonly SmartCandidateTable _table;
         private readonly SmartCandidateMemory _memory;
         private readonly int _pageSize;
@@ -17,7 +16,6 @@ namespace uclliu
         private bool _continuousEnabled;
         private int _pageOffset;
         private string _contextKey = "";
-        private string _chineseRun = "";
 
         public SmartCandidateSession(SmartCandidateTable table, SmartCandidateMemory memory, int pageSize = 5)
         {
@@ -91,9 +89,7 @@ namespace uclliu
                 i += scalarLength;
                 if (IsChinese(scalar))
                 {
-                    _chineseRun = AppendBoundedScalars(_chineseRun, scalarText, MaxChineseRunScalars);
                     Context = AppendBoundedScalars(Context, scalarText, MaxContextScalars);
-                    _memory.ObserveSequence(_chineseRun);
                     RefreshCandidates();
                 }
                 else if (scalar == '，')
@@ -106,8 +102,7 @@ namespace uclliu
                 }
                 else
                 {
-                    // 非中文會中斷連續學習，避免隔著垃圾字元仍被視為同一詞組。
-                    _chineseRun = "";
+                    // 非中文會中斷候選上下文，避免跨越無關字元繼續預測。
                     Cancel();
                 }
             }
@@ -142,7 +137,6 @@ namespace uclliu
             {
                 return false;
             }
-            _memory.RecordPredictionChoice(selection.ContextKey, selection.Text);
             ObserveCommittedText(committedText);
             selection.IsCommitted = true;
             return true;
@@ -210,12 +204,18 @@ namespace uclliu
             for (int length = maxLength; length >= 1; length--)
             {
                 string key = TakeLastScalars(Context, length);
-                List<string> merged = _memory.GetPredictions(key);
-                MergeUnique(merged, _table.Find(key));
-                if (merged.Count > 0)
+                List<string> candidates = _table.Find(key);
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    string candidate = candidates[i];
+                    if (!Context.EndsWith(candidate, StringComparison.Ordinal) && !_candidates.Contains(candidate))
+                    {
+                        _candidates.Add(candidate);
+                    }
+                }
+                if (_candidates.Count > 0)
                 {
                     _contextKey = key;
-                    _candidates.AddRange(merged);
                     UpdateVisiblePage();
                     return;
                 }
@@ -240,7 +240,6 @@ namespace uclliu
         private void ClearContext()
         {
             Context = "";
-            _chineseRun = "";
             Cancel();
         }
 
@@ -283,17 +282,6 @@ namespace uclliu
                 && char.IsLowSurrogate(value[index + 1])
                 ? 2
                 : 1;
-        }
-
-        private static void MergeUnique(List<string> target, IEnumerable<string> source)
-        {
-            foreach (string candidate in source)
-            {
-                if (!target.Contains(candidate))
-                {
-                    target.Add(candidate);
-                }
-            }
         }
 
         private static bool IsChinese(int value)
@@ -391,10 +379,6 @@ namespace uclliu
             }
             else
             {
-                if (_rootChoice != null)
-                {
-                    memory.RecordRootChoice(_rootChoice.Root, _rootChoice.Candidate);
-                }
                 session.ObserveCommittedText(preparedText);
             }
             _completed = true;
@@ -411,9 +395,15 @@ namespace uclliu
                 throw new ArgumentNullException("config");
             }
 
-            EnsureDefault(config["DEFAULT"], "SMART_CANDIDATE_ENABLE");
-            EnsureDefault(config["DEFAULT"], "SMART_CANDIDATE_CONTINUOUS");
-            EnsureDefault(config["DEFAULT"], "SMART_ROOT_ENABLE");
+            SimpleIniSection section = config["DEFAULT"];
+            if (!section.ContainsKey("SMART_CANDIDATE_POLICY_VERSION")
+                || section["SMART_CANDIDATE_POLICY_VERSION"] != "2")
+            {
+                section["SMART_CANDIDATE_ENABLE"] = "0";
+                section["SMART_CANDIDATE_CONTINUOUS"] = "1";
+                section["SMART_ROOT_ENABLE"] = "0";
+                section["SMART_CANDIDATE_POLICY_VERSION"] = "2";
+            }
         }
 
         public static bool IsEnabled(string value)
@@ -426,13 +416,6 @@ namespace uclliu
             return IsEnabled(totalEnabled) && IsEnabled(rootEnabled) && tableAvailable && sessionEnabled;
         }
 
-        private static void EnsureDefault(SimpleIniSection section, string key)
-        {
-            if (!section.ContainsKey(key))
-            {
-                section[key] = "1";
-            }
-        }
     }
 
     public static class SmartCandidateDisplay

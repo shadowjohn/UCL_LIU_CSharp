@@ -76,6 +76,9 @@ foreach ($record in $records) {
     for ($length = 1; $length -le $maxPrefix; $length++) {
         $key = [string]::Concat($scalars[0..($length - 1)])
         $suffix = [string]::Concat($scalars[$length..($scalars.Count - 1)])
+        if ($scalars.Count - $length -gt 3) {
+            continue
+        }
         if (-not $rows.ContainsKey($key)) {
             $rows[$key] = [System.Collections.Generic.Dictionary[string, long]]::new([System.StringComparer]::Ordinal)
         }

@@ -27,7 +27,6 @@ namespace uclliu
         public readonly TsfBridgeManager tsfBridgeManager;
         private const int ShortModeTextPadding = 8;
         public const string CANDIDATE_FILE = "candidate.txt";
-        public const string CANDIDATE_MEMORY_FILE = "candidate_memory.json";
         public string VERSION = UclLiuAppInfo.Version;
         public FileStream lockFileString;
         public SmartCandidateMemory smartCandidateMemory;
@@ -468,63 +467,6 @@ namespace uclliu
             smartCandidates.Cancel();
             refresh_smart_candidate_label();
         }
-        public void flush_smart_candidate_memory(bool force)
-        {
-            if (smartCandidates == null || smartCandidateMemory == null || !smartCandidateMemory.IsDirty)
-            {
-                if (!force && smartCandidates != null)
-                {
-                    smartCandidates.ShouldFlush(DateTime.UtcNow, TimeSpan.FromMinutes(3));
-                }
-                return;
-            }
-            if (!force && !smartCandidates.ShouldFlush(DateTime.UtcNow, TimeSpan.FromMinutes(3)))
-            {
-                return;
-            }
-
-            try
-            {
-                SmartCandidateMemoryStore.SaveAtomic(Path.Combine(my.pwd(), CANDIDATE_MEMORY_FILE), smartCandidateMemory);
-            }
-            catch (Exception ex)
-            {
-                debug_print("smart candidate memory save failed: " + ex.Message);
-            }
-        }
-        public bool clear_smart_candidate_memory()
-        {
-            string memoryPath = Path.Combine(my.pwd(), CANDIDATE_MEMORY_FILE);
-            string error;
-            if (!SmartCandidateMemoryStore.TryClearAtomic(memoryPath, out error))
-            {
-                debug_print("smart candidate memory clear failed: " + error);
-                return false;
-            }
-
-            foreach (string path in new string[] { memoryPath + ".tmp", memoryPath + ".broken" })
-            {
-                try
-                {
-                    if (File.Exists(path))
-                    {
-                        File.Delete(path);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    debug_print("smart candidate memory cleanup failed: " + ex.Message);
-                }
-            }
-
-            smartCandidateMemory = new SmartCandidateMemory();
-            smartCandidates = new SmartCandidateSession(smartCandidateTable ?? SmartCandidateTable.Empty(), smartCandidateMemory);
-            smartCandidates.Enabled = SmartCandidateSettings.IsEnabled(config["DEFAULT"]["SMART_CANDIDATE_ENABLE"])
-                && has_smart_candidate_table();
-            smartCandidates.ContinuousEnabled = SmartCandidateSettings.IsEnabled(config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"]);
-            refresh_smart_candidate_label();
-            return true;
-        }
         public void refresh_smart_candidate_label()
         {
             if (smartCandidates == null)
@@ -810,6 +752,7 @@ namespace uclliu
                     debug_print(ex.Message);
                 }
             }
+            SmartCandidateSettings.EnsureDefaults(config);
             debug_print(config.ToString());
             if (Convert.ToDouble(config["DEFAULT"]["ALPHA"]) >= 1)
             {
@@ -904,7 +847,6 @@ namespace uclliu
         private void initialize_smart_candidates()
         {
             string tablePath = Path.Combine(my.pwd(), CANDIDATE_FILE);
-            string memoryPath = Path.Combine(my.pwd(), CANDIDATE_MEMORY_FILE);
             try
             {
                 smartCandidateTable = SmartCandidateTable.Load(tablePath);
@@ -919,21 +861,8 @@ namespace uclliu
                 debug_print("smart candidate table load failed: " + ex.Message);
             }
 
-            bool memoryExisted = File.Exists(memoryPath);
-            try
-            {
-                smartCandidateMemory = SmartCandidateMemoryStore.Load(memoryPath);
-                if (memoryExisted && !File.Exists(memoryPath))
-                {
-                    debug_print("smart candidate memory was invalid and has been backed up");
-                }
-            }
-            catch (Exception ex)
-            {
-                smartCandidateMemory = new SmartCandidateMemory();
-                debug_print("smart candidate memory load failed: " + ex.Message);
-            }
-
+            // v0.17 僅使用官方靜態排序；保留空物件以維持既有介面，但不讀取使用者記憶檔。
+            smartCandidateMemory = new SmartCandidateMemory();
             smartCandidates = new SmartCandidateSession(smartCandidateTable, smartCandidateMemory);
             smartCandidates.Enabled = SmartCandidateSettings.IsEnabled(config["DEFAULT"]["SMART_CANDIDATE_ENABLE"])
                 && smartCandidateTable.IsAvailable;
@@ -2067,9 +1996,7 @@ namespace uclliu
             else if (try_get_root_candidates(c, out candidates))
             {
                 //# print("Debug V2")
-                ucl_find_data = should_use_smart_root()
-                    ? smartCandidateMemory.RankRootCandidates(c, candidates)
-                    : new List<string>(candidates);
+                ucl_find_data = new List<string>(candidates);
                 word_label_set_text();
                 return true;
             }
@@ -2305,27 +2232,7 @@ namespace uclliu
 
         private SmartCandidateOutputCommit prepare_normal_smart_candidate_output(string data)
         {
-            if (!should_use_smart_root())
-            {
-                return SmartCandidateOutputCommit.ForNormal(null);
-            }
-
-            string root = (play_ucl_label ?? "").ToLowerInvariant().Trim();
-            List<string> candidates;
-            SmartCandidateRootChoice rootChoice = try_get_root_candidates(root, out candidates)
-                ? SmartCandidateRootChoice.Capture(root, data, candidates)
-                : null;
-            return SmartCandidateOutputCommit.ForNormal(rootChoice);
-        }
-
-        private bool should_use_smart_root()
-        {
-            return smartCandidateMemory != null
-                && SmartCandidateSettings.ShouldUseSmartRoot(
-                    config["DEFAULT"]["SMART_CANDIDATE_ENABLE"],
-                    config["DEFAULT"]["SMART_ROOT_ENABLE"],
-                    has_smart_candidate_table(),
-                    smartCandidates != null && smartCandidates.Enabled);
+            return SmartCandidateOutputCommit.ForNormal(null);
         }
 
         public void senddata(string data)

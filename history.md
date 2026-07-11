@@ -1,5 +1,17 @@
 # 開發對話紀錄
 
+## 2026-07-11 - v0.17 候選字保守化
+
+### 根本原因與修正
+
+- `SmartCandidateSession.ObserveCommittedText()` 原本每收到一個中文字就呼叫 `ObserveSequence()`，且顯示時把個人記憶排在靜態表之前，造成 `智 -> 慧、慧學、慧學習` 類逐步自我延伸。
+- v0.17 改為完全靜態：不載入、更新、排序或保存 `candidate_memory.json`，智慧字根與清除記憶不再出現在選單；既有記憶檔保留不動。
+- `candidate.txt` 與 runtime loader 都限制候選最多 3 個 Unicode scalar，並抑制與目前上下文直接重複的候選。
+- 總開關預設關閉、連續出字預設開啟、智慧字根關閉，以 policy v2 migration 套用一次後保留使用者選擇。
+- 正式候選表依相同 pinned source 重建為 59,211 keys、202,639 mappings、1,639,012 bytes，SHA-256 `98DAB302D1CAA1504EA7240161C6F8BB5A7C97CB93B8C4314CD935CF77C77765`。
+
+---
+
 ## 2026-07-11 - v0.17 智慧候選字開發收尾
 
 ### 實作紀錄

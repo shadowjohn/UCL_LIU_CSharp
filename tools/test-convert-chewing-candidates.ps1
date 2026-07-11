@@ -18,6 +18,7 @@ try {
         "# dc:identifier,test,"
         '"王小明",100,"ㄨㄤˊ ㄒㄧㄠˇ ㄇㄧㄥˊ"'
         '"王先生",50,"ㄨㄤˊ ㄒㄧㄢ ㄕㄥ"'
+        '"王一二三四",40,"suffix too long"'
         '"王小明",200,"duplicate, quoted phone"'
         ('"' + $extensionB + '中華",80,"supplementary"')
         '極大,9223372036854775807,max long'
@@ -44,6 +45,7 @@ try {
     $lines = [System.IO.File]::ReadAllLines($output1, [System.Text.Encoding]::UTF8)
     $wang = $lines | Where-Object { $_.StartsWith("王`t", [System.StringComparison]::Ordinal) } | Select-Object -First 1
     if ($wang -ne "王`t小明`t先生") { throw "王的候選排序錯誤：$wang" }
+    if ($lines -match "一二三四") { throw "超過三個 Unicode scalar 的候選不應輸出。" }
     if (-not ($lines -contains ($extensionB + "`t中華"))) { throw "補充平面字元被拆壞。" }
     if (-not ($lines -contains ($extensionB + "中`t華"))) { throw "補充平面前綴被拆壞。" }
     if (-not ($lines -contains "極`t大`t小")) { throw "64-bit 頻率排序錯誤。" }

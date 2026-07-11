@@ -6,7 +6,6 @@ namespace uclliu
     {
         public const string CandidateMenu = "12. 候選字相關";
         public const string CandidateDownload = "請先下載候選字";
-        public const string CandidateClearMemory = "清除智慧選字記憶";
         public const string Exit = "13. 離開(Quit)";
 
         public static string Mark(bool enabled)
@@ -59,11 +58,6 @@ namespace uclliu
             return ToggleItem("", enabled, "連續出字功能");
         }
 
-        public static string SmartRoot(bool enabled)
-        {
-            return ToggleItem("", enabled, "智慧字根功能");
-        }
-
         private static bool IsOutputType(string outputType, string expected)
         {
             return (outputType ?? "DEFAULT").Trim().ToUpperInvariant() == expected;
@@ -74,9 +68,7 @@ namespace uclliu
     {
         Download,
         Enable,
-        Continuous,
-        SmartRoot,
-        ClearMemory
+        Continuous
     }
 
     public sealed class CandidateMenuItemDescriptor
@@ -93,7 +85,7 @@ namespace uclliu
 
     public static class CandidateMenuModel
     {
-        public static CandidateMenuItemDescriptor[] Build(bool tableAvailable, bool enabled, bool continuousEnabled, bool smartRootEnabled)
+        public static CandidateMenuItemDescriptor[] Build(bool tableAvailable, bool enabled, bool continuousEnabled)
         {
             if (!tableAvailable)
             {
@@ -105,9 +97,7 @@ namespace uclliu
             return new CandidateMenuItemDescriptor[]
             {
                 new CandidateMenuItemDescriptor(CandidateMenuItemKind.Enable, TrayMenuText.CandidateEnable(enabled)),
-                new CandidateMenuItemDescriptor(CandidateMenuItemKind.Continuous, TrayMenuText.CandidateContinuous(continuousEnabled)),
-                new CandidateMenuItemDescriptor(CandidateMenuItemKind.SmartRoot, TrayMenuText.SmartRoot(smartRootEnabled)),
-                new CandidateMenuItemDescriptor(CandidateMenuItemKind.ClearMemory, TrayMenuText.CandidateClearMemory)
+                new CandidateMenuItemDescriptor(CandidateMenuItemKind.Continuous, TrayMenuText.CandidateContinuous(continuousEnabled))
             };
         }
     }

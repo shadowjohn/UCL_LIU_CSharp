@@ -1146,7 +1146,6 @@ namespace uclliu
         uclliu ucl;
         private static Form1 form = null;
         private readonly ContextMenu cMenu = new ContextMenu();
-        private readonly System.Windows.Forms.Timer smartCandidateTimer;
         private CustomDictionaryForm customDictionaryForm = null;
         public Form1()
         {
@@ -1156,14 +1155,6 @@ namespace uclliu
             //https://stackoverflow.com/questions/12983427/accessing-forms-controls-from-another-class
             form = this;
             ucl = new uclliu(ref form);
-            smartCandidateTimer = new System.Windows.Forms.Timer();
-            smartCandidateTimer.Interval = 30000;
-            smartCandidateTimer.Tick += smartCandidateTimer_Tick;
-        }
-
-        private void smartCandidateTimer_Tick(object sender, EventArgs e)
-        {
-            ucl.flush_smart_candidate_memory(false);
         }
 
         //令 form 可以移動 
@@ -1249,7 +1240,6 @@ namespace uclliu
             //起始不可以是 topmost ，在程式執行後，才置高，不然
             //首次切換輸入法時，會失去原始的焦點(如記事本)
             this.TopMost = true;
-            smartCandidateTimer.Start();
 
 
 
@@ -1679,30 +1669,6 @@ namespace uclliu
             }
             ucl.saveConfig();
         }
-        private void menu_toggle_smart_root(object sender, EventArgs e)
-        {
-            bool enabled = ucl.config["DEFAULT"]["SMART_ROOT_ENABLE"] != "1";
-            ucl.config["DEFAULT"]["SMART_ROOT_ENABLE"] = enabled ? "1" : "0";
-            ucl.saveConfig();
-        }
-        private void menu_clear_smart_candidate_memory(object sender, EventArgs e)
-        {
-            if (MessageBox.Show(
-                this,
-                "確定要清除智慧選字記憶？",
-                TrayMenuText.CandidateClearMemory,
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question) == DialogResult.Yes)
-            {
-                bool cleared = ucl.clear_smart_candidate_memory();
-                MessageBox.Show(
-                    this,
-                    cleared ? "智慧選字記憶已清除。" : "智慧選字記憶清除失敗，原有記憶仍保留。",
-                    TrayMenuText.CandidateClearMemory,
-                    MessageBoxButtons.OK,
-                    cleared ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
-            }
-        }
         private void menu_run_exit(object sender, EventArgs e)
         {
             this.Close();
@@ -1833,8 +1799,7 @@ namespace uclliu
             CandidateMenuItemDescriptor[] candidateItems = CandidateMenuModel.Build(
                 ucl.has_smart_candidate_table(),
                 ucl.config["DEFAULT"]["SMART_CANDIDATE_ENABLE"] == "1",
-                ucl.config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] == "1",
-                ucl.config["DEFAULT"]["SMART_ROOT_ENABLE"] == "1");
+                ucl.config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] == "1");
             foreach (CandidateMenuItemDescriptor item in candidateItems)
             {
                 EventHandler handler = null;
@@ -1849,12 +1814,6 @@ namespace uclliu
                     case CandidateMenuItemKind.Continuous:
                         handler = this.menu_toggle_smart_candidate_continuous;
                         break;
-                    case CandidateMenuItemKind.SmartRoot:
-                        handler = this.menu_toggle_smart_root;
-                        break;
-                    case CandidateMenuItemKind.ClearMemory:
-                        handler = this.menu_clear_smart_candidate_memory;
-                        break;
                 }
                 candidateMenu.MenuItems.Add(item.Text, handler);
             }
@@ -1864,9 +1823,6 @@ namespace uclliu
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
-            smartCandidateTimer.Stop();
-            ucl.flush_smart_candidate_memory(true);
-            smartCandidateTimer.Dispose();
             if (intLLKey != 0)
             {
                 UnhookWindowsHookEx(intLLKey);

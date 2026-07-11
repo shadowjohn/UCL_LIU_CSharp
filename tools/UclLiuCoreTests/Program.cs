@@ -109,6 +109,7 @@ internal static class Program
         failed += Run("phone table maps words back to zhuyin labels", TestPhoneTableMapsWordsBackToZhuyinLabels);
         failed += Run("smart candidate table parses TSV and skips invalid rows", TestSmartCandidateTableParsesTsvAndSkipsInvalidRows);
         failed += Run("smart candidate table keeps stable unique order", TestSmartCandidateTableKeepsStableUniqueOrder);
+        failed += Run("smart candidate table limits candidates to three Unicode scalars", TestSmartCandidateTableLimitsCandidateScalars);
         failed += Run("smart candidate table missing file returns empty table", TestSmartCandidateTableMissingFileReturnsEmptyTable);
         failed += Run("smart candidate memory learns text suffixes", TestSmartCandidateMemoryLearnsTextSuffixes);
         failed += Run("smart candidate memory explicit prediction wins", TestSmartCandidateMemoryExplicitPredictionWins);
@@ -125,17 +126,15 @@ internal static class Program
         failed += Run("smart candidate session pages and selects one based candidates", TestSmartCandidateSessionPagesAndSelects);
         failed += Run("smart candidate session advances by visible page count", TestSmartCandidateSessionAdvancesByVisiblePageCount);
         failed += Run("smart candidate output commits only after success", TestSmartCandidateOutputCommitsOnlyAfterSuccess);
-        failed += Run("smart candidate session uses longest suffix and memory first", TestSmartCandidateSessionUsesLongestSuffixAndMemoryFirst);
+        failed += Run("smart candidate session uses table order only", TestSmartCandidateSessionUsesTableOrderOnly);
         failed += Run("smart candidate continuous toggle refreshes display text", TestSmartCandidateContinuousToggleRefreshesDisplayText);
-        failed += Run("smart candidate session learns continuous Chinese commits", TestSmartCandidateSessionLearnsContinuousChineseCommits);
+        failed += Run("smart candidate session never learns observed text", TestSmartCandidateSessionNeverLearnsObservedText);
+        failed += Run("smart candidate session suppresses immediate duplicate candidates", TestSmartCandidateSessionSuppressesImmediateDuplicates);
         failed += Run("smart candidate session handles punctuation and cancellation boundaries", TestSmartCandidateSessionHandlesBoundaries);
         failed += Run("smart candidate session distinguishes cancel and end context", TestSmartCandidateSessionCancelAndEndContext);
-        failed += Run("smart candidate session flushes dirty memory only when idle", TestSmartCandidateSessionFlushRules);
         failed += Run("smart candidate session handles supplementary CJK scalars", TestSmartCandidateSessionHandlesSupplementaryCjk);
-        failed += Run("smart candidate session bounds comma preserved Chinese run", TestSmartCandidateSessionBoundsChineseRun);
         failed += Run("smart candidate key rules require shifted top row digits", TestSmartCandidateKeyRules);
-        failed += Run("smart candidate settings default only missing keys", TestSmartCandidateSettingsDefaults);
-        failed += Run("smart root policy requires every feature gate", TestSmartRootPolicyRequiresEveryGate);
+        failed += Run("smart candidate settings migrate once and preserve v2 choices", TestSmartCandidateSettingsDefaults);
         failed += Run("smart candidate labels use one based pages", TestSmartCandidateLabelsUseOneBasedPages);
 
         if (failed > 0)
@@ -351,31 +350,26 @@ internal static class Program
         AssertEqual("13. 離開(Quit)", TrayMenuText.Exit);
         AssertEqual("【●】啟動候選字表", TrayMenuText.CandidateEnable(true));
         AssertEqual("【　】連續出字功能", TrayMenuText.CandidateContinuous(false));
-        AssertEqual("【●】智慧字根功能", TrayMenuText.SmartRoot(true));
     }
 
     private static void TestCandidateTrayMenuModel()
     {
-        CandidateMenuItemDescriptor[] missing = CandidateMenuModel.Build(false, true, true, true);
+        CandidateMenuItemDescriptor[] missing = CandidateMenuModel.Build(false, true, true);
         AssertEqual(1, missing.Length);
         AssertEqual((int)CandidateMenuItemKind.Download, (int)missing[0].Kind);
         AssertEqual("請先下載候選字", missing[0].Text);
 
-        CandidateMenuItemDescriptor[] available = CandidateMenuModel.Build(true, true, false, true);
-        AssertEqual(4, available.Length);
+        CandidateMenuItemDescriptor[] available = CandidateMenuModel.Build(true, true, false);
+        AssertEqual(2, available.Length);
         AssertSequence(
             new string[]
             {
                 "【●】啟動候選字表",
-                "【　】連續出字功能",
-                "【●】智慧字根功能",
-                "清除智慧選字記憶"
+                "【　】連續出字功能"
             },
-            new string[] { available[0].Text, available[1].Text, available[2].Text, available[3].Text });
+            new string[] { available[0].Text, available[1].Text });
         AssertEqual((int)CandidateMenuItemKind.Enable, (int)available[0].Kind);
         AssertEqual((int)CandidateMenuItemKind.Continuous, (int)available[1].Kind);
-        AssertEqual((int)CandidateMenuItemKind.SmartRoot, (int)available[2].Kind);
-        AssertEqual((int)CandidateMenuItemKind.ClearMemory, (int)available[3].Kind);
     }
 
     private static void TestTrayMenuOpensOnLeftAndRightClick()
@@ -1771,6 +1765,17 @@ internal static class Program
         AssertSequence(new string[] { "丁" }, table.Find("CTX").ToArray());
     }
 
+    private static void TestSmartCandidateTableLimitsCandidateScalars()
+    {
+        string extensionB = char.ConvertFromUtf32(0x20000);
+        SmartCandidateTable table = SmartCandidateTable.Parse(new string[]
+        {
+            "ctx\t一二三\t一二三四\t" + extensionB + "甲乙\t" + extensionB + "甲乙丙"
+        });
+
+        AssertSequence(new string[] { "一二三", extensionB + "甲乙" }, table.Find("ctx").ToArray());
+    }
+
     private static void TestSmartCandidateTableMissingFileReturnsEmptyTable()
     {
         string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".txt");
@@ -2088,7 +2093,7 @@ internal static class Program
         AssertEqual("王小明", session.Context);
         AssertEqual("", session.Select(9));
         AssertEqual("王小明", session.Context);
-        AssertEqual("小明", memory.GetPredictions("王")[0]);
+        AssertSequence(new string[0], memory.GetPredictions("王").ToArray());
     }
 
     private static void TestSmartCandidateSessionAdvancesByVisiblePageCount()
@@ -2135,8 +2140,8 @@ internal static class Program
         AssertTrue(succeeded.Complete(true, session, memory, "后"), "successful output should commit");
         AssertTrue(!succeeded.Complete(true, session, memory, "后"), "successful output must commit once");
         AssertEqual("王后", session.Context);
-        AssertEqual(5, FindCandidateScore(memory.ToData().Predictions, "王", "後"));
-        AssertEqual(1, FindCandidateScore(memory.ToData().Predictions, "王", "后"));
+        AssertEqual(0, FindCandidateScore(memory.ToData().Predictions, "王", "後"));
+        AssertEqual(0, FindCandidateScore(memory.ToData().Predictions, "王", "后"));
 
         SmartCandidateRootChoice rootChoice = SmartCandidateRootChoice.Capture("abc", "王", new string[] { "汪", "王" });
         SmartCandidateOutputCommit failedRoot = SmartCandidateOutputCommit.ForNormal(rootChoice);
@@ -2146,7 +2151,7 @@ internal static class Program
         SmartCandidateOutputCommit rootOutput = SmartCandidateOutputCommit.ForNormal(rootChoice);
         AssertTrue(rootOutput.Complete(true, session, memory, "王"), "successful root output should commit");
         AssertTrue(!rootOutput.Complete(true, session, memory, "王"), "root output must commit once");
-        AssertEqual(5, FindCandidateScore(memory.ToData().Roots, "abc", "王"));
+        AssertEqual(0, FindCandidateScore(memory.ToData().Roots, "abc", "王"));
         AssertEqual("王后王", session.Context);
     }
 
@@ -2162,7 +2167,7 @@ internal static class Program
         return 0;
     }
 
-    private static void TestSmartCandidateSessionUsesLongestSuffixAndMemoryFirst()
+    private static void TestSmartCandidateSessionUsesTableOrderOnly()
     {
         SmartCandidateMemory memory = new SmartCandidateMemory();
         memory.RecordPredictionChoice("甲乙王", "記憶");
@@ -2176,12 +2181,12 @@ internal static class Program
 
         session.ObserveCommittedText("甲乙王");
 
-        AssertSequence(new string[] { "記憶", "重複", "表格" }, ToArray(session.VisibleCandidates));
+        AssertSequence(new string[] { "重複", "表格" }, ToArray(session.VisibleCandidates));
         AssertTrue(session.Enabled && session.ContinuousEnabled, "available table should enable continuous predictions by default");
         session.ContinuousEnabled = false;
         AssertSequence(new string[0], ToArray(session.VisibleCandidates));
         session.ContinuousEnabled = true;
-        AssertSequence(new string[] { "記憶", "重複", "表格" }, ToArray(session.VisibleCandidates));
+        AssertSequence(new string[] { "重複", "表格" }, ToArray(session.VisibleCandidates));
     }
 
     private static void TestSmartCandidateContinuousToggleRefreshesDisplayText()
@@ -2198,7 +2203,7 @@ internal static class Program
         AssertEqual("1小明", SmartCandidateDisplay.Format(session.VisibleCandidates, session.HasNextPage));
     }
 
-    private static void TestSmartCandidateSessionLearnsContinuousChineseCommits()
+    private static void TestSmartCandidateSessionNeverLearnsObservedText()
     {
         SmartCandidateMemory memory = new SmartCandidateMemory();
         SmartCandidateSession session = new SmartCandidateSession(SmartCandidateTable.Empty(), memory);
@@ -2208,7 +2213,24 @@ internal static class Program
         session.ObserveCommittedText("小");
         session.ObserveCommittedText("明");
 
-        AssertTrue(memory.GetPredictions("王").Contains("小明"), "separate commits should learn the whole Chinese run");
+        AssertSequence(new string[0], memory.GetPredictions("王").ToArray());
+        AssertTrue(!memory.IsDirty, "repeated observations must not dirty dormant memory");
+    }
+
+    private static void TestSmartCandidateSessionSuppressesImmediateDuplicates()
+    {
+        SmartCandidateSession session = new SmartCandidateSession(
+            SmartCandidateTable.Parse(new string[]
+            {
+                "哈\t哈\t哈哈\t囉",
+                "甲乙\t甲乙\t乙\t丙"
+            }), new SmartCandidateMemory());
+
+        session.ObserveCommittedText("哈");
+        AssertSequence(new string[] { "哈哈", "囉" }, ToArray(session.VisibleCandidates));
+        session.EndContext();
+        session.ObserveCommittedText("甲乙");
+        AssertSequence(new string[] { "丙" }, ToArray(session.VisibleCandidates));
     }
 
     private static void TestSmartCandidateSessionHandlesBoundaries()
@@ -2283,7 +2305,7 @@ internal static class Program
         AssertEqual(extensionB, session.Context);
         AssertSequence(new string[] { "中" }, ToArray(session.VisibleCandidates));
         AssertEqual("中", session.Select(1));
-        AssertTrue(memory.GetPredictions(extensionB).Contains("中"), "supplementary CJK context should learn a selected continuation");
+        AssertSequence(new string[0], memory.GetPredictions(extensionB).ToArray());
 
         session.ObserveCommittedText(extensionB + "王");
         AssertEqual("中" + extensionB + "王", session.Context);
@@ -2328,14 +2350,28 @@ internal static class Program
     private static void TestSmartCandidateSettingsDefaults()
     {
         SimpleIniData config = new SimpleIniData();
-        config["DEFAULT"]["SMART_ROOT_ENABLE"] = "0";
-        config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] = "";
-
         SmartCandidateSettings.EnsureDefaults(config);
 
-        AssertEqual("1", config["DEFAULT"]["SMART_CANDIDATE_ENABLE"]);
-        AssertEqual("", config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"]);
+        AssertEqual("0", config["DEFAULT"]["SMART_CANDIDATE_ENABLE"]);
+        AssertEqual("1", config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"]);
         AssertEqual("0", config["DEFAULT"]["SMART_ROOT_ENABLE"]);
+        AssertEqual("2", config["DEFAULT"]["SMART_CANDIDATE_POLICY_VERSION"]);
+        config["DEFAULT"]["SMART_CANDIDATE_ENABLE"] = "1";
+        config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] = "0";
+        SmartCandidateSettings.EnsureDefaults(config);
+        AssertEqual("1", config["DEFAULT"]["SMART_CANDIDATE_ENABLE"]);
+        AssertEqual("0", config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"]);
+
+        SimpleIniData oldConfig = new SimpleIniData();
+        oldConfig["DEFAULT"]["SMART_CANDIDATE_POLICY_VERSION"] = "1";
+        oldConfig["DEFAULT"]["SMART_CANDIDATE_ENABLE"] = "1";
+        oldConfig["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] = "0";
+        oldConfig["DEFAULT"]["SMART_ROOT_ENABLE"] = "1";
+        SmartCandidateSettings.EnsureDefaults(oldConfig);
+        AssertEqual("0", oldConfig["DEFAULT"]["SMART_CANDIDATE_ENABLE"]);
+        AssertEqual("1", oldConfig["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"]);
+        AssertEqual("0", oldConfig["DEFAULT"]["SMART_ROOT_ENABLE"]);
+        AssertEqual("2", oldConfig["DEFAULT"]["SMART_CANDIDATE_POLICY_VERSION"]);
         AssertTrue(SmartCandidateSettings.IsEnabled("1"), "1 should enable smart candidates");
         AssertTrue(!SmartCandidateSettings.IsEnabled("0"), "0 should disable smart candidates");
     }
