@@ -35,7 +35,7 @@
 
 ### 驗證與文件
 
-- [x] 補候選解析、排序、學習、保存、按鍵優先權與 UI 寬度核心測試。
+- [x] 補候選解析、靜態排序、max 3、設定 migration、按鍵優先權與 UI 寬度核心測試。
 - [x] 確認原本字根、注音、同音、半／全形與遊戲模式沒有退步。
 - [x] 更新 README、CHANGELOG、設定欄位與候選表來源／授權說明。
-- [ ] 使用 `bin\Debug\uclliu.exe` 完成人工智慧候選鍵盤／UI smoke：候選載入、選單 12/13、三個開關與清除、`Shift+1`～`Shift+5`、`Shift+Space` 分頁、Esc／新字根／英肥切換取消、句尾／Enter／3 分鐘邊界。
+- [ ] 使用 `bin\Debug\uclliu.exe` 完成靜態候選鍵盤／UI smoke：候選載入、選單 12/13、總開關預設關閉／連續出字預設開啟且僅顯示這兩項、候選最多 3 個 Unicode scalar、`Shift+1`～`Shift+5`、`Shift+Space` 分頁、Esc／新字根／英肥切換取消、句尾／Enter 邊界，並確認 `candidate_memory.json` 不因等待或離開而更新。

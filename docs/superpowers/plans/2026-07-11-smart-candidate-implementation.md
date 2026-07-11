@@ -1,5 +1,7 @@
 # Smart Candidate Learning Implementation Plan
 
+> 歷史計畫：此文件記錄最初含個人學習與智慧字根的實作步驟。v0.17 現行 runtime 已改為 static-only、候選 max 3、兩個選單開關且不讀寫 `candidate_memory.json`；目前規格以 `docs/superpowers/specs/2026-07-11-smart-candidate-design.md` 的「v0.17 穩定化後的現行設計」為準。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add local next-word/phrase prediction and adaptive root-candidate ranking without new DLLs or NuGet packages.

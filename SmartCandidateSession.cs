@@ -406,6 +406,30 @@ namespace uclliu
             }
         }
 
+        public static void ApplyLoadedPolicy(SimpleIniData config, SimpleIniData loaded)
+        {
+            if (config == null)
+            {
+                throw new ArgumentNullException("config");
+            }
+            if (loaded == null)
+            {
+                throw new ArgumentNullException("loaded");
+            }
+
+            foreach (KeyValuePair<string, string> key in loaded["DEFAULT"].Keys)
+            {
+                config["DEFAULT"][key.Key] = key.Value.Trim();
+            }
+
+            // 必須看載入檔本身的版本，不能被啟動時預先填入的 v2 預設掩蓋。
+            if (loaded["DEFAULT"]["SMART_CANDIDATE_POLICY_VERSION"] != "2")
+            {
+                config["DEFAULT"]["SMART_CANDIDATE_POLICY_VERSION"] = "1";
+            }
+            EnsureDefaults(config);
+        }
+
         public static bool IsEnabled(string value)
         {
             return value == "1";

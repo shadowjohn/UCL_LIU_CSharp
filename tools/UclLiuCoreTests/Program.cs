@@ -135,6 +135,7 @@ internal static class Program
         failed += Run("smart candidate session handles supplementary CJK scalars", TestSmartCandidateSessionHandlesSupplementaryCjk);
         failed += Run("smart candidate key rules require shifted top row digits", TestSmartCandidateKeyRules);
         failed += Run("smart candidate settings migrate once and preserve v2 choices", TestSmartCandidateSettingsDefaults);
+        failed += Run("smart candidate settings migrate actual loaded INI sequence", TestSmartCandidateSettingsApplyLoadedPolicy);
         failed += Run("smart candidate labels use one based pages", TestSmartCandidateLabelsUseOneBasedPages);
 
         if (failed > 0)
@@ -2374,6 +2375,29 @@ internal static class Program
         AssertEqual("2", oldConfig["DEFAULT"]["SMART_CANDIDATE_POLICY_VERSION"]);
         AssertTrue(SmartCandidateSettings.IsEnabled("1"), "1 should enable smart candidates");
         AssertTrue(!SmartCandidateSettings.IsEnabled("0"), "0 should disable smart candidates");
+    }
+
+    private static void TestSmartCandidateSettingsApplyLoadedPolicy()
+    {
+        SimpleIniData config = new SimpleIniData();
+        SmartCandidateSettings.EnsureDefaults(config);
+        SimpleIniData oldIni = SimpleIniData.Parse(
+            "[DEFAULT]\r\nSMART_CANDIDATE_ENABLE=1\r\nSMART_CANDIDATE_CONTINUOUS=0\r\nSMART_ROOT_ENABLE=1\r\n");
+
+        SmartCandidateSettings.ApplyLoadedPolicy(config, oldIni);
+
+        AssertEqual("0", config["DEFAULT"]["SMART_CANDIDATE_ENABLE"]);
+        AssertEqual("1", config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"]);
+        AssertEqual("0", config["DEFAULT"]["SMART_ROOT_ENABLE"]);
+        AssertEqual("2", config["DEFAULT"]["SMART_CANDIDATE_POLICY_VERSION"]);
+
+        SimpleIniData v2Ini = SimpleIniData.Parse(
+            "[DEFAULT]\r\nSMART_CANDIDATE_ENABLE=1\r\nSMART_CANDIDATE_CONTINUOUS=0\r\nSMART_ROOT_ENABLE=0\r\nSMART_CANDIDATE_POLICY_VERSION=2\r\n");
+        SmartCandidateSettings.ApplyLoadedPolicy(config, v2Ini);
+        AssertEqual("1", config["DEFAULT"]["SMART_CANDIDATE_ENABLE"]);
+        AssertEqual("0", config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"]);
+        AssertEqual("0", config["DEFAULT"]["SMART_ROOT_ENABLE"]);
+        AssertEqual("2", config["DEFAULT"]["SMART_CANDIDATE_POLICY_VERSION"]);
     }
 
     private static void TestSmartCandidateLabelsUseOneBasedPages()

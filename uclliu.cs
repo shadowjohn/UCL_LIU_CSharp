@@ -739,12 +739,7 @@ namespace uclliu
                 {
                     SimpleIniData _config = SimpleIniFile.ReadFile(INI_CONFIG_FILE);
 
-                    foreach (KeyValuePair<string, string> key in _config["DEFAULT"].Keys)
-                    {
-                        config["DEFAULT"][key.Key] = key.Value.Trim();
-                        //debug_print(key.Key);
-                        //debug_print(key.Value);
-                    }
+                    SmartCandidateSettings.ApplyLoadedPolicy(config, _config);
                 }
                 catch (Exception ex)
                 {
@@ -752,7 +747,6 @@ namespace uclliu
                     debug_print(ex.Message);
                 }
             }
-            SmartCandidateSettings.EnsureDefaults(config);
             debug_print(config.ToString());
             if (Convert.ToDouble(config["DEFAULT"]["ALPHA"]) >= 1)
             {
