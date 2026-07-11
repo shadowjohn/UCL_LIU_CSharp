@@ -364,3 +364,12 @@ dist/
 wavs/*.wav
 /liu.cin
 /liu.json
+
+# Smart candidate memory and local upstream source downloads
+/candidate_memory.json
+/candidate_memory.json.tmp
+/candidate_memory.json.broken
+/libchewing-data/
+/tools/libchewing-data/
+/tsi.csv
+/tools/tsi.csv

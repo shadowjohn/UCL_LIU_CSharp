@@ -39,11 +39,19 @@ New-Item -ItemType Directory -Path $packageRoot | Out-Null
 
 Copy-Item -LiteralPath $exePath -Destination (Join-Path $packageRoot "uclliu.exe") -Force
 
-$optionalFiles = @("pinyi.txt", "README.md", "LICENSE")
+$optionalFiles = @("pinyi.txt", "candidate.txt", "THIRD_PARTY_CANDIDATE_DATA.md", "README.md", "LICENSE")
 foreach ($fileName in $optionalFiles) {
     $sourcePath = Join-Path $ProjectRoot $fileName
     if (Test-Path -LiteralPath $sourcePath) {
         Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $packageRoot $fileName) -Force
+    }
+}
+
+$hasCandidate = Test-Path -LiteralPath (Join-Path $ProjectRoot "candidate.txt")
+if ($hasCandidate) {
+    $candidateLicenses = Join-Path $ProjectRoot "LICENSES"
+    if (Test-Path -LiteralPath $candidateLicenses) {
+        Copy-Item -LiteralPath $candidateLicenses -Destination (Join-Path $packageRoot "LICENSES") -Recurse -Force
     }
 }
 
@@ -123,10 +131,11 @@ $singleExePath = Join-Path $OutputDirectory "uclliu.exe"
 Copy-Item -LiteralPath $exePath -Destination $singleExePath -Force
 
 $notesPath = Join-Path $OutputDirectory "release-notes.md"
+$candidateContents = if ($hasCandidate) { "、candidate.txt" } else { "" }
 $zipContents = if ($IncludeWavs) {
-    "uclliu.exe、pinyi.txt、wavs、tsf_bridge、README 與 LICENSE"
+    "uclliu.exe、pinyi.txt${candidateContents}、wavs、tsf_bridge、README 與 LICENSE"
 } else {
-    "uclliu.exe、pinyi.txt、tsf_bridge、README 與 LICENSE"
+    "uclliu.exe、pinyi.txt${candidateContents}、tsf_bridge、README 與 LICENSE"
 }
 $soundNote = if ($IncludeWavs) {
     "本次封包包含 wavs 音效目錄，請確認音效檔具備可再散布授權。"
@@ -137,7 +146,7 @@ $soundNote = if ($IncludeWavs) {
 UCL_LIU_CSharp $versionSuffix
 
 - uclliu-$versionSuffix.zip：推薦下載包，含 $zipContents。
-- uclliu.exe：單檔版，不含 TSF Bridge、同音/注音資料與音效素材。
+- uclliu.exe：單檔版，不含 TSF Bridge、同音/注音資料、候選字表與音效素材；請至 GitHub 手動下載 candidate.txt。
 
 $soundNote
 
