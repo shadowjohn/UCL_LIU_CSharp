@@ -124,6 +124,7 @@ internal static class Program
         failed += Run("smart candidate session bounds comma preserved Chinese run", TestSmartCandidateSessionBoundsChineseRun);
         failed += Run("smart candidate key rules require shifted top row digits", TestSmartCandidateKeyRules);
         failed += Run("smart candidate settings default only missing keys", TestSmartCandidateSettingsDefaults);
+        failed += Run("smart root policy requires every feature gate", TestSmartRootPolicyRequiresEveryGate);
         failed += Run("smart candidate labels use one based pages", TestSmartCandidateLabelsUseOneBasedPages);
 
         if (failed > 0)
@@ -2095,6 +2096,15 @@ internal static class Program
         AssertEqual("1小明 2先生 ...", SmartCandidateDisplay.Format(new string[] { "小明", "先生" }, true));
         AssertEqual("1小姐", SmartCandidateDisplay.Format(new string[] { "小姐" }, false));
         AssertEqual("", SmartCandidateDisplay.Format(new string[0], false));
+    }
+
+    private static void TestSmartRootPolicyRequiresEveryGate()
+    {
+        AssertTrue(!SmartCandidateSettings.ShouldUseSmartRoot("0", "1", true, true), "total off must disable smart root");
+        AssertTrue(!SmartCandidateSettings.ShouldUseSmartRoot("1", "0", true, true), "root off must disable smart root");
+        AssertTrue(!SmartCandidateSettings.ShouldUseSmartRoot("1", "1", false, true), "missing table must disable smart root");
+        AssertTrue(!SmartCandidateSettings.ShouldUseSmartRoot("1", "1", true, false), "disabled session must disable smart root");
+        AssertTrue(SmartCandidateSettings.ShouldUseSmartRoot("1", "1", true, true), "all gates should enable smart root");
     }
 
     private static string[] ToArray(IList<string> values)

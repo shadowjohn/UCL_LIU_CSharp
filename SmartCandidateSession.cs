@@ -294,6 +294,11 @@ namespace uclliu
             return value == "1";
         }
 
+        public static bool ShouldUseSmartRoot(string totalEnabled, string rootEnabled, bool tableAvailable, bool sessionEnabled)
+        {
+            return IsEnabled(totalEnabled) && IsEnabled(rootEnabled) && tableAvailable && sessionEnabled;
+        }
+
         private static void EnsureDefault(SimpleIniSection section, string key)
         {
             if (!section.ContainsKey(key))

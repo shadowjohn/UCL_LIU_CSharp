@@ -1966,7 +1966,7 @@ namespace uclliu
             else if (try_get_root_candidates(c, out candidates))
             {
                 //# print("Debug V2")
-                ucl_find_data = smartCandidateMemory != null && SmartCandidateSettings.IsEnabled(config["DEFAULT"]["SMART_ROOT_ENABLE"])
+                ucl_find_data = should_use_smart_root()
                     ? smartCandidateMemory.RankRootCandidates(c, candidates)
                     : new List<string>(candidates);
                 word_label_set_text();
@@ -2205,7 +2205,7 @@ namespace uclliu
 
         private void record_normal_root_candidate(string data)
         {
-            if (smartCandidateMemory == null)
+            if (!should_use_smart_root())
             {
                 return;
             }
@@ -2216,6 +2216,16 @@ namespace uclliu
             {
                 smartCandidateMemory.RecordRootChoice(root, data);
             }
+        }
+
+        private bool should_use_smart_root()
+        {
+            return smartCandidateMemory != null
+                && SmartCandidateSettings.ShouldUseSmartRoot(
+                    config["DEFAULT"]["SMART_CANDIDATE_ENABLE"],
+                    config["DEFAULT"]["SMART_ROOT_ENABLE"],
+                    has_smart_candidate_table(),
+                    smartCandidates != null && smartCandidates.Enabled);
         }
 
         public void senddata(string data)
