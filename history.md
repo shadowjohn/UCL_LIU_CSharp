@@ -1,5 +1,25 @@
 # 開發對話紀錄
 
+## 2026-07-11 - v0.17 智慧候選字開發收尾
+
+### 實作紀錄
+
+- 智慧候選表、連續出字、智慧字根、個人記憶與候選鍵盤流程完成整合。
+- repo 根目錄 `candidate.txt` 納入 Debug / Release build output，執行目錄可直接載入。
+- 新增 `build_and_run.bat`，以 executable path 精準停止本 repo Debug 程序，建置成功後才隱藏啟動。
+- README、CHANGELOG、TODO 補齊 v0.17 開發狀態、操作方式、資料來源與授權；保留 v0.16 正式下載與歷史。
+
+### 驗證紀錄
+
+- `tools/test-convert-chewing-candidates.ps1` 通過。
+- `tools/test-package-candidate-license.ps1` 通過。
+- `dotnet run --project tools/UclLiuCoreTests/UclLiuCoreTests.csproj` 全部通過。
+- `tools/test-build-and-run.ps1` 通過，固定精準路徑與 stop -> build -> success gate -> start 順序。
+- `build_and_run.bat` 實測停止舊的 repo Debug PID 12484，MSBuild Debug|Any CPU 為 0 error、1 個既有 unused warning，並啟動 PID 23796。
+- 執行檔為 `D:\mytools\UCL_LIU_CSharp\bin\Debug\uclliu.exe`，FileVersion `0.17.0.0`、ProductVersion `0.17`；`candidate.txt` 已複製至同目錄。
+
+---
+
 ## 2026-07-11 - v0.17 版號與遊戲模式命令調整
 
 - 程式版號更新為 `0.17` / `0.17.0.0`，尚未發佈。

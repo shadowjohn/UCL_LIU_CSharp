@@ -194,6 +194,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="candidate.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="uclliu_logo.ico" />
     <Content Include="wavs\*.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -4,6 +4,22 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ## Unreleased
 
+### Added
+
+- v0.17 開發版加入智慧候選字：`candidate.txt` 詞組預測、一般輸入學習、智慧字根排序、每頁 5 筆、`Shift+1`～`Shift+5` 選字與 `Shift+Space` 優先翻頁。
+- 右下角加入 `12. 候選字相關`，提供候選字、連續出字、智慧字根三個開關與清除個人記憶；離開調整為 `13. 離開(Quit)`。
+- 個人記憶保存於本機 `candidate_memory.json`，閒置 3 分鐘或正常離開時原子寫入，並限制每個 key 16 筆、每類 1024 筆。
+- 新增 `build_and_run.bat`，只停止本 repo Debug exe，建置成功後才從 `bin\Debug` 啟動並回報 PID／版本。
+
+### Changed
+
+- 開發版號更新為 `0.17`；遊戲／正常模式命令調整為 `,,,game` / `,,,normal`。
+- `candidate.txt` 會複製到本機 build output；完整 zip 包含候選資料與授權檔，單檔 exe 不包含，也不會自動下載。
+
+### Data
+
+- `candidate.txt` 由 libchewing-data `dict/chewing/tsi.csv` 固定版本轉換，採 LGPL-2.1-or-later；來源、hash、修改與再散布聲明見 `THIRD_PARTY_CANDIDATE_DATA.md`。
+
 ### Fixed
 
 - 修正 `TSF出字模式` 在前景程式沒有對應 `uclliu_tsf_bridge_<pid>` pipe、且全域 pipe 不存在時，每次出字都等待 named pipe timeout 才 fallback，造成打字明顯卡頓；現在會先檢查 pipe 是否存在，不存在就立即 fallback。
