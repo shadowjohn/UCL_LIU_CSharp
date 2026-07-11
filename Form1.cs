@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1309,7 +1309,7 @@ namespace uclliu
         }
         private void menu_chage_gamemode(object sender, EventArgs e)
         {
-            this.btn_gamemode.PerformClick();
+            this.btn_gamemode_Click(this.btn_gamemode, EventArgs.Empty);
         }
         private void menu_change_senddata_kind(object sender, EventArgs e)
         {
