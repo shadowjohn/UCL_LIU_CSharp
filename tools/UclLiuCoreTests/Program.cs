@@ -101,6 +101,8 @@ internal static class Program
         failed += Run("pinyi legacy same sound keeps whole matching lines", TestPinyiLegacyKeepsWholeMatchingLines);
         failed += Run("phone table converts zhuyin query to candidates", TestPhoneTableConvertsZhuyinQueryToCandidates);
         failed += Run("phone table maps words back to zhuyin labels", TestPhoneTableMapsWordsBackToZhuyinLabels);
+        failed += Run("smart candidate table parses TSV and skips invalid rows", TestSmartCandidateTableParsesTsvAndSkipsInvalidRows);
+        failed += Run("smart candidate table keeps stable unique order", TestSmartCandidateTableKeepsStableUniqueOrder);
 
         if (failed > 0)
         {
@@ -1585,6 +1587,52 @@ internal static class Program
 
         AssertSequence(new string[] { "ㄈㄟˊ" }, table.GetPhonesForWord("肥").ToArray());
         AssertSequence(new string[] { "ㄈㄟ", "ㄈㄟˊ" }, table.GetPhonesForWord("菲").ToArray());
+    }
+
+    private static void TestSmartCandidateTableParsesTsvAndSkipsInvalidRows()
+    {
+        SmartCandidateTable table = SmartCandidateTable.Parse(new string[]
+        {
+            "",
+            "  # comment",
+            "\t候選",
+            "\t候選一\t候選二",
+            "上下文\t\t ",
+            "上下文\t候選一\t候選二"
+        });
+
+        AssertTrue(table.IsAvailable, "table with a valid row should be available");
+        AssertEqual(3, table.InvalidLineCount);
+        AssertSequence(new string[] { "候選一", "候選二" }, table.Find("上下文").ToArray());
+        AssertSequence(new string[0], table.Find("不存在").ToArray());
+        AssertTrue(!SmartCandidateTable.Empty().IsAvailable, "empty table should not be available");
+
+        string path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "情境\t肥米\r\n", Encoding.UTF8);
+            AssertSequence(new string[] { "肥米" }, SmartCandidateTable.Load(path).Find("情境").ToArray());
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    private static void TestSmartCandidateTableKeepsStableUniqueOrder()
+    {
+        SmartCandidateTable table = SmartCandidateTable.Parse(new string[]
+        {
+            "ctx\t甲\t乙\t甲",
+            "ctx\t乙\t丙",
+            "CTX\t丁"
+        });
+
+        List<string> candidates = table.Find("ctx");
+        candidates.Add("外部修改");
+
+        AssertSequence(new string[] { "甲", "乙", "丙" }, table.Find("ctx").ToArray());
+        AssertSequence(new string[] { "丁" }, table.Find("CTX").ToArray());
     }
 
     private static byte[] BuildUnitab(string firstTwoKeys, int key3, int key4, int unicodeCodePoint)
