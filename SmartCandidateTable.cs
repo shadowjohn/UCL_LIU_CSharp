@@ -31,7 +31,7 @@ namespace uclliu
 
         public static SmartCandidateTable Load(string path)
         {
-            return Parse(File.ReadAllLines(path, Encoding.UTF8));
+            return File.Exists(path) ? Parse(File.ReadAllLines(path, Encoding.UTF8)) : Empty();
         }
 
         public static SmartCandidateTable Parse(IEnumerable<string> lines)

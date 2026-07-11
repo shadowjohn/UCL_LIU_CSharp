@@ -103,6 +103,7 @@ internal static class Program
         failed += Run("phone table maps words back to zhuyin labels", TestPhoneTableMapsWordsBackToZhuyinLabels);
         failed += Run("smart candidate table parses TSV and skips invalid rows", TestSmartCandidateTableParsesTsvAndSkipsInvalidRows);
         failed += Run("smart candidate table keeps stable unique order", TestSmartCandidateTableKeepsStableUniqueOrder);
+        failed += Run("smart candidate table missing file returns empty table", TestSmartCandidateTableMissingFileReturnsEmptyTable);
 
         if (failed > 0)
         {
@@ -1633,6 +1634,17 @@ internal static class Program
 
         AssertSequence(new string[] { "甲", "乙", "丙" }, table.Find("ctx").ToArray());
         AssertSequence(new string[] { "丁" }, table.Find("CTX").ToArray());
+    }
+
+    private static void TestSmartCandidateTableMissingFileReturnsEmptyTable()
+    {
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".txt");
+
+        SmartCandidateTable table = SmartCandidateTable.Load(path);
+
+        AssertTrue(!table.IsAvailable, "missing file should return an unavailable table");
+        AssertEqual(0, table.InvalidLineCount);
+        AssertSequence(new string[0], table.Find("ctx").ToArray());
     }
 
     private static byte[] BuildUnitab(string firstTwoKeys, int key3, int key4, int unicodeCodePoint)
