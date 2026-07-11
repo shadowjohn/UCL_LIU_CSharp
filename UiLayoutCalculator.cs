@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 
 namespace uclliu
@@ -82,9 +83,24 @@ namespace uclliu
             return Math.Min(Math.Max(measuredWidth, minimumWidth), screenWorkWidth);
         }
 
-        public static bool ShouldRestoreLongCandidateWidth(bool widthAdjusted, string candidateText)
+        public static int FitCandidateCount(IList<int> prefixWidths, int maximumWidth)
         {
-            return widthAdjusted && String.IsNullOrEmpty(candidateText);
+            if (prefixWidths == null || prefixWidths.Count == 0)
+            {
+                return 0;
+            }
+
+            maximumWidth = Math.Max(0, maximumWidth);
+            int count = 1;
+            for (int i = 0; i < prefixWidths.Count; i++)
+            {
+                if (Math.Max(0, prefixWidths[i]) > maximumWidth)
+                {
+                    break;
+                }
+                count = i + 1;
+            }
+            return count;
         }
 
         public static int ShortModeTextWidth(string text, double zoom, int charWidth, int minWidth, int maxWidth)
@@ -306,6 +322,7 @@ namespace uclliu
         public ShortModeWordLayoutKind WordLayoutKind { get; set; }
         public bool WordHasMorePage { get; set; }
         public bool ResizeLongModeCandidate { get; set; }
+        public bool RestoreLongModeCandidate { get; set; }
     }
 
     public sealed class UiLabelUpdateBatcher
@@ -323,6 +340,7 @@ namespace uclliu
         private ShortModeWordLayoutKind wordLayoutKind = ShortModeWordLayoutKind.Hint;
         private bool wordHasMorePage;
         private bool resizeLongModeCandidate;
+        private bool restoreLongModeCandidate;
 
         public UiLabelUpdateBatcher(Action<Action> post, Action<UiLabelUpdateSnapshot> apply)
         {
@@ -338,7 +356,13 @@ namespace uclliu
             Schedule();
         }
 
-        public void QueueWord(string text, Color? color, ShortModeWordLayoutKind layoutKind, bool hasMorePage, bool resizeLongModeCandidate = false)
+        public void QueueWord(
+            string text,
+            Color? color,
+            ShortModeWordLayoutKind layoutKind,
+            bool hasMorePage,
+            bool resizeLongModeCandidate = false,
+            bool restoreLongModeCandidate = false)
         {
             updateWord = true;
             wordText = text ?? "";
@@ -350,6 +374,7 @@ namespace uclliu
             wordLayoutKind = layoutKind;
             wordHasMorePage = hasMorePage;
             this.resizeLongModeCandidate = resizeLongModeCandidate;
+            this.restoreLongModeCandidate |= restoreLongModeCandidate;
             Schedule();
         }
 
@@ -384,10 +409,12 @@ namespace uclliu
             snapshot.WordLayoutKind = wordLayoutKind;
             snapshot.WordHasMorePage = wordHasMorePage;
             snapshot.ResizeLongModeCandidate = resizeLongModeCandidate;
+            snapshot.RestoreLongModeCandidate = restoreLongModeCandidate;
 
             scheduled = false;
             updateType = false;
             updateWord = false;
+            restoreLongModeCandidate = false;
 
             if (apply != null)
             {

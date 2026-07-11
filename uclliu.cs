@@ -532,7 +532,13 @@ namespace uclliu
                 return;
             }
             string text = SmartCandidateDisplay.Format(smartCandidates.VisibleCandidates, smartCandidates.HasNextPage);
-            queue_word_label_update(text, Color.Black, ShortModeWordLayoutKind.Candidates, smartCandidates.HasNextPage, true);
+            queue_word_label_update(
+                text,
+                Color.Black,
+                ShortModeWordLayoutKind.Candidates,
+                smartCandidates.HasNextPage,
+                true,
+                String.IsNullOrEmpty(text));
         }
         public bool start_phone_mode()
         {
@@ -1321,9 +1327,21 @@ namespace uclliu
         {
             queue_word_label_update(text, foreColor, ShortModeWordLayoutKind.Hint, false);
         }
-        private void queue_word_label_update(string text, Color? foreColor, ShortModeWordLayoutKind layoutKind, bool hasMorePage, bool resizeLongModeCandidate = false)
+        private void queue_word_label_update(
+            string text,
+            Color? foreColor,
+            ShortModeWordLayoutKind layoutKind,
+            bool hasMorePage,
+            bool resizeLongModeCandidate = false,
+            bool restoreLongModeCandidate = false)
         {
-            labelUpdateBatcher.QueueWord(text, foreColor, layoutKind, hasMorePage, resizeLongModeCandidate);
+            labelUpdateBatcher.QueueWord(
+                text,
+                foreColor,
+                layoutKind,
+                hasMorePage,
+                resizeLongModeCandidate,
+                restoreLongModeCandidate);
         }
         private void apply_label_update_batch(UiLabelUpdateSnapshot snapshot)
         {
@@ -1339,6 +1357,12 @@ namespace uclliu
             }
             if (snapshot.UpdateWord)
             {
+                if (snapshot.ResizeLongModeCandidate && !String.IsNullOrEmpty(snapshot.WordText))
+                {
+                    bool hasMorePage;
+                    snapshot.WordText = prepare_smart_candidate_label(out hasMorePage);
+                    snapshot.WordHasMorePage = hasMorePage;
+                }
                 f.word_label.Text = snapshot.WordText;
                 if (snapshot.WordHasColor)
                 {
@@ -1346,7 +1370,11 @@ namespace uclliu
                 }
                 currentWordLayoutKind = snapshot.WordLayoutKind;
                 currentWordHasMorePage = snapshot.WordHasMorePage;
-                if (snapshot.ResizeLongModeCandidate)
+                if (snapshot.RestoreLongModeCandidate)
+                {
+                    restore_long_mode_candidate_width();
+                }
+                if (snapshot.ResizeLongModeCandidate && !String.IsNullOrEmpty(snapshot.WordText))
                 {
                     update_long_mode_candidate_width();
                 }
@@ -1401,21 +1429,10 @@ namespace uclliu
             {
                 return;
             }
-            if (String.IsNullOrEmpty(f.word_label.Text))
-            {
-                if (UiLayoutCalculator.ShouldRestoreLongCandidateWidth(longCandidateWidthAdjusted, f.word_label.Text))
-                {
-                    update_UI();
-                }
-                return;
-            }
-
             int normalCandidateWidth = Convert.ToInt32(350 * Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
-            int currentCandidateWidth = get_column_width(3);
-            int chromeWidth = Math.Max(0, f.LP.GetPreferredSize(Size.Empty).Width - currentCandidateWidth);
-            Rectangle workingArea = Screen.FromControl(f).WorkingArea;
-            int availableFormWidth = Math.Max(0, workingArea.Right - Math.Max(f.Left, workingArea.Left));
-            int availableCandidateWidth = Math.Max(0, availableFormWidth - chromeWidth);
+            int chromeWidth;
+            int availableFormWidth;
+            int availableCandidateWidth = get_long_mode_available_candidate_width(out chromeWidth, out availableFormWidth);
             int measuredWidth = measure_short_mode_text_width(f.word_label.Text, f.word_label.Font)
                 + f.word_label.Padding.Horizontal;
             int candidateWidth = UiLayoutCalculator.BoundCandidateWidth(
@@ -1430,6 +1447,47 @@ namespace uclliu
                 f.Width = formWidth;
             }
             longCandidateWidthAdjusted = candidateWidth != normalCandidateWidth;
+        }
+        private void restore_long_mode_candidate_width()
+        {
+            if (config["DEFAULT"]["SHORT_MODE"] != "1" && longCandidateWidthAdjusted)
+            {
+                update_UI();
+            }
+        }
+        private string prepare_smart_candidate_label(out bool hasNextPage)
+        {
+            smartCandidates.LimitCurrentPage(5);
+            if (config["DEFAULT"]["SHORT_MODE"] != "1")
+            {
+                IList<string> candidates = smartCandidates.VisibleCandidates;
+                bool hasCandidatesAfterMaximumPage = smartCandidates.HasNextPage;
+                List<int> prefixWidths = new List<int>();
+                List<string> prefix = new List<string>();
+                for (int count = 1; count <= candidates.Count; count++)
+                {
+                    prefix.Add(candidates[count - 1]);
+                    bool prefixHasNextPage = count < candidates.Count || hasCandidatesAfterMaximumPage;
+                    string prefixText = SmartCandidateDisplay.Format(prefix, prefixHasNextPage);
+                    prefixWidths.Add(measure_short_mode_text_width(prefixText, f.word_label.Font) + f.word_label.Padding.Horizontal);
+                }
+
+                int chromeWidth;
+                int availableFormWidth;
+                int availableCandidateWidth = get_long_mode_available_candidate_width(out chromeWidth, out availableFormWidth);
+                smartCandidates.LimitCurrentPage(UiLayoutCalculator.FitCandidateCount(prefixWidths, availableCandidateWidth));
+            }
+
+            hasNextPage = smartCandidates.HasNextPage;
+            return SmartCandidateDisplay.Format(smartCandidates.VisibleCandidates, hasNextPage);
+        }
+        private int get_long_mode_available_candidate_width(out int chromeWidth, out int availableFormWidth)
+        {
+            int currentCandidateWidth = get_column_width(3);
+            chromeWidth = Math.Max(0, f.LP.GetPreferredSize(Size.Empty).Width - currentCandidateWidth);
+            Rectangle workingArea = Screen.FromControl(f).WorkingArea;
+            availableFormWidth = Math.Max(0, workingArea.Right - Math.Max(f.Left, workingArea.Left));
+            return Math.Max(0, availableFormWidth - chromeWidth);
         }
         private int measure_short_mode_text_width(string text, Font font)
         {

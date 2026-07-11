@@ -43,12 +43,13 @@ internal static class Program
         failed += Run("short mode uses python-style compact label metrics", TestShortModeUsesPythonStyleCompactLabelMetrics);
         failed += Run("short mode measured layout keeps candidates readable", TestShortModeMeasuredLayoutKeepsCandidatesReadable);
         failed += Run("long candidate width is bounded", TestLongCandidateWidthIsBounded);
-        failed += Run("long candidate width restore requires prior adjustment", TestLongCandidateWidthRestoreRequiresPriorAdjustment);
+        failed += Run("long candidate fit count keeps at least one rendered item", TestLongCandidateFitCount);
         failed += Run("short mode layout change detects only real column changes", TestShortModeLayoutChangeDetectsOnlyRealColumnChanges);
         failed += Run("short mode packed layout removes hidden column gaps", TestShortModePackedLayoutRemovesHiddenColumnGaps);
         failed += Run("short mode chrome text padding nudges button text upward", TestShortModeChromeTextPaddingNudgesButtonTextUpward);
         failed += Run("long mode transition restores columns before showing game button", TestLongModeTransitionRestoresColumnsBeforeShowingGameButton);
         failed += Run("label update batcher coalesces short mode layout", TestLabelUpdateBatcherCoalescesShortModeLayout);
+        failed += Run("label update batcher keeps pending long mode restore", TestLabelUpdateBatcherKeepsPendingLongModeRestore);
         failed += Run("output hint composer ignores stale candidate labels", TestOutputHintComposerIgnoresStaleCandidateLabels);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
         failed += Run("simple ini reads default section values", TestSimpleIniReadsDefaultSectionValues);
@@ -121,6 +122,7 @@ internal static class Program
         failed += Run("smart candidate memory loads compatible literal JSON", TestSmartCandidateMemoryLoadsCompatibleLiteralJson);
         failed += Run("smart candidate memory learns supplementary scalar sequences", TestSmartCandidateMemoryLearnsSupplementaryScalarSequences);
         failed += Run("smart candidate session pages and selects one based candidates", TestSmartCandidateSessionPagesAndSelects);
+        failed += Run("smart candidate session advances by visible page count", TestSmartCandidateSessionAdvancesByVisiblePageCount);
         failed += Run("smart candidate output commits only after success", TestSmartCandidateOutputCommitsOnlyAfterSuccess);
         failed += Run("smart candidate session uses longest suffix and memory first", TestSmartCandidateSessionUsesLongestSuffixAndMemoryFirst);
         failed += Run("smart candidate continuous toggle refreshes display text", TestSmartCandidateContinuousToggleRefreshesDisplayText);
@@ -643,18 +645,24 @@ internal static class Program
         AssertEqual(300, UiLayoutCalculator.BoundCandidateWidth(200, 350, 300));
     }
 
-    private static void TestLongCandidateWidthRestoreRequiresPriorAdjustment()
+    private static void TestLongCandidateFitCount()
     {
-        AssertTrue(UiLayoutCalculator.ShouldRestoreLongCandidateWidth(true, ""), "adjusted width should restore when candidates clear");
-        AssertTrue(!UiLayoutCalculator.ShouldRestoreLongCandidateWidth(false, ""), "normal width should ignore empty refreshes");
-        AssertTrue(!UiLayoutCalculator.ShouldRestoreLongCandidateWidth(true, "1候選"), "visible candidates should not restore");
-
-        bool adjusted = true;
-        if (UiLayoutCalculator.ShouldRestoreLongCandidateWidth(adjusted, ""))
+        string[] longCandidates = new string[]
         {
-            adjusted = false;
+            new string('甲', 10), new string('乙', 10), new string('丙', 10), new string('丁', 10), new string('戊', 10)
+        };
+        List<string> prefix = new List<string>();
+        List<int> prefixWidths = new List<int>();
+        for (int i = 0; i < longCandidates.Length; i++)
+        {
+            prefix.Add(longCandidates[i]);
+            prefixWidths.Add(SmartCandidateDisplay.Format(prefix, i < longCandidates.Length - 1).Length * 10);
         }
-        AssertTrue(!UiLayoutCalculator.ShouldRestoreLongCandidateWidth(adjusted, ""), "repeated empty refresh should not restore twice");
+
+        AssertEqual(2, UiLayoutCalculator.FitCandidateCount(prefixWidths, prefixWidths[1]));
+        AssertEqual(5, UiLayoutCalculator.FitCandidateCount(new int[] { 120, 240, 360, 480, 600 }, 600));
+        AssertEqual(1, UiLayoutCalculator.FitCandidateCount(new int[] { 500, 700 }, 100));
+        AssertEqual(0, UiLayoutCalculator.FitCandidateCount(new int[0], 100));
     }
 
     private static void TestShortModeLayoutChangeDetectsOnlyRealColumnChanges()
@@ -868,6 +876,29 @@ internal static class Program
         AssertTrue(appliedSnapshot.WordHasColor, "word color should be carried by the batch");
         AssertEqual((int)ShortModeWordLayoutKind.Candidates, (int)appliedSnapshot.WordLayoutKind);
         AssertTrue(appliedSnapshot.WordHasMorePage, "more-page state should be carried by the batch");
+    }
+
+    private static void TestLabelUpdateBatcherKeepsPendingLongModeRestore()
+    {
+        Action pending = null;
+        List<UiLabelUpdateSnapshot> applied = new List<UiLabelUpdateSnapshot>();
+        UiLabelUpdateBatcher batcher = new UiLabelUpdateBatcher(
+            delegate(Action action) { pending = action; },
+            delegate(UiLabelUpdateSnapshot snapshot) { applied.Add(snapshot); });
+
+        batcher.QueueWord("", Color.Black, ShortModeWordLayoutKind.Candidates, false, true, true);
+        batcher.QueueWord("一般字根", Color.Black, ShortModeWordLayoutKind.Hint, false);
+        pending();
+
+        AssertEqual(1, applied.Count);
+        AssertEqual("一般字根", applied[0].WordText);
+        AssertTrue(applied[0].RestoreLongModeCandidate, "later normal label must preserve pending restore");
+        AssertTrue(!applied[0].ResizeLongModeCandidate, "final normal label must not resize as smart candidates");
+
+        batcher.QueueWord("下一個字根", Color.Black, ShortModeWordLayoutKind.Hint, false);
+        pending();
+        AssertEqual(2, applied.Count);
+        AssertTrue(!applied[1].RestoreLongModeCandidate, "restore action must clear after one flush");
     }
 
     private static void TestOutputHintComposerIgnoresStaleCandidateLabels()
@@ -2043,6 +2074,30 @@ internal static class Program
         AssertEqual("", session.Select(9));
         AssertEqual("王小明", session.Context);
         AssertEqual("小明", memory.GetPredictions("王")[0]);
+    }
+
+    private static void TestSmartCandidateSessionAdvancesByVisiblePageCount()
+    {
+        SmartCandidateSession session = new SmartCandidateSession(SmartCandidateTable.Parse(new string[]
+        {
+            "王\t甲\t乙\t丙\t丁\t戊\t己\t庚\t辛"
+        }), new SmartCandidateMemory());
+        session.ObserveCommittedText("王");
+
+        session.LimitCurrentPage(2);
+        AssertSequence(new string[] { "甲", "乙" }, ToArray(session.VisibleCandidates));
+        AssertTrue(session.NextPage(), "overflow candidates should move to next page");
+        AssertSequence(new string[] { "丙", "丁", "戊", "己", "庚" }, ToArray(session.VisibleCandidates));
+
+        session.LimitCurrentPage(3);
+        AssertSequence(new string[] { "丙", "丁", "戊" }, ToArray(session.VisibleCandidates));
+        AssertTrue(session.NextPage(), "next offset should use the displayed count, not fixed page size");
+        AssertSequence(new string[] { "己", "庚", "辛" }, ToArray(session.VisibleCandidates));
+
+        session.EndContext();
+        session.ObserveCommittedText("王");
+        session.LimitCurrentPage(0);
+        AssertSequence(new string[] { "甲" }, ToArray(session.VisibleCandidates));
     }
 
     private static void TestSmartCandidateOutputCommitsOnlyAfterSuccess()

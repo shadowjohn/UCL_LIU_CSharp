@@ -155,10 +155,23 @@ namespace uclliu
                 return false;
             }
 
-            _pageOffset += _pageSize;
+            _pageOffset += _visibleCandidates.Count;
             UpdateVisiblePage();
             LastActivityUtc = DateTime.UtcNow;
             return true;
+        }
+
+        public void LimitCurrentPage(int count)
+        {
+            if (count < 1)
+            {
+                count = 1;
+            }
+            if (count > _pageSize)
+            {
+                count = _pageSize;
+            }
+            UpdateVisiblePage(count);
         }
 
         public void Cancel()
@@ -211,8 +224,13 @@ namespace uclliu
 
         private void UpdateVisiblePage()
         {
+            UpdateVisiblePage(_pageSize);
+        }
+
+        private void UpdateVisiblePage(int count)
+        {
             _visibleCandidates.Clear();
-            int end = Math.Min(_pageOffset + _pageSize, _candidates.Count);
+            int end = Math.Min(_pageOffset + count, _candidates.Count);
             for (int i = _pageOffset; i < end; i++)
             {
                 _visibleCandidates.Add(_candidates[i]);
