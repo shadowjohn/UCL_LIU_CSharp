@@ -208,7 +208,7 @@ namespace uclliu
                 for (int i = 0; i < candidates.Count; i++)
                 {
                     string candidate = candidates[i];
-                    if (!Context.EndsWith(candidate, StringComparison.Ordinal) && !_candidates.Contains(candidate))
+                    if (!Context.EndsWith(candidate, StringComparison.Ordinal))
                     {
                         _candidates.Add(candidate);
                     }

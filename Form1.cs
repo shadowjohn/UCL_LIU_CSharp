@@ -191,6 +191,12 @@ namespace uclliu
                 //剪貼簿與舊 SendKeys 模式會產生 injected key，但不要放行真人按鍵。
                 return OK;
             }
+            if (ucl.smartCandidates != null && SmartCandidateKeyRules.ShouldEndContext(ea, keydown))
+            {
+                ucl.smartCandidates.EndContext();
+                ucl.refresh_smart_candidate_label();
+                return OK;
+            }
             //如果是需要跳過的 app ，就跳過
             string foregroundProcessName = ucl.getForegroundWindowProcessName();
             if (TextOutputRouter.MatchesProcess(foregroundProcessName, ucl.sendkey_not_use_ucl_apps))

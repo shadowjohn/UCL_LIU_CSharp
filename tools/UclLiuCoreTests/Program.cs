@@ -132,6 +132,8 @@ internal static class Program
         failed += Run("smart candidate session suppresses immediate duplicate candidates", TestSmartCandidateSessionSuppressesImmediateDuplicates);
         failed += Run("smart candidate session handles punctuation and cancellation boundaries", TestSmartCandidateSessionHandlesBoundaries);
         failed += Run("smart candidate session distinguishes cancel and end context", TestSmartCandidateSessionCancelAndEndContext);
+        failed += Run("smart candidate enter ends context and passes through", TestSmartCandidateEnterEndsContextAndPassesThrough);
+        failed += Run("smart candidate session keeps large table order", TestSmartCandidateSessionKeepsLargeTableOrder);
         failed += Run("smart candidate session handles supplementary CJK scalars", TestSmartCandidateSessionHandlesSupplementaryCjk);
         failed += Run("smart candidate key rules require shifted top row digits", TestSmartCandidateKeyRules);
         failed += Run("smart candidate settings migrate once and preserve v2 choices", TestSmartCandidateSettingsDefaults);
@@ -2268,6 +2270,42 @@ internal static class Program
         session.EndContext();
         AssertEqual("", session.Context);
         AssertSequence(new string[0], ToArray(session.VisibleCandidates));
+    }
+
+    private static void TestSmartCandidateEnterEndsContextAndPassesThrough()
+    {
+        SmartCandidateSession session = new SmartCandidateSession(
+            SmartCandidateTable.Parse(new string[] { "王\t小明" }),
+            new SmartCandidateMemory());
+        session.ObserveCommittedText("王");
+
+        AssertTrue(SmartCandidateKeyRules.ShouldEndContext(13, true), "Enter keydown should end the smart context");
+        AssertTrue(!SmartCandidateKeyRules.ShouldEndContext(13, false), "Enter keyup should not repeat the action");
+        AssertTrue(!SmartCandidateKeyRules.ShouldEndContext(32, true), "other keys should keep the smart context");
+        session.EndContext();
+
+        AssertEqual("", session.Context);
+        AssertSequence(new string[0], ToArray(session.VisibleCandidates));
+    }
+
+    private static void TestSmartCandidateSessionKeepsLargeTableOrder()
+    {
+        const int candidateCount = 1500;
+        string[] expected = new string[candidateCount];
+        StringBuilder row = new StringBuilder("王");
+        for (int i = 0; i < candidateCount; i++)
+        {
+            expected[i] = char.ConvertFromUtf32(0x3400 + i);
+            row.Append('\t').Append(expected[i]);
+        }
+
+        SmartCandidateSession session = new SmartCandidateSession(
+            SmartCandidateTable.Parse(new string[] { row.ToString() }),
+            new SmartCandidateMemory(),
+            candidateCount);
+        session.ObserveCommittedText("王");
+
+        AssertSequence(expected, ToArray(session.VisibleCandidates));
     }
 
     private static void TestSmartCandidateSessionFlushRules()

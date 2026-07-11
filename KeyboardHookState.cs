@@ -124,6 +124,11 @@ namespace uclliu
 
     public static class SmartCandidateKeyRules
     {
+        public static bool ShouldEndContext(int virtualKey, bool keyDown)
+        {
+            return keyDown && virtualKey == 13;
+        }
+
         public static int SelectionNumber(int virtualKey, bool shiftDown)
         {
             return shiftDown && virtualKey >= 49 && virtualKey <= 53 ? virtualKey - 48 : 0;
