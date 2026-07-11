@@ -229,7 +229,7 @@ namespace uclliu
                 run_about_ucl();
                 return true;
             }
-            code = ",,,lock";
+            code = ",,,game";
             if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
             {
                 last_key = "";
@@ -239,7 +239,7 @@ namespace uclliu
                 }
                 return true;
             }
-            code = ",,,unlock";
+            code = ",,,normal";
             if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
             {
                 last_key = "";
