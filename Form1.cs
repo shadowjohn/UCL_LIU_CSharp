@@ -246,6 +246,12 @@ namespace uclliu
                 ucl.last_key = "";
             }
 
+            if (keydown && ESC && ucl.has_visible_smart_candidates())
+            {
+                ucl.cancel_smart_candidates();
+                return NO;
+            }
+
 
             if (ucl.flag_is_gamemode)
             {
@@ -376,6 +382,21 @@ namespace uclliu
                     ucl.debug_print("Debug14");
                 }
                 return OK;
+            }
+
+            int smartCandidateNumber = SmartCandidateKeyRules.SelectionNumber(ea, ucl.flag_is_shift_down);
+            if (keydown && smartCandidateNumber > 0 && ucl.try_select_smart_candidate(smartCandidateNumber))
+            {
+                return NO;
+            }
+
+            if (keydown && ea == 32 && ucl.flag_is_shift_down
+                && ucl.smartCandidates != null
+                && SmartCandidateKeyRules.ShouldPageOnShiftSpace(ucl.has_visible_smart_candidates(), ucl.smartCandidates.HasNextPage)
+                && ucl.try_page_smart_candidates())
+            {
+                ucl.flag_is_play_otherkey = true;
+                return NO;
             }
 
             HalfFullShortcutDecision halfFullShortcutDecision = HalfFullShortcutRules.EvaluateShiftSpace(ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] == "1", ucl.flag_is_shift_down);
@@ -627,6 +648,10 @@ namespace uclliu
                         //# Play ucl
                         //#print("Play UCL")
                         //#print(thekey)
+                        if (ucl.play_ucl_label.Length == 0)
+                        {
+                            ucl.cancel_smart_candidates();
+                        }
                         int kac = ea;
                         switch (kac)
                         {
@@ -1121,6 +1146,7 @@ namespace uclliu
         uclliu ucl;
         private static Form1 form = null;
         private readonly ContextMenu cMenu = new ContextMenu();
+        private readonly System.Windows.Forms.Timer smartCandidateTimer;
         private CustomDictionaryForm customDictionaryForm = null;
         public Form1()
         {
@@ -1130,6 +1156,14 @@ namespace uclliu
             //https://stackoverflow.com/questions/12983427/accessing-forms-controls-from-another-class
             form = this;
             ucl = new uclliu(ref form);
+            smartCandidateTimer = new System.Windows.Forms.Timer();
+            smartCandidateTimer.Interval = 30000;
+            smartCandidateTimer.Tick += smartCandidateTimer_Tick;
+        }
+
+        private void smartCandidateTimer_Tick(object sender, EventArgs e)
+        {
+            ucl.flush_smart_candidate_memory(false);
         }
 
         //令 form 可以移動 
@@ -1200,7 +1234,7 @@ namespace uclliu
             /*this.TopLevel = true;
             this.TopLevel = false;
             this.TopLevel = true;
-            this.TopMost = true;            
+            this.TopMost = true;
             this.TopMost = false;
             this.TopMost = true;
             */
@@ -1215,6 +1249,7 @@ namespace uclliu
             //起始不可以是 topmost ，在程式執行後，才置高，不然
             //首次切換輸入法時，會失去原始的焦點(如記事本)
             this.TopMost = true;
+            smartCandidateTimer.Start();
 
 
 
@@ -1729,6 +1764,9 @@ namespace uclliu
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
+            smartCandidateTimer.Stop();
+            ucl.flush_smart_candidate_memory(true);
+            smartCandidateTimer.Dispose();
             if (intLLKey != 0)
             {
                 UnhookWindowsHookEx(intLLKey);

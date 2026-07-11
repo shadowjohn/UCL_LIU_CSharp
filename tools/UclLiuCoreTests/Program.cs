@@ -123,6 +123,8 @@ internal static class Program
         failed += Run("smart candidate session handles supplementary CJK scalars", TestSmartCandidateSessionHandlesSupplementaryCjk);
         failed += Run("smart candidate session bounds comma preserved Chinese run", TestSmartCandidateSessionBoundsChineseRun);
         failed += Run("smart candidate key rules require shifted top row digits", TestSmartCandidateKeyRules);
+        failed += Run("smart candidate settings default only missing keys", TestSmartCandidateSettingsDefaults);
+        failed += Run("smart candidate labels use one based pages", TestSmartCandidateLabelsUseOneBasedPages);
 
         if (failed > 0)
         {
@@ -2071,6 +2073,28 @@ internal static class Program
         AssertEqual(0, SmartCandidateKeyRules.SelectionNumber(54, true));
         AssertTrue(SmartCandidateKeyRules.ShouldPageOnShiftSpace(true, true), "visible next page should win Shift+Space");
         AssertTrue(!SmartCandidateKeyRules.ShouldPageOnShiftSpace(true, false), "last page should fall through");
+    }
+
+    private static void TestSmartCandidateSettingsDefaults()
+    {
+        SimpleIniData config = new SimpleIniData();
+        config["DEFAULT"]["SMART_ROOT_ENABLE"] = "0";
+        config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] = "";
+
+        SmartCandidateSettings.EnsureDefaults(config);
+
+        AssertEqual("1", config["DEFAULT"]["SMART_CANDIDATE_ENABLE"]);
+        AssertEqual("", config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"]);
+        AssertEqual("0", config["DEFAULT"]["SMART_ROOT_ENABLE"]);
+        AssertTrue(SmartCandidateSettings.IsEnabled("1"), "1 should enable smart candidates");
+        AssertTrue(!SmartCandidateSettings.IsEnabled("0"), "0 should disable smart candidates");
+    }
+
+    private static void TestSmartCandidateLabelsUseOneBasedPages()
+    {
+        AssertEqual("1小明 2先生 ...", SmartCandidateDisplay.Format(new string[] { "小明", "先生" }, true));
+        AssertEqual("1小姐", SmartCandidateDisplay.Format(new string[] { "小姐" }, false));
+        AssertEqual("", SmartCandidateDisplay.Format(new string[0], false));
     }
 
     private static string[] ToArray(IList<string> values)

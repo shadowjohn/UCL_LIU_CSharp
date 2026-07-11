@@ -151,6 +151,11 @@ namespace uclliu
                 }
             }
         }
+
+        public bool ContainsKey(string key)
+        {
+            return key != null && values.ContainsKey(key);
+        }
     }
 
     public static class SimpleIniFile

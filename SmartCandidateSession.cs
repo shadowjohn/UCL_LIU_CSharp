@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace uclliu
 {
@@ -271,6 +272,59 @@ namespace uclliu
         private static bool IsSentenceBoundary(int value)
         {
             return value == '。' || value == '！' || value == '？' || value == '；' || value == '\r' || value == '\n';
+        }
+    }
+
+    public static class SmartCandidateSettings
+    {
+        public static void EnsureDefaults(SimpleIniData config)
+        {
+            if (config == null)
+            {
+                throw new ArgumentNullException("config");
+            }
+
+            EnsureDefault(config["DEFAULT"], "SMART_CANDIDATE_ENABLE");
+            EnsureDefault(config["DEFAULT"], "SMART_CANDIDATE_CONTINUOUS");
+            EnsureDefault(config["DEFAULT"], "SMART_ROOT_ENABLE");
+        }
+
+        public static bool IsEnabled(string value)
+        {
+            return value == "1";
+        }
+
+        private static void EnsureDefault(SimpleIniSection section, string key)
+        {
+            if (!section.ContainsKey(key))
+            {
+                section[key] = "1";
+            }
+        }
+    }
+
+    public static class SmartCandidateDisplay
+    {
+        public static string Format(IEnumerable<string> candidates, bool hasNextPage)
+        {
+            StringBuilder text = new StringBuilder();
+            int number = 1;
+            if (candidates != null)
+            {
+                foreach (string candidate in candidates)
+                {
+                    if (text.Length > 0)
+                    {
+                        text.Append(' ');
+                    }
+                    text.Append(number++).Append(candidate);
+                }
+            }
+            if (hasNextPage && text.Length > 0)
+            {
+                text.Append(" ...");
+            }
+            return text.ToString();
         }
     }
 }
