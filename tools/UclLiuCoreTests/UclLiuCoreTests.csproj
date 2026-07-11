@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net452</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System.Web.Extensions" />
     <Compile Include="..\..\AltTabWindowStyle.cs" Link="AltTabWindowStyle.cs" />
     <Compile Include="..\..\ChromeButton.cs" Link="ChromeButton.cs" />
     <Compile Include="..\..\ChromeButtonTextAlignment.cs" Link="ChromeButtonTextAlignment.cs" />

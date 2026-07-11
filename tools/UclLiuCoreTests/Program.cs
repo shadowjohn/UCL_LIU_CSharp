@@ -111,6 +111,8 @@ internal static class Program
         failed += Run("smart candidate memory missing load returns empty memory", TestSmartCandidateMemoryMissingLoadReturnsEmptyMemory);
         failed += Run("smart candidate memory corrupt load backs up and recovers", TestSmartCandidateMemoryCorruptLoadBacksUpAndRecovers);
         failed += Run("smart candidate memory save atomically replaces file", TestSmartCandidateMemorySaveAtomicallyReplacesFile);
+        failed += Run("smart candidate memory caps candidates and scope", TestSmartCandidateMemoryCapsCandidatesAndScope);
+        failed += Run("smart candidate memory loads compatible literal JSON", TestSmartCandidateMemoryLoadsCompatibleLiteralJson);
 
         if (failed > 0)
         {
@@ -1760,6 +1762,51 @@ internal static class Program
         {
             File.Delete(path);
             File.Delete(path + ".tmp");
+        }
+    }
+
+    private static void TestSmartCandidateMemoryCapsCandidatesAndScope()
+    {
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+        memory.RecordPredictionChoice("ctx", "keep");
+        memory.RecordPredictionChoice("ctx", "keep");
+        for (int i = 0; i < SmartCandidateMemory.MaxCandidatesPerKey; i++)
+        {
+            memory.RecordPredictionChoice("ctx", "candidate-" + i);
+        }
+
+        string[] predictions = memory.GetPredictions("ctx").ToArray();
+
+        AssertEqual(SmartCandidateMemory.MaxCandidatesPerKey, predictions.Length);
+        AssertEqual("keep", predictions[0]);
+
+        SmartCandidateMemory scopeMemory = new SmartCandidateMemory();
+        for (int i = 0; i <= SmartCandidateMemory.MaxEntriesPerScope; i++)
+        {
+            scopeMemory.RecordPredictionChoice("ctx-" + i, "candidate");
+        }
+        AssertSequence(new string[0], scopeMemory.GetPredictions("ctx-0").ToArray());
+        AssertSequence(new string[] { "candidate" }, scopeMemory.GetPredictions("ctx-" + SmartCandidateMemory.MaxEntriesPerScope).ToArray());
+    }
+
+    private static void TestSmartCandidateMemoryLoadsCompatibleLiteralJson()
+    {
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            File.WriteAllText(path,
+                "{\"version\":1,\"nextOrder\":9,\"predictions\":[{\"key\":\"王\",\"candidate\":\"小明\",\"score\":7,\"firstSeen\":2,\"lastUsed\":8}],\"roots\":null,\"future\":\"ignored\"}",
+                new UTF8Encoding(false));
+
+            SmartCandidateMemory memory = SmartCandidateMemoryStore.Load(path);
+
+            AssertSequence(new string[] { "小明" }, memory.GetPredictions("王").ToArray());
+            AssertSequence(new string[] { "甲", "乙" }, memory.RankRootCandidates("abc", new string[] { "甲", "乙" }).ToArray());
+            AssertTrue(!memory.IsDirty, "compatible JSON should load cleanly");
+        }
+        finally
+        {
+            File.Delete(path);
         }
     }
 
