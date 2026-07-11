@@ -42,6 +42,7 @@ internal static class Program
         failed += Run("short mode width is bounded and proportional", TestShortModeWidth);
         failed += Run("short mode uses python-style compact label metrics", TestShortModeUsesPythonStyleCompactLabelMetrics);
         failed += Run("short mode measured layout keeps candidates readable", TestShortModeMeasuredLayoutKeepsCandidatesReadable);
+        failed += Run("long candidate width is bounded", TestLongCandidateWidthIsBounded);
         failed += Run("short mode layout change detects only real column changes", TestShortModeLayoutChangeDetectsOnlyRealColumnChanges);
         failed += Run("short mode packed layout removes hidden column gaps", TestShortModePackedLayoutRemovesHiddenColumnGaps);
         failed += Run("short mode chrome text padding nudges button text upward", TestShortModeChromeTextPaddingNudgesButtonTextUpward);
@@ -628,6 +629,17 @@ internal static class Program
 
         ShortModeLabelLayout cappedLayout = UiLayoutCalculator.ShortModeMeasuredWordLayout("0你 1條", 85, 1.0, 8, ShortModeWordLayoutKind.Candidates, false, 80);
         AssertEqual(80, cappedLayout.Width);
+    }
+
+    private static void TestLongCandidateWidthIsBounded()
+    {
+        AssertEqual(500, UiLayoutCalculator.BoundCandidateWidth(500, 350, 1200));
+        AssertEqual(350, UiLayoutCalculator.BoundCandidateWidth(200, 350, 1200));
+        AssertEqual(1200, UiLayoutCalculator.BoundCandidateWidth(1600, 350, 1200));
+        AssertEqual(350, UiLayoutCalculator.BoundCandidateWidth(-1, 350, 1200));
+        AssertEqual(200, UiLayoutCalculator.BoundCandidateWidth(200, -1, 1200));
+        AssertEqual(0, UiLayoutCalculator.BoundCandidateWidth(200, 350, -1));
+        AssertEqual(300, UiLayoutCalculator.BoundCandidateWidth(200, 350, 300));
     }
 
     private static void TestShortModeLayoutChangeDetectsOnlyRealColumnChanges()

@@ -531,7 +531,7 @@ namespace uclliu
                 return;
             }
             string text = SmartCandidateDisplay.Format(smartCandidates.VisibleCandidates, smartCandidates.HasNextPage);
-            queue_word_label_update(text, Color.Black, ShortModeWordLayoutKind.Candidates, smartCandidates.HasNextPage);
+            queue_word_label_update(text, Color.Black, ShortModeWordLayoutKind.Candidates, smartCandidates.HasNextPage, true);
         }
         public bool start_phone_mode()
         {
@@ -1319,9 +1319,9 @@ namespace uclliu
         {
             queue_word_label_update(text, foreColor, ShortModeWordLayoutKind.Hint, false);
         }
-        private void queue_word_label_update(string text, Color? foreColor, ShortModeWordLayoutKind layoutKind, bool hasMorePage)
+        private void queue_word_label_update(string text, Color? foreColor, ShortModeWordLayoutKind layoutKind, bool hasMorePage, bool resizeLongModeCandidate = false)
         {
-            labelUpdateBatcher.QueueWord(text, foreColor, layoutKind, hasMorePage);
+            labelUpdateBatcher.QueueWord(text, foreColor, layoutKind, hasMorePage, resizeLongModeCandidate);
         }
         private void apply_label_update_batch(UiLabelUpdateSnapshot snapshot)
         {
@@ -1344,6 +1344,10 @@ namespace uclliu
                 }
                 currentWordLayoutKind = snapshot.WordLayoutKind;
                 currentWordHasMorePage = snapshot.WordHasMorePage;
+                if (snapshot.ResizeLongModeCandidate)
+                {
+                    update_long_mode_candidate_width();
+                }
             }
 
             update_short_mode_columns();
@@ -1388,6 +1392,38 @@ namespace uclliu
         private int get_short_mode_max_width()
         {
             return Math.Max(0, Screen.PrimaryScreen.WorkingArea.Width - 160);
+        }
+        private void update_long_mode_candidate_width()
+        {
+            if (config["DEFAULT"]["SHORT_MODE"] == "1")
+            {
+                return;
+            }
+            if (String.IsNullOrEmpty(f.word_label.Text))
+            {
+                update_UI();
+                return;
+            }
+
+            int normalCandidateWidth = Convert.ToInt32(350 * Convert.ToDouble(config["DEFAULT"]["ZOOM"]));
+            int currentCandidateWidth = get_column_width(3);
+            int chromeWidth = Math.Max(0, f.LP.GetPreferredSize(Size.Empty).Width - currentCandidateWidth);
+            Rectangle workingArea = Screen.FromControl(f).WorkingArea;
+            int availableFormWidth = Math.Max(0, workingArea.Right - Math.Max(f.Left, workingArea.Left));
+            int availableCandidateWidth = Math.Max(0, availableFormWidth - chromeWidth);
+            int measuredWidth = measure_short_mode_text_width(f.word_label.Text, f.word_label.Font)
+                + f.word_label.Padding.Horizontal;
+            int candidateWidth = UiLayoutCalculator.BoundCandidateWidth(
+                measuredWidth,
+                normalCandidateWidth,
+                availableCandidateWidth);
+            int formWidth = Math.Min(availableFormWidth, chromeWidth + candidateWidth);
+
+            set_column_width(3, candidateWidth);
+            if (f.Width != formWidth)
+            {
+                f.Width = formWidth;
+            }
         }
         private int measure_short_mode_text_width(string text, Font font)
         {

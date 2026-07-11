@@ -74,6 +74,14 @@ namespace uclliu
 
     public static class UiLayoutCalculator
     {
+        public static int BoundCandidateWidth(int measuredWidth, int minimumWidth, int screenWorkWidth)
+        {
+            measuredWidth = Math.Max(0, measuredWidth);
+            minimumWidth = Math.Max(0, minimumWidth);
+            screenWorkWidth = Math.Max(0, screenWorkWidth);
+            return Math.Min(Math.Max(measuredWidth, minimumWidth), screenWorkWidth);
+        }
+
         public static int ShortModeTextWidth(string text, double zoom, int charWidth, int minWidth, int maxWidth)
         {
             if (text == null)
@@ -292,6 +300,7 @@ namespace uclliu
         public Color WordColor { get; set; }
         public ShortModeWordLayoutKind WordLayoutKind { get; set; }
         public bool WordHasMorePage { get; set; }
+        public bool ResizeLongModeCandidate { get; set; }
     }
 
     public sealed class UiLabelUpdateBatcher
@@ -308,6 +317,7 @@ namespace uclliu
         private Color wordColor = Color.Black;
         private ShortModeWordLayoutKind wordLayoutKind = ShortModeWordLayoutKind.Hint;
         private bool wordHasMorePage;
+        private bool resizeLongModeCandidate;
 
         public UiLabelUpdateBatcher(Action<Action> post, Action<UiLabelUpdateSnapshot> apply)
         {
@@ -323,7 +333,7 @@ namespace uclliu
             Schedule();
         }
 
-        public void QueueWord(string text, Color? color, ShortModeWordLayoutKind layoutKind, bool hasMorePage)
+        public void QueueWord(string text, Color? color, ShortModeWordLayoutKind layoutKind, bool hasMorePage, bool resizeLongModeCandidate = false)
         {
             updateWord = true;
             wordText = text ?? "";
@@ -334,6 +344,7 @@ namespace uclliu
             }
             wordLayoutKind = layoutKind;
             wordHasMorePage = hasMorePage;
+            this.resizeLongModeCandidate = resizeLongModeCandidate;
             Schedule();
         }
 
@@ -367,6 +378,7 @@ namespace uclliu
             snapshot.WordColor = wordColor;
             snapshot.WordLayoutKind = wordLayoutKind;
             snapshot.WordHasMorePage = wordHasMorePage;
+            snapshot.ResizeLongModeCandidate = resizeLongModeCandidate;
 
             scheduled = false;
             updateType = false;
