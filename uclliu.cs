@@ -455,7 +455,7 @@ namespace uclliu
             {
                 return false;
             }
-            show_smart_candidate_label();
+            refresh_smart_candidate_label();
             return true;
         }
         public void cancel_smart_candidates()
@@ -465,7 +465,7 @@ namespace uclliu
                 return;
             }
             smartCandidates.Cancel();
-            show_smart_candidate_label();
+            refresh_smart_candidate_label();
         }
         public void flush_smart_candidate_memory(bool force)
         {
@@ -491,18 +491,14 @@ namespace uclliu
                 debug_print("smart candidate memory save failed: " + ex.Message);
             }
         }
-        public void clear_smart_candidate_memory()
+        public bool clear_smart_candidate_memory()
         {
             string memoryPath = Path.Combine(my.pwd(), CANDIDATE_MEMORY_FILE);
-            SmartCandidateMemory emptyMemory = new SmartCandidateMemory();
-            try
+            string error;
+            if (!SmartCandidateMemoryStore.TryClearAtomic(memoryPath, out error))
             {
-                SmartCandidateMemoryStore.SaveAtomic(memoryPath, emptyMemory);
-            }
-            catch (Exception ex)
-            {
-                debug_print("smart candidate memory clear failed: " + ex.Message);
-                return;
+                debug_print("smart candidate memory clear failed: " + error);
+                return false;
             }
 
             foreach (string path in new string[] { memoryPath + ".tmp", memoryPath + ".broken" })
@@ -520,14 +516,15 @@ namespace uclliu
                 }
             }
 
-            smartCandidateMemory = emptyMemory;
+            smartCandidateMemory = new SmartCandidateMemory();
             smartCandidates = new SmartCandidateSession(smartCandidateTable ?? SmartCandidateTable.Empty(), smartCandidateMemory);
             smartCandidates.Enabled = SmartCandidateSettings.IsEnabled(config["DEFAULT"]["SMART_CANDIDATE_ENABLE"])
                 && has_smart_candidate_table();
             smartCandidates.ContinuousEnabled = SmartCandidateSettings.IsEnabled(config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"]);
-            show_smart_candidate_label();
+            refresh_smart_candidate_label();
+            return true;
         }
-        private void show_smart_candidate_label()
+        public void refresh_smart_candidate_label()
         {
             if (smartCandidates == null)
             {
@@ -1594,7 +1591,7 @@ namespace uclliu
                     show_phone_to_label(data);
                     if (has_visible_smart_candidates())
                     {
-                        show_smart_candidate_label();
+                        refresh_smart_candidate_label();
                     }
                     return true;
                 }
@@ -1730,7 +1727,7 @@ namespace uclliu
                 if (smartCandidates != null)
                 {
                     smartCandidates.EndContext();
-                    show_smart_candidate_label();
+                    refresh_smart_candidate_label();
                 }
                 switch (flag_is_ucl)
                 {
@@ -2336,7 +2333,7 @@ namespace uclliu
             pendingCommit.Complete(outputSucceeded, smartCandidates, smartCandidateMemory, preparedText);
             if (has_visible_smart_candidates() || !outputSucceeded)
             {
-                show_smart_candidate_label();
+                refresh_smart_candidate_label();
             }
         }
     }

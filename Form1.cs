@@ -1636,11 +1636,18 @@ namespace uclliu
         }
         private void menu_open_candidate_download(object sender, EventArgs e)
         {
-            Process.Start(new ProcessStartInfo
+            try
             {
-                FileName = "https://github.com/shadowjohn/UCL_LIU_CSharp",
-                UseShellExecute = true
-            });
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://github.com/shadowjohn/UCL_LIU_CSharp",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "無法開啟候選字下載頁面：" + ex.Message, TrayMenuText.CandidateDownload, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
         private void menu_toggle_smart_candidate(object sender, EventArgs e)
         {
@@ -1652,8 +1659,8 @@ namespace uclliu
                 if (!enabled)
                 {
                     ucl.smartCandidates.EndContext();
-                    ucl.cancel_smart_candidates();
                 }
+                ucl.refresh_smart_candidate_label();
             }
             ucl.saveConfig();
         }
@@ -1666,8 +1673,9 @@ namespace uclliu
                 ucl.smartCandidates.ContinuousEnabled = enabled;
                 if (!enabled)
                 {
-                    ucl.cancel_smart_candidates();
+                    ucl.smartCandidates.Cancel();
                 }
+                ucl.refresh_smart_candidate_label();
             }
             ucl.saveConfig();
         }
@@ -1686,7 +1694,13 @@ namespace uclliu
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                ucl.clear_smart_candidate_memory();
+                bool cleared = ucl.clear_smart_candidate_memory();
+                MessageBox.Show(
+                    this,
+                    cleared ? "智慧選字記憶已清除。" : "智慧選字記憶清除失敗，原有記憶仍保留。",
+                    TrayMenuText.CandidateClearMemory,
+                    MessageBoxButtons.OK,
+                    cleared ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             }
         }
         private void menu_run_exit(object sender, EventArgs e)
@@ -1749,7 +1763,6 @@ namespace uclliu
         }
         private void show_tray_menu_at_cursor()
         {
-            rebuild_tray_menu();
             cMenu.Show(this, PointToClient(Cursor.Position));
         }
         private void rebuild_tray_menu()
@@ -1817,22 +1830,33 @@ namespace uclliu
 
             MenuItem candidateMenu = new MenuItem();
             candidateMenu.Text = TrayMenuText.CandidateMenu;
-            if (!ucl.has_smart_candidate_table())
+            CandidateMenuItemDescriptor[] candidateItems = CandidateMenuModel.Build(
+                ucl.has_smart_candidate_table(),
+                ucl.config["DEFAULT"]["SMART_CANDIDATE_ENABLE"] == "1",
+                ucl.config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] == "1",
+                ucl.config["DEFAULT"]["SMART_ROOT_ENABLE"] == "1");
+            foreach (CandidateMenuItemDescriptor item in candidateItems)
             {
-                candidateMenu.MenuItems.Add(TrayMenuText.CandidateDownload, this.menu_open_candidate_download);
-            }
-            else
-            {
-                candidateMenu.MenuItems.Add(
-                    TrayMenuText.CandidateEnable(ucl.config["DEFAULT"]["SMART_CANDIDATE_ENABLE"] == "1"),
-                    this.menu_toggle_smart_candidate);
-                candidateMenu.MenuItems.Add(
-                    TrayMenuText.CandidateContinuous(ucl.config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] == "1"),
-                    this.menu_toggle_smart_candidate_continuous);
-                candidateMenu.MenuItems.Add(
-                    TrayMenuText.SmartRoot(ucl.config["DEFAULT"]["SMART_ROOT_ENABLE"] == "1"),
-                    this.menu_toggle_smart_root);
-                candidateMenu.MenuItems.Add(TrayMenuText.CandidateClearMemory, this.menu_clear_smart_candidate_memory);
+                EventHandler handler = null;
+                switch (item.Kind)
+                {
+                    case CandidateMenuItemKind.Download:
+                        handler = this.menu_open_candidate_download;
+                        break;
+                    case CandidateMenuItemKind.Enable:
+                        handler = this.menu_toggle_smart_candidate;
+                        break;
+                    case CandidateMenuItemKind.Continuous:
+                        handler = this.menu_toggle_smart_candidate_continuous;
+                        break;
+                    case CandidateMenuItemKind.SmartRoot:
+                        handler = this.menu_toggle_smart_root;
+                        break;
+                    case CandidateMenuItemKind.ClearMemory:
+                        handler = this.menu_clear_smart_candidate_memory;
+                        break;
+                }
+                candidateMenu.MenuItems.Add(item.Text, handler);
             }
             cMenu.MenuItems.Add(candidateMenu);
             cMenu.MenuItems.Add(TrayMenuText.Exit, this.menu_run_exit);

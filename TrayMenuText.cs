@@ -64,24 +64,51 @@ namespace uclliu
             return ToggleItem("", enabled, "智慧字根功能");
         }
 
-        public static string[] CandidateItems(bool tableAvailable, bool enabled, bool continuousEnabled, bool smartRootEnabled)
-        {
-            if (!tableAvailable)
-            {
-                return new string[] { CandidateDownload };
-            }
-            return new string[]
-            {
-                CandidateEnable(enabled),
-                CandidateContinuous(continuousEnabled),
-                SmartRoot(smartRootEnabled),
-                CandidateClearMemory
-            };
-        }
-
         private static bool IsOutputType(string outputType, string expected)
         {
             return (outputType ?? "DEFAULT").Trim().ToUpperInvariant() == expected;
+        }
+    }
+
+    public enum CandidateMenuItemKind
+    {
+        Download,
+        Enable,
+        Continuous,
+        SmartRoot,
+        ClearMemory
+    }
+
+    public sealed class CandidateMenuItemDescriptor
+    {
+        public CandidateMenuItemDescriptor(CandidateMenuItemKind kind, string text)
+        {
+            Kind = kind;
+            Text = text;
+        }
+
+        public CandidateMenuItemKind Kind { get; private set; }
+        public string Text { get; private set; }
+    }
+
+    public static class CandidateMenuModel
+    {
+        public static CandidateMenuItemDescriptor[] Build(bool tableAvailable, bool enabled, bool continuousEnabled, bool smartRootEnabled)
+        {
+            if (!tableAvailable)
+            {
+                return new CandidateMenuItemDescriptor[]
+                {
+                    new CandidateMenuItemDescriptor(CandidateMenuItemKind.Download, TrayMenuText.CandidateDownload)
+                };
+            }
+            return new CandidateMenuItemDescriptor[]
+            {
+                new CandidateMenuItemDescriptor(CandidateMenuItemKind.Enable, TrayMenuText.CandidateEnable(enabled)),
+                new CandidateMenuItemDescriptor(CandidateMenuItemKind.Continuous, TrayMenuText.CandidateContinuous(continuousEnabled)),
+                new CandidateMenuItemDescriptor(CandidateMenuItemKind.SmartRoot, TrayMenuText.SmartRoot(smartRootEnabled)),
+                new CandidateMenuItemDescriptor(CandidateMenuItemKind.ClearMemory, TrayMenuText.CandidateClearMemory)
+            };
         }
     }
 

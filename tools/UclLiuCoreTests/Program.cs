@@ -114,12 +114,14 @@ internal static class Program
         failed += Run("smart candidate memory corrupt load backs up and recovers", TestSmartCandidateMemoryCorruptLoadBacksUpAndRecovers);
         failed += Run("smart candidate memory save atomically replaces file", TestSmartCandidateMemorySaveAtomicallyReplacesFile);
         failed += Run("smart candidate memory atomic clear overwrites active file", TestSmartCandidateMemoryAtomicClearOverwritesActiveFile);
+        failed += Run("smart candidate memory atomic clear reports success and failure", TestSmartCandidateMemoryAtomicClearResult);
         failed += Run("smart candidate memory caps candidates and scope", TestSmartCandidateMemoryCapsCandidatesAndScope);
         failed += Run("smart candidate memory loads compatible literal JSON", TestSmartCandidateMemoryLoadsCompatibleLiteralJson);
         failed += Run("smart candidate memory learns supplementary scalar sequences", TestSmartCandidateMemoryLearnsSupplementaryScalarSequences);
         failed += Run("smart candidate session pages and selects one based candidates", TestSmartCandidateSessionPagesAndSelects);
         failed += Run("smart candidate output commits only after success", TestSmartCandidateOutputCommitsOnlyAfterSuccess);
         failed += Run("smart candidate session uses longest suffix and memory first", TestSmartCandidateSessionUsesLongestSuffixAndMemoryFirst);
+        failed += Run("smart candidate continuous toggle refreshes display text", TestSmartCandidateContinuousToggleRefreshesDisplayText);
         failed += Run("smart candidate session learns continuous Chinese commits", TestSmartCandidateSessionLearnsContinuousChineseCommits);
         failed += Run("smart candidate session handles punctuation and cancellation boundaries", TestSmartCandidateSessionHandlesBoundaries);
         failed += Run("smart candidate session distinguishes cancel and end context", TestSmartCandidateSessionCancelAndEndContext);
@@ -349,9 +351,13 @@ internal static class Program
 
     private static void TestCandidateTrayMenuModel()
     {
-        AssertSequence(
-            new string[] { "請先下載候選字" },
-            TrayMenuText.CandidateItems(false, true, true, true));
+        CandidateMenuItemDescriptor[] missing = CandidateMenuModel.Build(false, true, true, true);
+        AssertEqual(1, missing.Length);
+        AssertEqual((int)CandidateMenuItemKind.Download, (int)missing[0].Kind);
+        AssertEqual("請先下載候選字", missing[0].Text);
+
+        CandidateMenuItemDescriptor[] available = CandidateMenuModel.Build(true, true, false, true);
+        AssertEqual(4, available.Length);
         AssertSequence(
             new string[]
             {
@@ -360,7 +366,11 @@ internal static class Program
                 "【●】智慧字根功能",
                 "清除智慧選字記憶"
             },
-            TrayMenuText.CandidateItems(true, true, false, true));
+            new string[] { available[0].Text, available[1].Text, available[2].Text, available[3].Text });
+        AssertEqual((int)CandidateMenuItemKind.Enable, (int)available[0].Kind);
+        AssertEqual((int)CandidateMenuItemKind.Continuous, (int)available[1].Kind);
+        AssertEqual((int)CandidateMenuItemKind.SmartRoot, (int)available[2].Kind);
+        AssertEqual((int)CandidateMenuItemKind.ClearMemory, (int)available[3].Kind);
     }
 
     private static void TestTrayMenuOpensOnLeftAndRightClick()
@@ -1834,6 +1844,31 @@ internal static class Program
         }
     }
 
+    private static void TestSmartCandidateMemoryAtomicClearResult()
+    {
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
+        string missingParentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "memory.json");
+        try
+        {
+            SmartCandidateMemory oldMemory = new SmartCandidateMemory();
+            oldMemory.RecordPredictionChoice("王", "小明");
+            SmartCandidateMemoryStore.SaveAtomic(path, oldMemory);
+
+            string error;
+            AssertTrue(SmartCandidateMemoryStore.TryClearAtomic(path, out error), "valid path should report clear success");
+            AssertEqual("", error);
+            AssertSequence(new string[0], SmartCandidateMemoryStore.Load(path).GetPredictions("王").ToArray());
+            AssertTrue(!SmartCandidateMemoryStore.TryClearAtomic(missingParentPath, out error), "missing parent should report clear failure");
+            AssertTrue(error.Length > 0, "failed clear should expose an error");
+            AssertTrue(!File.Exists(missingParentPath), "failed clear must not create a memory file");
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(path + ".tmp");
+        }
+    }
+
     private static void TestSmartCandidateMemoryCapsCandidatesAndScope()
     {
         SmartCandidateMemory memory = new SmartCandidateMemory();
@@ -2050,6 +2085,20 @@ internal static class Program
         AssertSequence(new string[0], ToArray(session.VisibleCandidates));
         session.ContinuousEnabled = true;
         AssertSequence(new string[] { "記憶", "重複", "表格" }, ToArray(session.VisibleCandidates));
+    }
+
+    private static void TestSmartCandidateContinuousToggleRefreshesDisplayText()
+    {
+        SmartCandidateSession session = new SmartCandidateSession(
+            SmartCandidateTable.Parse(new string[] { "王\t小明" }),
+            new SmartCandidateMemory());
+        session.ObserveCommittedText("王");
+        AssertEqual("1小明", SmartCandidateDisplay.Format(session.VisibleCandidates, session.HasNextPage));
+
+        session.ContinuousEnabled = false;
+        AssertEqual("", SmartCandidateDisplay.Format(session.VisibleCandidates, session.HasNextPage));
+        session.ContinuousEnabled = true;
+        AssertEqual("1小明", SmartCandidateDisplay.Format(session.VisibleCandidates, session.HasNextPage));
     }
 
     private static void TestSmartCandidateSessionLearnsContinuousChineseCommits()

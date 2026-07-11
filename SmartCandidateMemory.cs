@@ -565,6 +565,21 @@ namespace uclliu
             }
         }
 
+        public static bool TryClearAtomic(string path, out string error)
+        {
+            try
+            {
+                SaveAtomic(path, new SmartCandidateMemory());
+                error = "";
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
         private static void BackupBroken(string path)
         {
             string brokenPath = path + ".broken";
