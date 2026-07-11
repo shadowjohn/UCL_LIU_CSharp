@@ -1773,37 +1773,19 @@ namespace uclliu
         public void toAlphaOrNonAlpha()
         {
             // # 偵測肥米的位置，超出螢幕時，彈回
-            int screen_width = Screen.PrimaryScreen.Bounds.Width;
-            int screen_height = Screen.PrimaryScreen.Bounds.Height;
-            int _x = f.Left;
-            int _y = f.Top;
-            int _width = f.Width;
-            int _height = f.Height;
-            int new_position_x = _x;
-            int new_position_y = _y;
-            if (_x > screen_width - _width)
+            Rectangle workingArea = Screen.FromControl(f).WorkingArea;
+            Point position = UiLayoutCalculator.BoundWindowPosition(
+                workingArea.Left,
+                workingArea.Top,
+                workingArea.Right,
+                workingArea.Bottom,
+                f.Left,
+                f.Top,
+                f.Width,
+                f.Height);
+            if (f.Location != position)
             {
-                new_position_x = screen_width - _width - 20;
-                f.Left = new_position_x;
-                f.Top = new_position_y;
-            }
-            if (_y > screen_height - _height - 40)
-            {
-                new_position_y = screen_height - _height - 40;
-                f.Left = new_position_x;
-                f.Top = new_position_y;
-            }
-            if (_x < 0)
-            {
-                new_position_x = 0;
-                f.Left = new_position_x;
-                f.Top = new_position_y;
-            }
-            if (_y < 0)
-            {
-                new_position_y = 0;
-                f.Left = new_position_x;
-                f.Top = new_position_y;
+                f.Location = position;
             }
             if (flag_is_ucl || !flag_is_hf)
             {

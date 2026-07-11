@@ -44,6 +44,7 @@ internal static class Program
         failed += Run("short mode measured layout keeps candidates readable", TestShortModeMeasuredLayoutKeepsCandidatesReadable);
         failed += Run("long candidate width is bounded", TestLongCandidateWidthIsBounded);
         failed += Run("long candidate fit count keeps at least one rendered item", TestLongCandidateFitCount);
+        failed += Run("window position stays inside selected monitor work area", TestWindowPositionStaysInsideSelectedMonitorWorkArea);
         failed += Run("short mode layout change detects only real column changes", TestShortModeLayoutChangeDetectsOnlyRealColumnChanges);
         failed += Run("short mode packed layout removes hidden column gaps", TestShortModePackedLayoutRemovesHiddenColumnGaps);
         failed += Run("short mode chrome text padding nudges button text upward", TestShortModeChromeTextPaddingNudgesButtonTextUpward);
@@ -663,6 +664,20 @@ internal static class Program
         AssertEqual(5, UiLayoutCalculator.FitCandidateCount(new int[] { 120, 240, 360, 480, 600 }, 600));
         AssertEqual(1, UiLayoutCalculator.FitCandidateCount(new int[] { 500, 700 }, 100));
         AssertEqual(0, UiLayoutCalculator.FitCandidateCount(new int[0], 100));
+    }
+
+    private static void TestWindowPositionStaysInsideSelectedMonitorWorkArea()
+    {
+        AssertPoint(100, 100, UiLayoutCalculator.BoundWindowPosition(0, 0, 1920, 1040, 100, 100, 800, 100));
+        AssertPoint(1120, 940, UiLayoutCalculator.BoundWindowPosition(0, 0, 1920, 1040, 1800, 1100, 800, 100));
+        AssertPoint(2200, 100, UiLayoutCalculator.BoundWindowPosition(1920, 0, 3840, 1040, 2200, 100, 800, 100));
+        AssertPoint(3040, 940, UiLayoutCalculator.BoundWindowPosition(1920, 0, 3840, 1040, 3900, 1100, 800, 100));
+        AssertPoint(-1500, 100, UiLayoutCalculator.BoundWindowPosition(-1920, 0, 0, 1040, -1500, 100, 800, 100));
+        AssertPoint(-1920, 0, UiLayoutCalculator.BoundWindowPosition(-1920, 0, 0, 1040, -2100, -100, 800, 100));
+        AssertPoint(-800, 100, UiLayoutCalculator.BoundWindowPosition(-1920, 0, 0, 1040, -100, 100, 800, 100));
+        AssertPoint(100, -100, UiLayoutCalculator.BoundWindowPosition(0, -1080, 1920, 0, 100, 100, 800, 100));
+        AssertPoint(100, 1920, UiLayoutCalculator.BoundWindowPosition(0, 1080, 1920, 2120, 100, 2100, 800, 200));
+        AssertPoint(-1920, 0, UiLayoutCalculator.BoundWindowPosition(-1920, 0, 0, 1040, -500, 500, 2500, 2000));
     }
 
     private static void TestShortModeLayoutChangeDetectsOnlyRealColumnChanges()
@@ -2469,6 +2484,12 @@ internal static class Program
         {
             throw new Exception(message);
         }
+    }
+
+    private static void AssertPoint(int expectedX, int expectedY, Point actual)
+    {
+        AssertEqual(expectedX, actual.X);
+        AssertEqual(expectedY, actual.Y);
     }
 
     private static void AssertEqual(int expected, int actual)

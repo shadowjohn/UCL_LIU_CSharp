@@ -103,6 +103,33 @@ namespace uclliu
             return count;
         }
 
+        public static Point BoundWindowPosition(
+            int workLeft,
+            int workTop,
+            int workRight,
+            int workBottom,
+            int windowX,
+            int windowY,
+            int windowWidth,
+            int windowHeight)
+        {
+            return new Point(
+                BoundCoordinate(workLeft, workRight, windowX, windowWidth),
+                BoundCoordinate(workTop, workBottom, windowY, windowHeight));
+        }
+
+        private static int BoundCoordinate(int workStart, int workEnd, int coordinate, int windowSize)
+        {
+            long start = workStart;
+            long end = Math.Max(start, (long)workEnd);
+            long maximum = end - Math.Max(0L, (long)windowSize);
+            if (maximum < start)
+            {
+                return workStart;
+            }
+            return Convert.ToInt32(Math.Min(Math.Max((long)coordinate, start), maximum));
+        }
+
         public static int ShortModeTextWidth(string text, double zoom, int charWidth, int minWidth, int maxWidth)
         {
             if (text == null)
