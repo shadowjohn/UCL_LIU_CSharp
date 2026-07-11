@@ -17,6 +17,7 @@
 - `tools/test-build-and-run.ps1` 通過，固定精準路徑與 stop -> build -> success gate -> start 順序。
 - `build_and_run.bat` 實測停止舊的 repo Debug PID 12484，MSBuild Debug|Any CPU 為 0 error、1 個既有 unused warning，並啟動 PID 23796。
 - 執行檔為 `D:\mytools\UCL_LIU_CSharp\bin\Debug\uclliu.exe`，FileVersion `0.17.0.0`、ProductVersion `0.17`；`candidate.txt` 已複製至同目錄。
+- 自動化測試、build 與 live process 檢查已通過；目前桌面由 Codex 執行且不安全代送外部按鍵，`bin\Debug` 智慧候選的實際打字與 UI 人工 smoke 仍待使用者操作驗證。
 
 ---
 
