@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net452</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="System.Web.Extensions" />
     <Compile Include="..\..\AltTabWindowStyle.cs" Link="AltTabWindowStyle.cs" />
     <Compile Include="..\..\ChromeButton.cs" Link="ChromeButton.cs" />
     <Compile Include="..\..\ChromeButtonTextAlignment.cs" Link="ChromeButtonTextAlignment.cs" />
@@ -22,6 +23,7 @@
     <Compile Include="..\..\PhoneCodeTable.cs" Link="PhoneCodeTable.cs" />
     <Compile Include="..\..\SimpleIni.cs" Link="SimpleIni.cs" />
     <Compile Include="..\..\SmartCandidateTable.cs" Link="SmartCandidateTable.cs" />
+    <Compile Include="..\..\SmartCandidateMemory.cs" Link="SmartCandidateMemory.cs" />
     <Compile Include="..\..\ShortRootDisplaySetting.cs" Link="ShortRootDisplaySetting.cs" />
     <Compile Include="..\..\TextOutput.cs" Link="TextOutput.cs" />
     <Compile Include="..\..\TableLayoutModeTransition.cs" Link="TableLayoutModeTransition.cs" />

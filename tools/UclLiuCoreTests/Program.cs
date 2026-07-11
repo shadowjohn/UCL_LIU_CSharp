@@ -104,6 +104,13 @@ internal static class Program
         failed += Run("smart candidate table parses TSV and skips invalid rows", TestSmartCandidateTableParsesTsvAndSkipsInvalidRows);
         failed += Run("smart candidate table keeps stable unique order", TestSmartCandidateTableKeepsStableUniqueOrder);
         failed += Run("smart candidate table missing file returns empty table", TestSmartCandidateTableMissingFileReturnsEmptyTable);
+        failed += Run("smart candidate memory learns text suffixes", TestSmartCandidateMemoryLearnsTextSuffixes);
+        failed += Run("smart candidate memory explicit prediction wins", TestSmartCandidateMemoryExplicitPredictionWins);
+        failed += Run("smart candidate memory ranks only original root candidates", TestSmartCandidateMemoryRanksOnlyOriginalRootCandidates);
+        failed += Run("smart candidate memory save reload roundtrip", TestSmartCandidateMemorySaveReloadRoundtrip);
+        failed += Run("smart candidate memory missing load returns empty memory", TestSmartCandidateMemoryMissingLoadReturnsEmptyMemory);
+        failed += Run("smart candidate memory corrupt load backs up and recovers", TestSmartCandidateMemoryCorruptLoadBacksUpAndRecovers);
+        failed += Run("smart candidate memory save atomically replaces file", TestSmartCandidateMemorySaveAtomicallyReplacesFile);
 
         if (failed > 0)
         {
@@ -1645,6 +1652,115 @@ internal static class Program
         AssertTrue(!table.IsAvailable, "missing file should return an unavailable table");
         AssertEqual(0, table.InvalidLineCount);
         AssertSequence(new string[0], table.Find("ctx").ToArray());
+    }
+
+    private static void TestSmartCandidateMemoryLearnsTextSuffixes()
+    {
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+
+        memory.ObserveSequence("王小明");
+
+        AssertSequence(new string[] { "小明" }, memory.GetPredictions("王").ToArray());
+        AssertSequence(new string[] { "明" }, memory.GetPredictions("王小").ToArray());
+        AssertTrue(memory.IsDirty, "observing text should mark memory dirty");
+    }
+
+    private static void TestSmartCandidateMemoryExplicitPredictionWins()
+    {
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+        memory.ObserveSequence("王小明");
+        memory.RecordPredictionChoice("王", "小華");
+
+        AssertSequence(new string[] { "小華", "小明" }, memory.GetPredictions("王").ToArray());
+    }
+
+    private static void TestSmartCandidateMemoryRanksOnlyOriginalRootCandidates()
+    {
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+        memory.RecordRootChoice("abc", "乙");
+        memory.RecordRootChoice("abc", "不在原始候選");
+        memory.RecordRootChoice("abc", "丙");
+
+        AssertSequence(
+            new string[] { "乙", "丙", "甲" },
+            memory.RankRootCandidates("abc", new string[] { "甲", "丙", "乙" }).ToArray());
+    }
+
+    private static void TestSmartCandidateMemorySaveReloadRoundtrip()
+    {
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            SmartCandidateMemory memory = new SmartCandidateMemory();
+            memory.ObserveSequence("王小明");
+            memory.RecordPredictionChoice("王", "小華");
+            memory.RecordRootChoice("abc", "乙");
+
+            SmartCandidateMemoryStore.SaveAtomic(path, memory);
+            SmartCandidateMemory loaded = SmartCandidateMemoryStore.Load(path);
+
+            AssertSequence(new string[] { "小華", "小明" }, loaded.GetPredictions("王").ToArray());
+            AssertSequence(new string[] { "乙", "甲" }, loaded.RankRootCandidates("abc", new string[] { "甲", "乙" }).ToArray());
+            AssertTrue(!loaded.IsDirty, "loaded memory should start clean");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    private static void TestSmartCandidateMemoryMissingLoadReturnsEmptyMemory()
+    {
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
+
+        SmartCandidateMemory memory = SmartCandidateMemoryStore.Load(path);
+
+        AssertSequence(new string[0], memory.GetPredictions("王").ToArray());
+        AssertTrue(!memory.IsDirty, "missing memory should start clean");
+    }
+
+    private static void TestSmartCandidateMemoryCorruptLoadBacksUpAndRecovers()
+    {
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
+        string brokenPath = path + ".broken";
+        try
+        {
+            File.WriteAllText(path, "not json", Encoding.UTF8);
+            File.WriteAllText(brokenPath, "old backup", Encoding.UTF8);
+
+            SmartCandidateMemory memory = SmartCandidateMemoryStore.Load(path);
+
+            AssertSequence(new string[0], memory.GetPredictions("王").ToArray());
+            AssertTrue(!File.Exists(path), "corrupt source should be moved aside");
+            AssertEqual("not json", File.ReadAllText(brokenPath, Encoding.UTF8));
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(brokenPath);
+        }
+    }
+
+    private static void TestSmartCandidateMemorySaveAtomicallyReplacesFile()
+    {
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            File.WriteAllText(path, "old", Encoding.UTF8);
+            SmartCandidateMemory memory = new SmartCandidateMemory();
+            memory.RecordPredictionChoice("王", "小明");
+
+            SmartCandidateMemoryStore.SaveAtomic(path, memory);
+
+            AssertSequence(new string[] { "小明" }, SmartCandidateMemoryStore.Load(path).GetPredictions("王").ToArray());
+            AssertTrue(!File.Exists(path + ".tmp"), "atomic save should not leave temp files");
+            AssertTrue(!memory.IsDirty, "saved memory should be marked clean");
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(path + ".tmp");
+        }
     }
 
     private static byte[] BuildUnitab(string firstTwoKeys, int key3, int key4, int unicodeCodePoint)
