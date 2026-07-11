@@ -111,10 +111,12 @@ internal static class Program
         failed += Run("smart candidate memory missing load returns empty memory", TestSmartCandidateMemoryMissingLoadReturnsEmptyMemory);
         failed += Run("smart candidate memory corrupt load backs up and recovers", TestSmartCandidateMemoryCorruptLoadBacksUpAndRecovers);
         failed += Run("smart candidate memory save atomically replaces file", TestSmartCandidateMemorySaveAtomicallyReplacesFile);
+        failed += Run("smart candidate memory atomic clear overwrites active file", TestSmartCandidateMemoryAtomicClearOverwritesActiveFile);
         failed += Run("smart candidate memory caps candidates and scope", TestSmartCandidateMemoryCapsCandidatesAndScope);
         failed += Run("smart candidate memory loads compatible literal JSON", TestSmartCandidateMemoryLoadsCompatibleLiteralJson);
         failed += Run("smart candidate memory learns supplementary scalar sequences", TestSmartCandidateMemoryLearnsSupplementaryScalarSequences);
         failed += Run("smart candidate session pages and selects one based candidates", TestSmartCandidateSessionPagesAndSelects);
+        failed += Run("smart candidate output commits only after success", TestSmartCandidateOutputCommitsOnlyAfterSuccess);
         failed += Run("smart candidate session uses longest suffix and memory first", TestSmartCandidateSessionUsesLongestSuffixAndMemoryFirst);
         failed += Run("smart candidate session learns continuous Chinese commits", TestSmartCandidateSessionLearnsContinuousChineseCommits);
         failed += Run("smart candidate session handles punctuation and cancellation boundaries", TestSmartCandidateSessionHandlesBoundaries);
@@ -1778,6 +1780,32 @@ internal static class Program
         }
     }
 
+    private static void TestSmartCandidateMemoryAtomicClearOverwritesActiveFile()
+    {
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            SmartCandidateMemory oldMemory = new SmartCandidateMemory();
+            oldMemory.RecordPredictionChoice("王", "小明");
+            oldMemory.RecordRootChoice("abc", "王");
+            SmartCandidateMemoryStore.SaveAtomic(path, oldMemory);
+
+            SmartCandidateMemory empty = new SmartCandidateMemory();
+            SmartCandidateMemoryStore.SaveAtomic(path, empty);
+            SmartCandidateMemory loaded = SmartCandidateMemoryStore.Load(path);
+
+            AssertSequence(new string[0], loaded.GetPredictions("王").ToArray());
+            AssertSequence(new string[] { "汪", "王" }, loaded.RankRootCandidates("abc", new string[] { "汪", "王" }).ToArray());
+            AssertTrue(!empty.IsDirty, "atomic clear memory should be clean after save");
+            AssertTrue(!File.Exists(path + ".tmp"), "atomic clear should not leave temp files");
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(path + ".tmp");
+        }
+    }
+
     private static void TestSmartCandidateMemoryCapsCandidatesAndScope()
     {
         SmartCandidateMemory memory = new SmartCandidateMemory();
@@ -1925,6 +1953,53 @@ internal static class Program
         AssertEqual("", session.Select(9));
         AssertEqual("王小明", session.Context);
         AssertEqual("小明", memory.GetPredictions("王")[0]);
+    }
+
+    private static void TestSmartCandidateOutputCommitsOnlyAfterSuccess()
+    {
+        SmartCandidateMemory memory = new SmartCandidateMemory();
+        SmartCandidateSession session = new SmartCandidateSession(
+            SmartCandidateTable.Parse(new string[] { "王\t後" }), memory);
+        session.ObserveCommittedText("王");
+        memory.MarkSaved();
+
+        SmartCandidateSelection selection = session.PrepareSelection(1);
+        AssertTrue(session.PrepareSelection(9) == null, "invalid selection must not create pending output");
+        SmartCandidateOutputCommit failed = SmartCandidateOutputCommit.ForSelection(selection);
+        AssertTrue(!failed.Complete(false, session, memory, "后"), "failed output must not commit");
+        AssertEqual("王", session.Context);
+        AssertTrue(!memory.IsDirty, "failed output must not dirty memory");
+        AssertEqual(0, FindCandidateScore(memory.ToData().Predictions, "王", "後"));
+
+        SmartCandidateOutputCommit succeeded = SmartCandidateOutputCommit.ForSelection(selection);
+        AssertTrue(succeeded.Complete(true, session, memory, "后"), "successful output should commit");
+        AssertTrue(!succeeded.Complete(true, session, memory, "后"), "successful output must commit once");
+        AssertEqual("王后", session.Context);
+        AssertEqual(5, FindCandidateScore(memory.ToData().Predictions, "王", "後"));
+        AssertEqual(1, FindCandidateScore(memory.ToData().Predictions, "王", "后"));
+
+        SmartCandidateRootChoice rootChoice = SmartCandidateRootChoice.Capture("abc", "王", new string[] { "汪", "王" });
+        SmartCandidateOutputCommit failedRoot = SmartCandidateOutputCommit.ForNormal(rootChoice);
+        AssertTrue(!failedRoot.Complete(false, session, memory, "王"), "failed root output must not commit");
+        AssertEqual(0, FindCandidateScore(memory.ToData().Roots, "abc", "王"));
+        AssertEqual("王后", session.Context);
+        SmartCandidateOutputCommit rootOutput = SmartCandidateOutputCommit.ForNormal(rootChoice);
+        AssertTrue(rootOutput.Complete(true, session, memory, "王"), "successful root output should commit");
+        AssertTrue(!rootOutput.Complete(true, session, memory, "王"), "root output must commit once");
+        AssertEqual(5, FindCandidateScore(memory.ToData().Roots, "abc", "王"));
+        AssertEqual("王后王", session.Context);
+    }
+
+    private static int FindCandidateScore(IEnumerable<CandidateEntryData> entries, string key, string candidate)
+    {
+        foreach (CandidateEntryData entry in entries)
+        {
+            if (entry.Key == key && entry.Candidate == candidate)
+            {
+                return entry.Score;
+            }
+        }
+        return 0;
     }
 
     private static void TestSmartCandidateSessionUsesLongestSuffixAndMemoryFirst()

@@ -391,11 +391,19 @@ namespace uclliu
         }
         public void queue_senddata(string data)
         {
-            deferredTextOutputDispatcher.Queue(data, prepare_senddata_text, send_prepared_output);
+            SmartCandidateOutputCommit pendingCommit = prepare_normal_smart_candidate_output(data);
+            deferredTextOutputDispatcher.Queue(
+                data,
+                prepare_senddata_text,
+                delegate(string output)
+                {
+                    complete_smart_candidate_output(pendingCommit, send_prepared_output(output), output);
+                });
         }
         public void queue_senddata_with_labels(string data)
         {
             string labelText = data;
+            SmartCandidateOutputCommit pendingCommit = prepare_normal_smart_candidate_output(data);
             deferredTextOutputDispatcher.Queue(
                 data,
                 delegate(string output)
@@ -405,7 +413,10 @@ namespace uclliu
                     show_phone_to_label(labelText);
                     return preparedOutput;
                 },
-                send_prepared_output);
+                delegate(string output)
+                {
+                    complete_smart_candidate_output(pendingCommit, send_prepared_output(output), output);
+                });
         }
         public bool has_smart_candidate_table()
         {
@@ -422,19 +433,19 @@ namespace uclliu
                 return false;
             }
 
-            string selected = smartCandidates.Select(number);
-            if (selected.Length == 0)
+            SmartCandidateSelection selection = smartCandidates.PrepareSelection(number);
+            SmartCandidateOutputCommit pendingCommit = SmartCandidateOutputCommit.ForSelection(selection);
+            if (pendingCommit == null)
             {
                 return false;
             }
 
             deferredTextOutputDispatcher.Queue(
-                selected,
+                selection.Text,
                 prepare_senddata_text,
                 delegate(string output)
                 {
-                    send_prepared_output(output, false);
-                    show_smart_candidate_label();
+                    complete_smart_candidate_output(pendingCommit, send_prepared_output(output), output);
                 });
             return true;
         }
@@ -483,22 +494,33 @@ namespace uclliu
         public void clear_smart_candidate_memory()
         {
             string memoryPath = Path.Combine(my.pwd(), CANDIDATE_MEMORY_FILE);
+            SmartCandidateMemory emptyMemory = new SmartCandidateMemory();
             try
             {
-                foreach (string path in new string[] { memoryPath, memoryPath + ".tmp", memoryPath + ".broken" })
+                SmartCandidateMemoryStore.SaveAtomic(memoryPath, emptyMemory);
+            }
+            catch (Exception ex)
+            {
+                debug_print("smart candidate memory clear failed: " + ex.Message);
+                return;
+            }
+
+            foreach (string path in new string[] { memoryPath + ".tmp", memoryPath + ".broken" })
+            {
+                try
                 {
                     if (File.Exists(path))
                     {
                         File.Delete(path);
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                debug_print("smart candidate memory clear failed: " + ex.Message);
+                catch (Exception ex)
+                {
+                    debug_print("smart candidate memory cleanup failed: " + ex.Message);
+                }
             }
 
-            smartCandidateMemory = new SmartCandidateMemory();
+            smartCandidateMemory = emptyMemory;
             smartCandidates = new SmartCandidateSession(smartCandidateTable ?? SmartCandidateTable.Empty(), smartCandidateMemory);
             smartCandidates.Enabled = SmartCandidateSettings.IsEnabled(config["DEFAULT"]["SMART_CANDIDATE_ENABLE"])
                 && has_smart_candidate_table();
@@ -2183,7 +2205,6 @@ namespace uclliu
         private string prepare_senddata_text(string data)
         {
             data = data ?? "";
-            record_normal_root_candidate(data);
             same_sound_index = 0;// #回到第零頁
             is_has_more_page = false;// #回到沒有分頁
             same_sound_last_word = "";
@@ -2203,19 +2224,19 @@ namespace uclliu
             return data;
         }
 
-        private void record_normal_root_candidate(string data)
+        private SmartCandidateOutputCommit prepare_normal_smart_candidate_output(string data)
         {
             if (!should_use_smart_root())
             {
-                return;
+                return SmartCandidateOutputCommit.ForNormal(null);
             }
 
             string root = (play_ucl_label ?? "").ToLowerInvariant().Trim();
             List<string> candidates;
-            if (try_get_root_candidates(root, out candidates) && candidates.Contains(data))
-            {
-                smartCandidateMemory.RecordRootChoice(root, data);
-            }
+            SmartCandidateRootChoice rootChoice = try_get_root_candidates(root, out candidates)
+                ? SmartCandidateRootChoice.Capture(root, data, candidates)
+                : null;
+            return SmartCandidateOutputCommit.ForNormal(rootChoice);
         }
 
         private bool should_use_smart_root()
@@ -2230,16 +2251,12 @@ namespace uclliu
 
         public void senddata(string data)
         {
+            SmartCandidateOutputCommit pendingCommit = prepare_normal_smart_candidate_output(data);
             data = prepare_senddata_text(data);
-            send_prepared_output(data);
+            complete_smart_candidate_output(pendingCommit, send_prepared_output(data), data);
         }
 
-        private void send_prepared_output(string data)
-        {
-            send_prepared_output(data, true);
-        }
-
-        private void send_prepared_output(string data, bool observeSmartCandidate)
+        private bool send_prepared_output(string data)
         {
             //人生很難，研究很久 C# 的 sendkeys 遇到有些吃 iso-8859-1、big5 的app 如pcman、putty
             //或是早期的 photoimpact，最好的方法還是利用剪貼簿貼上，使用前備份一下原來的內容即可
@@ -2249,7 +2266,7 @@ namespace uclliu
             {
                 is_send_ucl = false;
                 debug_print("debug senddata empty");
-                return;
+                return false;
             }
 
             //出字
@@ -2290,8 +2307,7 @@ namespace uclliu
             string outputError;
             if (try_send_output(outputMode, data, foregroundProcessId, out outputError))
             {
-                observe_smart_candidate_output(data, observeSmartCandidate);
-                return;
+                return true;
             }
 
             debug_print("senddata primary output failed:" + outputError);
@@ -2299,30 +2315,26 @@ namespace uclliu
             {
                 if (try_send_output(TextOutputMode.UnicodeSendInput, data, foregroundProcessId, out outputError))
                 {
-                    observe_smart_candidate_output(data, observeSmartCandidate);
-                    return;
+                    return true;
                 }
                 debug_print("senddata unicode fallback failed:" + outputError);
             }
 
             if (try_send_legacy_sendkeys(data, out outputError))
             {
-                observe_smart_candidate_output(data, observeSmartCandidate);
+                return true;
             }
-            else
-            {
-                debug_print("senddata legacy fallback failed:" + outputError);
-            }
-
+            debug_print("senddata legacy fallback failed:" + outputError);
+            return false;
         }
-        private void observe_smart_candidate_output(string data, bool observeSmartCandidate)
+        private void complete_smart_candidate_output(SmartCandidateOutputCommit pendingCommit, bool outputSucceeded, string preparedText)
         {
-            if (!observeSmartCandidate || smartCandidates == null)
+            if (pendingCommit == null || smartCandidates == null || smartCandidateMemory == null)
             {
                 return;
             }
-            smartCandidates.ObserveCommittedText(data);
-            if (has_visible_smart_candidates())
+            pendingCommit.Complete(outputSucceeded, smartCandidates, smartCandidateMemory, preparedText);
+            if (has_visible_smart_candidates() || !outputSucceeded)
             {
                 show_smart_candidate_label();
             }

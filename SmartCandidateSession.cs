@@ -117,16 +117,35 @@ namespace uclliu
 
         public string Select(int oneBasedIndex)
         {
-            if (oneBasedIndex < 1 || oneBasedIndex > _visibleCandidates.Count || string.IsNullOrEmpty(_contextKey))
+            SmartCandidateSelection selection = PrepareSelection(oneBasedIndex);
+            if (selection == null)
             {
                 return "";
             }
 
-            string selected = _visibleCandidates[oneBasedIndex - 1];
-            string selectedContextKey = _contextKey;
-            _memory.RecordPredictionChoice(selectedContextKey, selected);
-            ObserveCommittedText(selected);
-            return selected;
+            CommitSelection(selection, selection.Text);
+            return selection.Text;
+        }
+
+        public SmartCandidateSelection PrepareSelection(int oneBasedIndex)
+        {
+            if (oneBasedIndex < 1 || oneBasedIndex > _visibleCandidates.Count || string.IsNullOrEmpty(_contextKey))
+            {
+                return null;
+            }
+            return new SmartCandidateSelection(_contextKey, _visibleCandidates[oneBasedIndex - 1]);
+        }
+
+        internal bool CommitSelection(SmartCandidateSelection selection, string committedText)
+        {
+            if (selection == null || selection.IsCommitted)
+            {
+                return false;
+            }
+            _memory.RecordPredictionChoice(selection.ContextKey, selection.Text);
+            ObserveCommittedText(committedText);
+            selection.IsCommitted = true;
+            return true;
         }
 
         public bool NextPage()
@@ -272,6 +291,96 @@ namespace uclliu
         private static bool IsSentenceBoundary(int value)
         {
             return value == '。' || value == '！' || value == '？' || value == '；' || value == '\r' || value == '\n';
+        }
+    }
+
+    public sealed class SmartCandidateSelection
+    {
+        internal SmartCandidateSelection(string contextKey, string text)
+        {
+            ContextKey = contextKey;
+            Text = text;
+        }
+
+        internal string ContextKey { get; private set; }
+        internal bool IsCommitted { get; set; }
+        public string Text { get; private set; }
+    }
+
+    public sealed class SmartCandidateRootChoice
+    {
+        private SmartCandidateRootChoice(string root, string candidate)
+        {
+            Root = root;
+            Candidate = candidate;
+        }
+
+        internal string Root { get; private set; }
+        internal string Candidate { get; private set; }
+
+        public static SmartCandidateRootChoice Capture(string root, string candidate, IEnumerable<string> candidates)
+        {
+            if (string.IsNullOrEmpty(root) || string.IsNullOrEmpty(candidate) || candidates == null)
+            {
+                return null;
+            }
+            foreach (string available in candidates)
+            {
+                if (available == candidate)
+                {
+                    return new SmartCandidateRootChoice(root, candidate);
+                }
+            }
+            return null;
+        }
+    }
+
+    public sealed class SmartCandidateOutputCommit
+    {
+        private readonly SmartCandidateRootChoice _rootChoice;
+        private readonly SmartCandidateSelection _selection;
+        private bool _completed;
+
+        private SmartCandidateOutputCommit(SmartCandidateRootChoice rootChoice, SmartCandidateSelection selection)
+        {
+            _rootChoice = rootChoice;
+            _selection = selection;
+        }
+
+        public static SmartCandidateOutputCommit ForNormal(SmartCandidateRootChoice rootChoice)
+        {
+            return new SmartCandidateOutputCommit(rootChoice, null);
+        }
+
+        public static SmartCandidateOutputCommit ForSelection(SmartCandidateSelection selection)
+        {
+            return selection == null ? null : new SmartCandidateOutputCommit(null, selection);
+        }
+
+        public bool Complete(bool outputSucceeded, SmartCandidateSession session, SmartCandidateMemory memory, string preparedText)
+        {
+            if (!outputSucceeded || _completed || session == null || memory == null)
+            {
+                return false;
+            }
+
+            if (_selection != null)
+            {
+                if (!session.CommitSelection(_selection, preparedText))
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                if (_rootChoice != null)
+                {
+                    memory.RecordRootChoice(_rootChoice.Root, _rootChoice.Candidate);
+                }
+                session.ObserveCommittedText(preparedText);
+            }
+            _completed = true;
+            return true;
         }
     }
 
