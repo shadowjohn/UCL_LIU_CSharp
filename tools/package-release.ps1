@@ -26,6 +26,18 @@ if (-not (Test-Path -LiteralPath $exePath)) {
     throw "找不到建置產物：$exePath"
 }
 
+$candidatePath = Join-Path $ProjectRoot "candidate.txt"
+$candidateNoticePath = Join-Path $ProjectRoot "THIRD_PARTY_CANDIDATE_DATA.md"
+$candidateLicensePath = Join-Path $ProjectRoot "LICENSES\LGPL-2.1-or-later.txt"
+$hasCandidate = Test-Path -LiteralPath $candidatePath
+if ($hasCandidate) {
+    foreach ($requiredPath in @($candidateNoticePath, $candidateLicensePath)) {
+        if (-not (Test-Path -LiteralPath $requiredPath)) {
+            throw "candidate.txt 存在但缺少必要授權檔：$requiredPath"
+        }
+    }
+}
+
 if (-not (Test-Path -LiteralPath $OutputDirectory)) {
     New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 }
@@ -39,7 +51,7 @@ New-Item -ItemType Directory -Path $packageRoot | Out-Null
 
 Copy-Item -LiteralPath $exePath -Destination (Join-Path $packageRoot "uclliu.exe") -Force
 
-$optionalFiles = @("pinyi.txt", "candidate.txt", "THIRD_PARTY_CANDIDATE_DATA.md", "README.md", "LICENSE")
+$optionalFiles = @("pinyi.txt", "README.md", "LICENSE")
 foreach ($fileName in $optionalFiles) {
     $sourcePath = Join-Path $ProjectRoot $fileName
     if (Test-Path -LiteralPath $sourcePath) {
@@ -47,12 +59,12 @@ foreach ($fileName in $optionalFiles) {
     }
 }
 
-$hasCandidate = Test-Path -LiteralPath (Join-Path $ProjectRoot "candidate.txt")
 if ($hasCandidate) {
-    $candidateLicenses = Join-Path $ProjectRoot "LICENSES"
-    if (Test-Path -LiteralPath $candidateLicenses) {
-        Copy-Item -LiteralPath $candidateLicenses -Destination (Join-Path $packageRoot "LICENSES") -Recurse -Force
-    }
+    Copy-Item -LiteralPath $candidatePath -Destination (Join-Path $packageRoot "candidate.txt") -Force
+    Copy-Item -LiteralPath $candidateNoticePath -Destination (Join-Path $packageRoot "THIRD_PARTY_CANDIDATE_DATA.md") -Force
+    $candidateLicenseDirectory = Join-Path $packageRoot "LICENSES"
+    New-Item -ItemType Directory -Path $candidateLicenseDirectory | Out-Null
+    Copy-Item -LiteralPath $candidateLicensePath -Destination (Join-Path $candidateLicenseDirectory "LGPL-2.1-or-later.txt") -Force
 }
 
 function Copy-TsfBridgeRuntime {

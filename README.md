@@ -342,4 +342,4 @@ git push origin v0.16
 
 - 作者：羽山秋人 ([3wa.tw](https://3wa.tw))、Benson9954029
 - 信箱：uclliu.3wa@gmail.com
-- 授權：MIT License
+- 授權：程式與專案原始碼採 MIT License；`candidate.txt` 不在 MIT 授權範圍內，詳見 [第三方候選資料聲明](THIRD_PARTY_CANDIDATE_DATA.md) 與 [LGPL-2.1-or-later](LICENSES/LGPL-2.1-or-later.txt)。
