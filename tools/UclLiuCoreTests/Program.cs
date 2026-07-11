@@ -43,6 +43,7 @@ internal static class Program
         failed += Run("short mode uses python-style compact label metrics", TestShortModeUsesPythonStyleCompactLabelMetrics);
         failed += Run("short mode measured layout keeps candidates readable", TestShortModeMeasuredLayoutKeepsCandidatesReadable);
         failed += Run("long candidate width is bounded", TestLongCandidateWidthIsBounded);
+        failed += Run("long candidate width restore requires prior adjustment", TestLongCandidateWidthRestoreRequiresPriorAdjustment);
         failed += Run("short mode layout change detects only real column changes", TestShortModeLayoutChangeDetectsOnlyRealColumnChanges);
         failed += Run("short mode packed layout removes hidden column gaps", TestShortModePackedLayoutRemovesHiddenColumnGaps);
         failed += Run("short mode chrome text padding nudges button text upward", TestShortModeChromeTextPaddingNudgesButtonTextUpward);
@@ -640,6 +641,20 @@ internal static class Program
         AssertEqual(200, UiLayoutCalculator.BoundCandidateWidth(200, -1, 1200));
         AssertEqual(0, UiLayoutCalculator.BoundCandidateWidth(200, 350, -1));
         AssertEqual(300, UiLayoutCalculator.BoundCandidateWidth(200, 350, 300));
+    }
+
+    private static void TestLongCandidateWidthRestoreRequiresPriorAdjustment()
+    {
+        AssertTrue(UiLayoutCalculator.ShouldRestoreLongCandidateWidth(true, ""), "adjusted width should restore when candidates clear");
+        AssertTrue(!UiLayoutCalculator.ShouldRestoreLongCandidateWidth(false, ""), "normal width should ignore empty refreshes");
+        AssertTrue(!UiLayoutCalculator.ShouldRestoreLongCandidateWidth(true, "1候選"), "visible candidates should not restore");
+
+        bool adjusted = true;
+        if (UiLayoutCalculator.ShouldRestoreLongCandidateWidth(adjusted, ""))
+        {
+            adjusted = false;
+        }
+        AssertTrue(!UiLayoutCalculator.ShouldRestoreLongCandidateWidth(adjusted, ""), "repeated empty refresh should not restore twice");
     }
 
     private static void TestShortModeLayoutChangeDetectsOnlyRealColumnChanges()

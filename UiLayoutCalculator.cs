@@ -82,6 +82,11 @@ namespace uclliu
             return Math.Min(Math.Max(measuredWidth, minimumWidth), screenWorkWidth);
         }
 
+        public static bool ShouldRestoreLongCandidateWidth(bool widthAdjusted, string candidateText)
+        {
+            return widthAdjusted && String.IsNullOrEmpty(candidateText);
+        }
+
         public static int ShortModeTextWidth(string text, double zoom, int charWidth, int minWidth, int maxWidth)
         {
             if (text == null)

@@ -87,6 +87,7 @@ namespace uclliu
         public bool is_display_sp = false; //是否顯示簡根
         private ShortModeWordLayoutKind currentWordLayoutKind = ShortModeWordLayoutKind.Hint;
         private bool currentWordHasMorePage = false;
+        private bool longCandidateWidthAdjusted = false;
         //# GUI Font
         public Font GUI_FONT_12 = new Font("roman", 12, FontStyle.Bold);
         public Font GUI_FONT_14 = new Font("roman", 14, FontStyle.Bold);
@@ -1164,6 +1165,7 @@ namespace uclliu
             f.Visible = true;
             //f.Refresh();
             f.ResumeLayout();
+            longCandidateWidthAdjusted = false;
         }
         private void update_short_mode_columns()
         {
@@ -1401,7 +1403,10 @@ namespace uclliu
             }
             if (String.IsNullOrEmpty(f.word_label.Text))
             {
-                update_UI();
+                if (UiLayoutCalculator.ShouldRestoreLongCandidateWidth(longCandidateWidthAdjusted, f.word_label.Text))
+                {
+                    update_UI();
+                }
                 return;
             }
 
@@ -1424,6 +1429,7 @@ namespace uclliu
             {
                 f.Width = formWidth;
             }
+            longCandidateWidthAdjusted = candidateWidth != normalCandidateWidth;
         }
         private int measure_short_mode_text_width(string text, Font font)
         {
