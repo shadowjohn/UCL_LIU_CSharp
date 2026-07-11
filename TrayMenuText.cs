@@ -4,6 +4,11 @@ namespace uclliu
 {
     public static class TrayMenuText
     {
+        public const string CandidateMenu = "12. 候選字相關";
+        public const string CandidateDownload = "請先下載候選字";
+        public const string CandidateClearMemory = "清除智慧選字記憶";
+        public const string Exit = "13. 離開(Quit)";
+
         public static string Mark(bool enabled)
         {
             return enabled ? "●" : "　";
@@ -42,6 +47,36 @@ namespace uclliu
         public static string TsfBridgeStatus(bool isRegistered)
         {
             return isRegistered ? "TSF Bridge 已註冊" : "TSF Bridge 未註冊";
+        }
+
+        public static string CandidateEnable(bool enabled)
+        {
+            return ToggleItem("", enabled, "啟動候選字表");
+        }
+
+        public static string CandidateContinuous(bool enabled)
+        {
+            return ToggleItem("", enabled, "連續出字功能");
+        }
+
+        public static string SmartRoot(bool enabled)
+        {
+            return ToggleItem("", enabled, "智慧字根功能");
+        }
+
+        public static string[] CandidateItems(bool tableAvailable, bool enabled, bool continuousEnabled, bool smartRootEnabled)
+        {
+            if (!tableAvailable)
+            {
+                return new string[] { CandidateDownload };
+            }
+            return new string[]
+            {
+                CandidateEnable(enabled),
+                CandidateContinuous(continuousEnabled),
+                SmartRoot(smartRootEnabled),
+                CandidateClearMemory
+            };
         }
 
         private static bool IsOutputType(string outputType, string expected)

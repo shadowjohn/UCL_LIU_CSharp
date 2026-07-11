@@ -1634,6 +1634,61 @@ namespace uclliu
             }
             ucl.saveConfig();
         }
+        private void menu_open_candidate_download(object sender, EventArgs e)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://github.com/shadowjohn/UCL_LIU_CSharp",
+                UseShellExecute = true
+            });
+        }
+        private void menu_toggle_smart_candidate(object sender, EventArgs e)
+        {
+            bool enabled = ucl.config["DEFAULT"]["SMART_CANDIDATE_ENABLE"] != "1";
+            ucl.config["DEFAULT"]["SMART_CANDIDATE_ENABLE"] = enabled ? "1" : "0";
+            if (ucl.smartCandidates != null)
+            {
+                ucl.smartCandidates.Enabled = enabled && ucl.has_smart_candidate_table();
+                if (!enabled)
+                {
+                    ucl.smartCandidates.EndContext();
+                    ucl.cancel_smart_candidates();
+                }
+            }
+            ucl.saveConfig();
+        }
+        private void menu_toggle_smart_candidate_continuous(object sender, EventArgs e)
+        {
+            bool enabled = ucl.config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] != "1";
+            ucl.config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] = enabled ? "1" : "0";
+            if (ucl.smartCandidates != null)
+            {
+                ucl.smartCandidates.ContinuousEnabled = enabled;
+                if (!enabled)
+                {
+                    ucl.cancel_smart_candidates();
+                }
+            }
+            ucl.saveConfig();
+        }
+        private void menu_toggle_smart_root(object sender, EventArgs e)
+        {
+            bool enabled = ucl.config["DEFAULT"]["SMART_ROOT_ENABLE"] != "1";
+            ucl.config["DEFAULT"]["SMART_ROOT_ENABLE"] = enabled ? "1" : "0";
+            ucl.saveConfig();
+        }
+        private void menu_clear_smart_candidate_memory(object sender, EventArgs e)
+        {
+            if (MessageBox.Show(
+                this,
+                "確定要清除智慧選字記憶？",
+                TrayMenuText.CandidateClearMemory,
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                ucl.clear_smart_candidate_memory();
+            }
+        }
         private void menu_run_exit(object sender, EventArgs e)
         {
             this.Close();
@@ -1759,7 +1814,28 @@ namespace uclliu
             cMenu.MenuItems.Add(TrayMenuText.ToggleItem("10.", ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] == "1", "允許(Shift+Space)切換 全形/半形"), this.menu_toggle_half_full);
 
             cMenu.MenuItems.Add("11. 自定詞庫", this.menu_open_custom_dict);
-            cMenu.MenuItems.Add("12. 離開(Quit)", this.menu_run_exit);
+
+            MenuItem candidateMenu = new MenuItem();
+            candidateMenu.Text = TrayMenuText.CandidateMenu;
+            if (!ucl.has_smart_candidate_table())
+            {
+                candidateMenu.MenuItems.Add(TrayMenuText.CandidateDownload, this.menu_open_candidate_download);
+            }
+            else
+            {
+                candidateMenu.MenuItems.Add(
+                    TrayMenuText.CandidateEnable(ucl.config["DEFAULT"]["SMART_CANDIDATE_ENABLE"] == "1"),
+                    this.menu_toggle_smart_candidate);
+                candidateMenu.MenuItems.Add(
+                    TrayMenuText.CandidateContinuous(ucl.config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] == "1"),
+                    this.menu_toggle_smart_candidate_continuous);
+                candidateMenu.MenuItems.Add(
+                    TrayMenuText.SmartRoot(ucl.config["DEFAULT"]["SMART_ROOT_ENABLE"] == "1"),
+                    this.menu_toggle_smart_root);
+                candidateMenu.MenuItems.Add(TrayMenuText.CandidateClearMemory, this.menu_clear_smart_candidate_memory);
+            }
+            cMenu.MenuItems.Add(candidateMenu);
+            cMenu.MenuItems.Add(TrayMenuText.Exit, this.menu_run_exit);
         }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)

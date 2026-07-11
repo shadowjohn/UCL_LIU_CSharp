@@ -25,6 +25,8 @@ internal static class Program
         failed += Run("tray menu text marks current output mode", TestTrayMenuTextMarksCurrentOutputMode);
         failed += Run("tray menu text marks boolean settings", TestTrayMenuTextMarksBooleanSettings);
         failed += Run("tray menu text shows administrator restart action", TestTrayMenuTextShowsAdministratorRestartAction);
+        failed += Run("candidate tray menu text uses exact labels and marks", TestCandidateTrayMenuText);
+        failed += Run("candidate tray menu model switches on table availability", TestCandidateTrayMenuModel);
         failed += Run("tray menu opens on left and right click", TestTrayMenuOpensOnLeftAndRightClick);
         failed += Run("chrome button does not keep focus", TestChromeButtonDoesNotKeepFocus);
         failed += Run("tsf bridge assets prefer architecture subfolder", TestTsfBridgeAssetsPreferArchitectureSubfolder);
@@ -333,6 +335,32 @@ internal static class Program
     private static void TestTrayMenuTextShowsAdministratorRestartAction()
     {
         AssertEqual("★以系統管理員身分重新啟動肥米", TrayMenuText.RestartAsAdministrator());
+    }
+
+    private static void TestCandidateTrayMenuText()
+    {
+        AssertEqual("12. 候選字相關", TrayMenuText.CandidateMenu);
+        AssertEqual("請先下載候選字", TrayMenuText.CandidateDownload);
+        AssertEqual("13. 離開(Quit)", TrayMenuText.Exit);
+        AssertEqual("【●】啟動候選字表", TrayMenuText.CandidateEnable(true));
+        AssertEqual("【　】連續出字功能", TrayMenuText.CandidateContinuous(false));
+        AssertEqual("【●】智慧字根功能", TrayMenuText.SmartRoot(true));
+    }
+
+    private static void TestCandidateTrayMenuModel()
+    {
+        AssertSequence(
+            new string[] { "請先下載候選字" },
+            TrayMenuText.CandidateItems(false, true, true, true));
+        AssertSequence(
+            new string[]
+            {
+                "【●】啟動候選字表",
+                "【　】連續出字功能",
+                "【●】智慧字根功能",
+                "清除智慧選字記憶"
+            },
+            TrayMenuText.CandidateItems(true, true, false, true));
     }
 
     private static void TestTrayMenuOpensOnLeftAndRightClick()
