@@ -13,13 +13,21 @@ try {
     $extensionB = [Char]::ConvertFromUtf32(0x20000)
     $csv = @(
         "# dc:title,測試詞庫,"
+        "# dc:rights,測試團隊,"
         "# dc:license,LGPL-2.1-or-later,"
+        "# dc:identifier,test,"
         '"王小明",100,"ㄨㄤˊ ㄒㄧㄠˇ ㄇㄧㄥˊ"'
         '"王先生",50,"ㄨㄤˊ ㄒㄧㄢ ㄕㄥ"'
         '"王小明",200,"duplicate, quoted phone"'
         ('"' + $extensionB + '中華",80,"supplementary"')
         '極大,9223372036854775807,max long'
         '極小,-9223372036854775808,min long'
+        '"多行",70,"quoted phone first line'
+        'quoted phone second line"'
+        'Aa,60,ordinal uppercase key'
+        'aa,50,ordinal lowercase key'
+        'XA,40,ordinal uppercase suffix'
+        'Xa,30,ordinal lowercase suffix'
         '壞資料,not-a-number,invalid'
         ',30,missing phrase'
         '單,10,too short'
@@ -39,8 +47,15 @@ try {
     if (-not ($lines -contains ($extensionB + "`t中華"))) { throw "補充平面字元被拆壞。" }
     if (-not ($lines -contains ($extensionB + "中`t華"))) { throw "補充平面前綴被拆壞。" }
     if (-not ($lines -contains "極`t大`t小")) { throw "64-bit 頻率排序錯誤。" }
+    if (-not ($lines -contains "多`t行") -or $lines -match "quoted phone second line") {
+        throw "multiline quoted CSV 被拆成多筆資料。"
+    }
+    if (-not ($lines -contains "A`ta") -or -not ($lines -contains "a`ta")) {
+        throw "Ordinal key/suffix 不應合併大小寫。"
+    }
+    if (-not ($lines -contains "X`tA`ta")) { throw "Ordinal suffix 不應合併大小寫。" }
     if ($lines -match "壞資料|missing phrase|too short") { throw "無效資料不應輸出。" }
-    if ($log1 -notmatch "Metadata rows:\s*2" -or $log1 -notmatch "Invalid rows:\s*2" -or
+    if ($log1 -notmatch "Metadata rows:\s*4" -or $log1 -notmatch "Invalid rows:\s*2" -or
         $log1 -notmatch "Short phrases:\s*1") {
         throw "略過資料的計數不正確：$log1"
     }

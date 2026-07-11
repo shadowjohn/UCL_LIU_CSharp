@@ -5,7 +5,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$rows = @{}
+$rows = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
 $total = 0
 $metadata = 0
 $invalid = 0
@@ -33,16 +33,19 @@ function Split-UnicodeScalars {
     return $scalars.ToArray()
 }
 
-$csvLines = [System.Collections.Generic.List[string]]::new()
-foreach ($line in Get-Content -LiteralPath $InputPath -Encoding UTF8) {
-    $total++
-    if ($line.StartsWith("#", [System.StringComparison]::Ordinal)) {
-        $metadata++
+$csvText = [System.IO.File]::ReadAllText($InputPath, [System.Text.UTF8Encoding]::new($false, $true))
+$csvOffset = 0
+while ($metadata -lt 4 -and $csvOffset -lt $csvText.Length -and $csvText[$csvOffset] -eq '#') {
+    $lineEnd = $csvText.IndexOf("`n", $csvOffset)
+    if ($lineEnd -lt 0) {
+        $csvOffset = $csvText.Length
     } else {
-        $csvLines.Add($line)
+        $csvOffset = $lineEnd + 1
     }
+    $metadata++
 }
-$records = $csvLines | ConvertFrom-Csv -Header Phrase,Frequency,Phone
+$records = @(ConvertFrom-Csv -InputObject $csvText.Substring($csvOffset) -Header Phrase,Frequency,Phone)
+$total = $metadata + $records.Count
 $recordNumber = $metadata
 foreach ($record in $records) {
     $recordNumber++
@@ -73,7 +76,9 @@ foreach ($record in $records) {
     for ($length = 1; $length -le $maxPrefix; $length++) {
         $key = [string]::Concat($scalars[0..($length - 1)])
         $suffix = [string]::Concat($scalars[$length..($scalars.Count - 1)])
-        if (-not $rows.ContainsKey($key)) { $rows[$key] = @{} }
+        if (-not $rows.ContainsKey($key)) {
+            $rows[$key] = [System.Collections.Generic.Dictionary[string, long]]::new([System.StringComparer]::Ordinal)
+        }
         if (-not $rows[$key].ContainsKey($suffix) -or $rows[$key][$suffix] -lt $frequency) {
             $rows[$key][$suffix] = $frequency
         }

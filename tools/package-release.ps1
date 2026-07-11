@@ -36,6 +36,19 @@ if ($hasCandidate) {
             throw "candidate.txt 存在但缺少必要授權檔：$requiredPath"
         }
     }
+
+    $noticeText = [System.IO.File]::ReadAllText($candidateNoticePath, [System.Text.Encoding]::UTF8)
+    $hashMatches = [regex]::Matches(
+        $noticeText,
+        '(?m)^- Candidate SHA-256:\s*`(?<hash>[0-9A-Fa-f]{64})`\s*$')
+    if ($hashMatches.Count -ne 1) {
+        throw "THIRD_PARTY_CANDIDATE_DATA.md 必須有且僅有一筆明確的 Candidate SHA-256。"
+    }
+    $expectedCandidateHash = $hashMatches[0].Groups["hash"].Value
+    $actualCandidateHash = (Get-FileHash -LiteralPath $candidatePath -Algorithm SHA256).Hash
+    if (-not [string]::Equals($expectedCandidateHash, $actualCandidateHash, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "candidate.txt SHA-256 與 THIRD_PARTY_CANDIDATE_DATA.md 不符。"
+    }
 }
 
 if (-not (Test-Path -LiteralPath $OutputDirectory)) {
@@ -43,10 +56,16 @@ if (-not (Test-Path -LiteralPath $OutputDirectory)) {
 }
 $OutputDirectory = (Resolve-Path -LiteralPath $OutputDirectory).Path
 
-$packageRoot = Join-Path $OutputDirectory "package"
-if (Test-Path -LiteralPath $packageRoot) {
-    Remove-Item -LiteralPath $packageRoot -Recurse -Force
+$stagingRoot = Join-Path $OutputDirectory (".package-stage-" + [Guid]::NewGuid().ToString("N"))
+$outputPrefix = [System.IO.Path]::GetFullPath($OutputDirectory).TrimEnd('\') + '\'
+$resolvedStagingRoot = [System.IO.Path]::GetFullPath($stagingRoot)
+if (-not $resolvedStagingRoot.StartsWith($outputPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "暫存封裝路徑不在輸出目錄內：$resolvedStagingRoot"
 }
+New-Item -ItemType Directory -Path $resolvedStagingRoot | Out-Null
+
+try {
+$packageRoot = Join-Path $resolvedStagingRoot "package"
 New-Item -ItemType Directory -Path $packageRoot | Out-Null
 
 Copy-Item -LiteralPath $exePath -Destination (Join-Path $packageRoot "uclliu.exe") -Force
@@ -133,16 +152,17 @@ if (-not $versionSuffix.StartsWith("v", [System.StringComparison]::OrdinalIgnore
     $versionSuffix = "v" + $versionSuffix
 }
 
-$zipPath = Join-Path $OutputDirectory ("uclliu-" + $versionSuffix + ".zip")
-if (Test-Path -LiteralPath $zipPath) {
-    Remove-Item -LiteralPath $zipPath -Force
-}
-Compress-Archive -Path (Join-Path $packageRoot "*") -DestinationPath $zipPath -Force
+$zipFileName = "uclliu-" + $versionSuffix + ".zip"
+$zipPath = Join-Path $OutputDirectory $zipFileName
+$stagedZipPath = Join-Path $resolvedStagingRoot $zipFileName
+Compress-Archive -Path (Join-Path $packageRoot "*") -DestinationPath $stagedZipPath -Force
 
 $singleExePath = Join-Path $OutputDirectory "uclliu.exe"
-Copy-Item -LiteralPath $exePath -Destination $singleExePath -Force
+$stagedSingleExePath = Join-Path $resolvedStagingRoot "uclliu.exe"
+Copy-Item -LiteralPath $exePath -Destination $stagedSingleExePath -Force
 
 $notesPath = Join-Path $OutputDirectory "release-notes.md"
+$stagedNotesPath = Join-Path $resolvedStagingRoot "release-notes.md"
 $candidateContents = if ($hasCandidate) { "、candidate.txt" } else { "" }
 $zipContents = if ($IncludeWavs) {
     "uclliu.exe、pinyi.txt${candidateContents}、wavs、tsf_bridge、README 與 LICENSE"
@@ -154,7 +174,7 @@ $soundNote = if ($IncludeWavs) {
 } else {
     "官方發行檔不內含 wav 音效；若要啟用打字音，請自行放入自有或合法授權的 wavs\*.wav。"
 }
-@"
+$releaseNotes = @"
 UCL_LIU_CSharp $versionSuffix
 
 - uclliu-$versionSuffix.zip：推薦下載包，含 $zipContents。
@@ -163,8 +183,53 @@ UCL_LIU_CSharp $versionSuffix
 $soundNote
 
 字碼表因版權因素不包含在發行檔內，請自行放入 liu.json、liu.cin、liu-uni.tab 或其他可轉換字碼表。
-"@ | Set-Content -LiteralPath $notesPath -Encoding UTF8
+"@
+[System.IO.File]::WriteAllText($stagedNotesPath, $releaseNotes, [System.Text.UTF8Encoding]::new($false))
+
+$previousRoot = Join-Path $resolvedStagingRoot "previous"
+New-Item -ItemType Directory -Path $previousRoot | Out-Null
+$artifacts = @(
+    [pscustomobject]@{ Staged = $packageRoot; Final = (Join-Path $OutputDirectory "package"); Backup = (Join-Path $previousRoot "package") },
+    [pscustomobject]@{ Staged = $stagedZipPath; Final = $zipPath; Backup = (Join-Path $previousRoot $zipFileName) },
+    [pscustomobject]@{ Staged = $stagedSingleExePath; Final = $singleExePath; Backup = (Join-Path $previousRoot "uclliu.exe") },
+    [pscustomobject]@{ Staged = $stagedNotesPath; Final = $notesPath; Backup = (Join-Path $previousRoot "release-notes.md") }
+)
+foreach ($artifact in $artifacts) {
+    $resolvedFinal = [System.IO.Path]::GetFullPath($artifact.Final)
+    if (-not $resolvedFinal.StartsWith($outputPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "封裝發布路徑不在輸出目錄內：$resolvedFinal"
+    }
+}
+$backedUp = [System.Collections.Generic.List[object]]::new()
+$published = [System.Collections.Generic.List[object]]::new()
+try {
+    foreach ($artifact in $artifacts) {
+        if (Test-Path -LiteralPath $artifact.Final) {
+            Move-Item -LiteralPath $artifact.Final -Destination $artifact.Backup
+            $backedUp.Add($artifact)
+        }
+    }
+    foreach ($artifact in $artifacts) {
+        Move-Item -LiteralPath $artifact.Staged -Destination $artifact.Final
+        $published.Add($artifact)
+    }
+} catch {
+    for ($i = $published.Count - 1; $i -ge 0; $i--) {
+        if (Test-Path -LiteralPath $published[$i].Final) {
+            Remove-Item -LiteralPath $published[$i].Final -Recurse -Force
+        }
+    }
+    for ($i = $backedUp.Count - 1; $i -ge 0; $i--) {
+        Move-Item -LiteralPath $backedUp[$i].Backup -Destination $backedUp[$i].Final
+    }
+    throw
+}
 
 Write-Host "Package zip: $zipPath"
 Write-Host "Single exe:  $singleExePath"
 Write-Host "Notes:       $notesPath"
+} finally {
+    if (Test-Path -LiteralPath $resolvedStagingRoot) {
+        Remove-Item -LiteralPath $resolvedStagingRoot -Recurse -Force
+    }
+}
