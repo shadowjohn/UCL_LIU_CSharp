@@ -672,6 +672,12 @@ namespace uclliu
                         ucl.play_ucl_label = ucl.play_ucl_label.Substring(0, ucl.play_ucl_label.Length - 1);
                         ucl.type_label_set_text();
                         ucl.debug_print("Debug5");
+                        // 扣完後如果是空的 find data 勢必也為空
+                        if (ucl.play_ucl_label.Length == 0)
+                        {
+                            ucl.ucl_find_data = new List<string>();
+                        }
+
                         return NO;
                     }
                 }
