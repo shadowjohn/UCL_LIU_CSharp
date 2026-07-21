@@ -139,6 +139,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleIni.cs" />
     <Compile Include="ShortRootDisplaySetting.cs" />
+    <Compile Include="SmartCandidateMemory.cs" />
+    <Compile Include="SmartCandidateSession.cs" />
+    <Compile Include="SmartCandidateTable.cs" />
     <Compile Include="TextOutput.cs" />
     <Compile Include="TableLayoutModeTransition.cs" />
     <Compile Include="TrayMenuText.cs" />
@@ -189,6 +192,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="candidate.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="uclliu_logo.ico" />
     <Content Include="wavs\*.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -8,18 +8,32 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ### Added
 
+- 新增 `candidate.txt` 固定候選字功能，每頁 5 筆，支援 `Shift+1`～`Shift+5` 選字與 `Shift+Space` 翻頁。
+- 右下角選單新增 `12. 候選字相關`，可切換候選總開關與連續出字；缺少 `candidate.txt` 時顯示下載提示。
+- 新增 `SmartCandidateTable` / `SmartCandidateSession` 核心測試，涵蓋候選載入、去重、上下文、分頁、按鍵規則與 tray menu 狀態。
 - 新增 `build.bat`，可不開 Visual Studio 直接用 MSBuild 編譯 Debug / Release。
 - 新增 `--debug` 啟動參數，會開啟 console 並輸出既有 `debug_print` 訊息。
 - 新增 `run_debug.bat`，用相對路徑啟動 `artifacts\build-Debug\uclliu.exe --debug`。
+
+### Changed
+
+- 將遊戲模式命令 `,,,lock` 改名為 `,,,game`、正常模式命令 `,,,unlock` 改名為 `,,,normal`，避免 `,,,l` 比 `,,,lock` 先觸發。
+- v0.17 的智慧候選收斂為固定表：只讀 `candidate.txt`，不讀寫個人記憶、不自動下載。
+- 發行 zip 會封入 `candidate.txt`、`THIRD_PARTY_CANDIDATE_DATA.md` 與 `LICENSES/LGPL-2.1-or-later.txt`；單檔 `uclliu.exe` 不含固定候選資料。
 
 ### Fixed
 
 - 修正 `build.bat` 未帶輸出目錄時的 batch 語法錯誤，並預設輸出到 `artifacts\build-Debug\` / `artifacts\build-Release\`，避免覆蓋正在執行中的 `bin\Debug\uclliu.exe`。
 - 修正瀏覽器 PTT / BBS 標題相容規則：`批踢踢實業坊`、`term.ptt.cc`、`ws.ptt.cc`、`bbs` 皆固定使用 `Shift+Insert` 貼上，避免 Python 版 `f_arr` set 順序造成的不穩定。
+- 固定候選字不顯示與目前上下文直接重複的候選，避免送出後立刻推薦同一段文字。
+
+### Data
+
+- `candidate.txt` 由 libchewing-data `dict/chewing/tsi.csv` 轉換，採 LGPL-2.1-or-later；來源 pin、SHA-256、轉換方式與再散布聲明見 `THIRD_PARTY_CANDIDATE_DATA.md`。
 
 ### Documentation
 
-- README 補上 `build.bat`、`run_debug.bat`、`--debug` 與 PTT/BBS `Shift+Insert` 相容說明。
+- README 補上固定候選字、`candidate.txt` 授權聲明、`,,,game` / `,,,normal`、`build.bat`、`run_debug.bat`、`--debug` 與 PTT/BBS `Shift+Insert` 相容說明。
 - 程式版本、exe meta、README 與 CHANGELOG 更新至 v0.17。
 
 ---

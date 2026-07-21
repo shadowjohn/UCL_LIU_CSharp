@@ -20,6 +20,10 @@ internal static class Program
         failed += Run("ensure json converts wuxiami text", TestEnsureJsonConvertsWuxiamiText);
         failed += Run("ensure json converts uniliu text", TestEnsureJsonConvertsUniliuText);
         failed += Run("app info exposes version and author message", TestAppInfoExposesVersionAndAuthorMessage);
+        failed += Run("smart candidate table parses static candidates", TestSmartCandidateTableParsesStaticCandidates);
+        failed += Run("smart candidate session pages and filters repeats", TestSmartCandidateSessionPagesAndFiltersRepeats);
+        failed += Run("smart candidate key rules use shift number", TestSmartCandidateKeyRulesUseShiftNumber);
+        failed += Run("candidate tray menu reflects table availability", TestCandidateTrayMenuReflectsTableAvailability);
         failed += Run("command line enables debug mode", TestCommandLineEnablesDebugMode);
         failed += Run("alt tab window style hides tool window from switcher", TestAltTabWindowStyleHidesToolWindowFromSwitcher);
         failed += Run("foreground process snapshot normalizes process name", TestForegroundProcessSnapshotNormalizesProcessName);
@@ -246,8 +250,8 @@ internal static class Program
             + "「,,,VERSION」目前版本\n"
             + "「'ucl」同音字查詢\n"
             + "「';zo6」注音查詢\n"
-            + "「,,,UNLOCK」回到正常模式\n"
-            + "「,,,LOCK」進入遊戲模式\n"
+            + "「,,,NORMAL」回到正常模式\n"
+            + "「,,,GAME」進入遊戲模式\n"
             + "「,,,C」簡體模式\n"
             + "「,,,T」繁體模式\n"
             + "「,,,S」UI變窄\n"
@@ -266,6 +270,67 @@ internal static class Program
         AssertEqual("Copyright (c) MIT 3WA Studio (https://3wa.tw)", UclLiuAppInfo.Copyright);
         AssertEqual("Authors: FeatherMountain (https://3wa.tw), Benson9954029", UclLiuAppInfo.Comments);
         AssertEqual(expected, UclLiuAppInfo.BuildAboutText());
+    }
+
+    private static void TestSmartCandidateTableParsesStaticCandidates()
+    {
+        SmartCandidateTable table = SmartCandidateTable.Parse(new string[]
+        {
+            "# comment",
+            "智\t慧\t慧學\t慧學習\t慧學習系統\t慧",
+            "空\t",
+            "\t候"
+        });
+
+        AssertTrue(table.IsAvailable, "candidate table should load valid rows");
+        AssertEqual(2, table.InvalidLineCount);
+        AssertSequence(new string[] { "慧", "慧學", "慧學習" }, table.Find("智").ToArray());
+        AssertEqual(0, table.Find("missing").Count);
+    }
+
+    private static void TestSmartCandidateSessionPagesAndFiltersRepeats()
+    {
+        SmartCandidateTable table = SmartCandidateTable.Parse(new string[]
+        {
+            "智\t慧\t慧學\t慧學習\t知識\t資料\t模式",
+            "智慧\t智慧\t學習"
+        });
+        SmartCandidateSession session = new SmartCandidateSession(table, new SmartCandidateMemory());
+
+        session.ObserveCommittedText("智");
+        AssertSequence(new string[] { "慧", "慧學", "慧學習", "知識", "資料" }, ToArray(session.VisibleCandidates));
+        AssertTrue(session.HasNextPage, "candidate session should expose next page");
+
+        AssertTrue(session.NextPage(), "next candidate page should be available");
+        AssertSequence(new string[] { "模式" }, ToArray(session.VisibleCandidates));
+
+        session.ObserveCommittedText("慧");
+        AssertSequence(new string[] { "學習" }, ToArray(session.VisibleCandidates));
+    }
+
+    private static void TestSmartCandidateKeyRulesUseShiftNumber()
+    {
+        AssertEqual(1, SmartCandidateKeyRules.SelectionNumber(49, true));
+        AssertEqual(5, SmartCandidateKeyRules.SelectionNumber(53, true));
+        AssertEqual(0, SmartCandidateKeyRules.SelectionNumber(49, false));
+        AssertTrue(SmartCandidateKeyRules.ShouldPageOnShiftSpace(true, true), "visible candidates should page on Shift+Space when more pages exist");
+        AssertTrue(!SmartCandidateKeyRules.ShouldPageOnShiftSpace(true, false), "candidates without next page should not consume Shift+Space");
+        AssertTrue(SmartCandidateKeyRules.ShouldEndContext(13, true), "enter keydown should end smart candidate context");
+    }
+
+    private static void TestCandidateTrayMenuReflectsTableAvailability()
+    {
+        CandidateMenuItemDescriptor[] unavailable = CandidateMenuModel.Build(false, false, true);
+        AssertEqual(1, unavailable.Length);
+        AssertEqual((int)CandidateMenuItemKind.Download, (int)unavailable[0].Kind);
+        AssertEqual("請先下載候選字", unavailable[0].Text);
+
+        CandidateMenuItemDescriptor[] available = CandidateMenuModel.Build(true, true, false);
+        AssertEqual(2, available.Length);
+        AssertEqual((int)CandidateMenuItemKind.Enable, (int)available[0].Kind);
+        AssertEqual("【●】啟動候選字表", available[0].Text);
+        AssertEqual((int)CandidateMenuItemKind.Continuous, (int)available[1].Kind);
+        AssertEqual("【　】連續出字功能", available[1].Text);
     }
 
     private static void TestCommandLineEnablesDebugMode()
@@ -1677,6 +1742,19 @@ internal static class Program
         }
 
         throw new Exception("Repository root not found from " + Directory.GetCurrentDirectory());
+    }
+
+    private static string[] ToArray(IList<string> values)
+    {
+        List<string> items = new List<string>();
+        if (values != null)
+        {
+            foreach (string value in values)
+            {
+                items.Add(value);
+            }
+        }
+        return items.ToArray();
     }
 
     private static void AssertContains(string haystack, string needle)

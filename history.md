@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-07-21 - v0.17 固定候選字補併
+
+### 實作紀錄
+
+- 對照 `C:\Users\johnho\Desktop\新增資料夾`，確認家裡版有 `SmartCandidate*`、`candidate.txt` 與 `,,,game` / `,,,normal`，但缺少目前 master 的 `build.bat`、`run_debug.bat`、`--debug` 與 PTT/BBS `Shift+Insert` 修正，因此只補併固定候選字相關變更。
+- 新增 `SmartCandidateTable.cs`、`SmartCandidateSession.cs`、`SmartCandidateMemory.cs`，並將 `candidate.txt` 納入主專案輸出與核心測試專案。
+- v0.17 先採固定表策略：只讀 `candidate.txt`，不讀寫個人學習記憶、不自動下載；`SmartCandidateMemory` 保持靜態 stub。
+- 右下角選單新增 `12. 候選字相關`，缺少資料時開啟專案 GitHub；有資料時可切換候選總開關與連續出字。
+- 候選操作對齊家裡版需求：`Shift+1`～`Shift+5` 選字、`Shift+Space` 在有下一頁時翻頁，Esc / Enter / 新字根等情境會結束候選上下文。
+- 將 `,,,lock` / `,,,unlock` 改名為 `,,,game` / `,,,normal`，避免 `,,,l` 先於 `,,,lock` 觸發。
+- 補上 `THIRD_PARTY_CANDIDATE_DATA.md` 與 `LICENSES/LGPL-2.1-or-later.txt`；`candidate.txt` SHA-256 為 `98DAB302D1CAA1504EA7240161C6F8BB5A7C97CB93B8C4314CD935CF77C77765`。
+- `tools/package-release.ps1` 改為封入 `candidate.txt`、候選資料聲明與 LGPL 授權全文；單檔 `uclliu.exe` 仍不含資料檔。
+- README 與 CHANGELOG 補上固定候選字、候選資料授權、`,,,game` / `,,,normal` 與 v0.17 打包內容。
+
+### 驗證紀錄
+
+- 先新增核心測試確認紅燈：`SmartCandidateTable`、`SmartCandidateSession`、`SmartCandidateMemory`、`SmartCandidateKeyRules` 與 `CandidateMenuModel` 尚不存在。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過，涵蓋候選表解析、重複過濾、分頁、按鍵規則、tray menu 與既有 PTT/BBS 測試。
+- `cmd /c build.bat` 通過，輸出 `artifacts\build-Debug\uclliu.exe`；保留既有 `Form1.lParam` 未使用警告，並確認 `artifacts\build-Debug\candidate.txt` 已複製。
+- `candidate.txt` 與 `artifacts\build-Debug\candidate.txt` SHA-256 皆為 `98DAB302D1CAA1504EA7240161C6F8BB5A7C97CB93B8C4314CD935CF77C77765`。
+- `cmd /c build.bat Release bin\Release\` 通過，輸出 `bin\Release\uclliu.exe`；保留同一個既有 warning。
+- `tools\package-release.ps1 -Version v0.17 -Configuration Release -OutputDirectory .\artifacts\package-smoke` 通過；zip 內容包含 `candidate.txt`、`THIRD_PARTY_CANDIDATE_DATA.md`、`LICENSES/LGPL-2.1-or-later.txt`、`pinyi.txt`、`tsf_bridge`、README 與 LICENSE。
+
+---
+
 ## 2026-07-21 - v0.17 版號與 release meta
 
 ### 實作紀錄

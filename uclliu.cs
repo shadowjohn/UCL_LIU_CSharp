@@ -26,8 +26,12 @@ namespace uclliu
         private readonly KeyboardHookLatencyMonitor keyboardHookLatencyMonitor = new KeyboardHookLatencyMonitor(KeyboardHookPerformancePolicy.SlowHookThresholdMilliseconds, KeyboardHookPerformancePolicy.SlowHookLogIntervalMilliseconds);
         public readonly TsfBridgeManager tsfBridgeManager;
         private const int ShortModeTextPadding = 8;
+        public const string CANDIDATE_FILE = "candidate.txt";
         public string VERSION = UclLiuAppInfo.Version;
         public FileStream lockFileString;
+        public SmartCandidateMemory smartCandidateMemory;
+        public SmartCandidateSession smartCandidates;
+        private SmartCandidateTable smartCandidateTable;
         public string CUSTOM_JSON_FILE
         {
             get { return my.pwd() + "\\custom.json"; }
@@ -229,7 +233,7 @@ namespace uclliu
                 run_about_ucl();
                 return true;
             }
-            code = ",,,lock";
+            code = ",,,game";
             if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
             {
                 last_key = "";
@@ -239,7 +243,7 @@ namespace uclliu
                 }
                 return true;
             }
-            code = ",,,unlock";
+            code = ",,,normal";
             if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
             {
                 last_key = "";
@@ -386,11 +390,19 @@ namespace uclliu
         }
         public void queue_senddata(string data)
         {
-            deferredTextOutputDispatcher.Queue(data, prepare_senddata_text, send_prepared_output);
+            SmartCandidateOutputCommit pendingCommit = prepare_normal_smart_candidate_output(data);
+            deferredTextOutputDispatcher.Queue(
+                data,
+                prepare_senddata_text,
+                delegate(string output)
+                {
+                    complete_smart_candidate_output(pendingCommit, send_prepared_output(output), output);
+                });
         }
         public void queue_senddata_with_labels(string data)
         {
             string labelText = data;
+            SmartCandidateOutputCommit pendingCommit = prepare_normal_smart_candidate_output(data);
             deferredTextOutputDispatcher.Queue(
                 data,
                 delegate(string output)
@@ -400,7 +412,71 @@ namespace uclliu
                     show_phone_to_label(labelText);
                     return preparedOutput;
                 },
-                send_prepared_output);
+                delegate(string output)
+                {
+                    complete_smart_candidate_output(pendingCommit, send_prepared_output(output), output);
+                });
+        }
+        public bool has_smart_candidate_table()
+        {
+            return smartCandidateTable != null && smartCandidateTable.IsAvailable;
+        }
+        public bool has_visible_smart_candidates()
+        {
+            return smartCandidates != null && smartCandidates.VisibleCandidates.Count > 0;
+        }
+        public bool try_select_smart_candidate(int number)
+        {
+            if (smartCandidates == null)
+            {
+                return false;
+            }
+
+            SmartCandidateSelection selection = smartCandidates.PrepareSelection(number);
+            SmartCandidateOutputCommit pendingCommit = SmartCandidateOutputCommit.ForSelection(selection);
+            if (pendingCommit == null)
+            {
+                return false;
+            }
+
+            deferredTextOutputDispatcher.Queue(
+                selection.Text,
+                prepare_senddata_text,
+                delegate(string output)
+                {
+                    complete_smart_candidate_output(pendingCommit, send_prepared_output(output), output);
+                });
+            return true;
+        }
+        public bool try_page_smart_candidates()
+        {
+            if (smartCandidates == null || !smartCandidates.NextPage())
+            {
+                return false;
+            }
+            refresh_smart_candidate_label();
+            return true;
+        }
+        public void cancel_smart_candidates()
+        {
+            if (smartCandidates == null)
+            {
+                return;
+            }
+            smartCandidates.Cancel();
+            refresh_smart_candidate_label();
+        }
+        public void refresh_smart_candidate_label()
+        {
+            if (smartCandidates == null)
+            {
+                return;
+            }
+            queue_word_label_update(
+                SmartCandidateDisplay.Format(smartCandidates.VisibleCandidates, smartCandidates.HasNextPage),
+                Color.Black,
+                ShortModeWordLayoutKind.Candidates,
+                smartCandidates.HasNextPage);
         }
         public bool start_phone_mode()
         {
@@ -646,6 +722,7 @@ namespace uclliu
             config["DEFAULT"]["STARTUP_DEFAULT_UCL"] = "1"; //#啟動時，預設為 肥，改為 0 則為 英
             config["DEFAULT"]["ENABLE_HALF_FULL"] = "1"; //#允許切換 全形半形
             config["DEFAULT"]["TSF_BRIDGE_TIMEOUT_MS"] = TsfBridgeConstants.DefaultTimeoutMilliseconds.ToString(); //#TSF Bridge pipe timeout
+            SmartCandidateSettings.EnsureDefaults(config);
 
             debug_print(INI_CONFIG_FILE);
             if (my.is_file(INI_CONFIG_FILE))
@@ -658,12 +735,7 @@ namespace uclliu
                 {
                     SimpleIniData _config = SimpleIniFile.ReadFile(INI_CONFIG_FILE);
 
-                    foreach (KeyValuePair<string, string> key in _config["DEFAULT"].Keys)
-                    {
-                        config["DEFAULT"][key.Key] = key.Value.Trim();
-                        //debug_print(key.Key);
-                        //debug_print(key.Value);
-                    }
+                    SmartCandidateSettings.ApplyLoadedPolicy(config, _config);
                 }
                 catch (Exception ex)
                 {
@@ -755,11 +827,35 @@ namespace uclliu
             add_configured_apps(sendkey_paste_shift_ins_apps, config["DEFAULT"]["SEND_KIND_1_PASTE"]);
             add_configured_apps(sendkey_paste_big5_apps, config["DEFAULT"]["SEND_KIND_2_BIG5"]);
             add_configured_apps(sendkey_not_use_ucl_apps, config["DEFAULT"]["SEND_KIND_3_NOUCL"]);
+            initialize_smart_candidates();
 
             clear_input_labels_for_mode_change();
             update_UI();
             //不管如何，先存一次
             saveConfig();
+        }
+        private void initialize_smart_candidates()
+        {
+            string tablePath = Path.Combine(my.pwd(), CANDIDATE_FILE);
+            try
+            {
+                smartCandidateTable = SmartCandidateTable.Load(tablePath);
+                if (smartCandidateTable.InvalidLineCount > 0)
+                {
+                    debug_print("smart candidate invalid lines: " + smartCandidateTable.InvalidLineCount.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                smartCandidateTable = SmartCandidateTable.Empty();
+                debug_print("smart candidate table load failed: " + ex.Message);
+            }
+
+            smartCandidateMemory = new SmartCandidateMemory();
+            smartCandidates = new SmartCandidateSession(smartCandidateTable, smartCandidateMemory);
+            smartCandidates.Enabled = SmartCandidateSettings.IsEnabled(config["DEFAULT"]["SMART_CANDIDATE_ENABLE"])
+                && smartCandidateTable.IsAvailable;
+            smartCandidates.ContinuousEnabled = SmartCandidateSettings.IsEnabled(config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"]);
         }
         private void add_configured_apps(List<string> appList, string configValue)
         {
@@ -1418,6 +1514,10 @@ namespace uclliu
                     senddata(data);
                     show_sp_to_label(data, true);
                     show_phone_to_label(data);
+                    if (has_visible_smart_candidates())
+                    {
+                        refresh_smart_candidate_label();
+                    }
                     return true;
                 }
             }
@@ -1563,6 +1663,7 @@ namespace uclliu
                         flag_is_ucl = true;
                         break;
                 }
+                cancel_smart_candidates();
                 //debug_print("window_state_event_cb(toggle_ucl)");
                 toAlphaOrNonAlpha();
                 //f.Refresh();
@@ -2041,11 +2142,17 @@ namespace uclliu
 
         public void senddata(string data)
         {
+            SmartCandidateOutputCommit pendingCommit = prepare_normal_smart_candidate_output(data);
             data = prepare_senddata_text(data);
-            send_prepared_output(data);
+            complete_smart_candidate_output(pendingCommit, send_prepared_output(data), data);
         }
 
-        private void send_prepared_output(string data)
+        private SmartCandidateOutputCommit prepare_normal_smart_candidate_output(string data)
+        {
+            return SmartCandidateOutputCommit.ForNormal(null);
+        }
+
+        private bool send_prepared_output(string data)
         {
             //人生很難，研究很久 C# 的 sendkeys 遇到有些吃 iso-8859-1、big5 的app 如pcman、putty
             //或是早期的 photoimpact，最好的方法還是利用剪貼簿貼上，使用前備份一下原來的內容即可
@@ -2055,7 +2162,7 @@ namespace uclliu
             {
                 is_send_ucl = false;
                 debug_print("debug senddata empty");
-                return;
+                return false;
             }
 
             //出字
@@ -2096,7 +2203,7 @@ namespace uclliu
             string outputError;
             if (try_send_output(outputMode, data, foregroundProcessId, out outputError))
             {
-                return;
+                return true;
             }
 
             debug_print("senddata primary output failed:" + outputError);
@@ -2104,16 +2211,31 @@ namespace uclliu
             {
                 if (try_send_output(TextOutputMode.UnicodeSendInput, data, foregroundProcessId, out outputError))
                 {
-                    return;
+                    return true;
                 }
                 debug_print("senddata unicode fallback failed:" + outputError);
             }
 
-            if (!try_send_legacy_sendkeys(data, out outputError))
+            if (try_send_legacy_sendkeys(data, out outputError))
             {
-                debug_print("senddata legacy fallback failed:" + outputError);
+                return true;
             }
 
+            debug_print("senddata legacy fallback failed:" + outputError);
+            return false;
+
+        }
+        private void complete_smart_candidate_output(SmartCandidateOutputCommit pendingCommit, bool outputSucceeded, string preparedText)
+        {
+            if (pendingCommit == null || smartCandidates == null || smartCandidateMemory == null)
+            {
+                return;
+            }
+            pendingCommit.Complete(outputSucceeded, smartCandidates, smartCandidateMemory, preparedText);
+            if (has_visible_smart_candidates() || !outputSucceeded)
+            {
+                refresh_smart_candidate_label();
+            }
         }
     }
 }

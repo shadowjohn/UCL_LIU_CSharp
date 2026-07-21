@@ -39,12 +39,21 @@ New-Item -ItemType Directory -Path $packageRoot | Out-Null
 
 Copy-Item -LiteralPath $exePath -Destination (Join-Path $packageRoot "uclliu.exe") -Force
 
-$optionalFiles = @("pinyi.txt", "README.md", "LICENSE")
+$optionalFiles = @("pinyi.txt", "candidate.txt", "THIRD_PARTY_CANDIDATE_DATA.md", "README.md", "LICENSE")
 foreach ($fileName in $optionalFiles) {
     $sourcePath = Join-Path $ProjectRoot $fileName
     if (Test-Path -LiteralPath $sourcePath) {
         Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $packageRoot $fileName) -Force
     }
+}
+
+$lgplLicensePath = Join-Path $ProjectRoot "LICENSES\LGPL-2.1-or-later.txt"
+if (Test-Path -LiteralPath $lgplLicensePath) {
+    $licensesDestination = Join-Path $packageRoot "LICENSES"
+    if (-not (Test-Path -LiteralPath $licensesDestination)) {
+        New-Item -ItemType Directory -Path $licensesDestination | Out-Null
+    }
+    Copy-Item -LiteralPath $lgplLicensePath -Destination (Join-Path $licensesDestination "LGPL-2.1-or-later.txt") -Force
 }
 
 function Copy-TsfBridgeRuntime {
@@ -124,9 +133,9 @@ Copy-Item -LiteralPath $exePath -Destination $singleExePath -Force
 
 $notesPath = Join-Path $OutputDirectory "release-notes.md"
 $zipContents = if ($IncludeWavs) {
-    "uclliu.exe、pinyi.txt、wavs、tsf_bridge、README 與 LICENSE"
+    "uclliu.exe、pinyi.txt、candidate.txt、第三方候選資料聲明、LGPL 授權全文、wavs、tsf_bridge、README 與 LICENSE"
 } else {
-    "uclliu.exe、pinyi.txt、tsf_bridge、README 與 LICENSE"
+    "uclliu.exe、pinyi.txt、candidate.txt、第三方候選資料聲明、LGPL 授權全文、tsf_bridge、README 與 LICENSE"
 }
 $soundNote = if ($IncludeWavs) {
     "本次封包包含 wavs 音效目錄，請確認音效檔具備可再散布授權。"
@@ -137,11 +146,11 @@ $soundNote = if ($IncludeWavs) {
 UCL_LIU_CSharp $versionSuffix
 
 - uclliu-$versionSuffix.zip：推薦下載包，含 $zipContents。
-- uclliu.exe：單檔版，不含 TSF Bridge、同音/注音資料與音效素材。
+- uclliu.exe：單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材。
 
 $soundNote
 
-字碼表因版權因素不包含在發行檔內，請自行放入 liu.json、liu.cin、liu-uni.tab 或其他可轉換字碼表。
+字碼表因版權因素不包含在發行檔內，請自行放入 liu.json、liu.cin、liu-uni.tab 或其他可轉換字碼表。candidate.txt 採 LGPL-2.1-or-later，來源與再散布聲明見 THIRD_PARTY_CANDIDATE_DATA.md，授權全文見 LICENSES/LGPL-2.1-or-later.txt。
 "@ | Set-Content -LiteralPath $notesPath -Encoding UTF8
 
 Write-Host "Package zip: $zipPath"

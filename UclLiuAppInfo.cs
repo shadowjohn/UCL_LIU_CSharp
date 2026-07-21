@@ -22,8 +22,8 @@ namespace uclliu
             msg += "「,,,VERSION」目前版本\n";
             msg += "「'ucl」同音字查詢\n";
             msg += "「';zo6」注音查詢\n";
-            msg += "「,,,UNLOCK」回到正常模式\n";
-            msg += "「,,,LOCK」進入遊戲模式\n";
+            msg += "「,,,NORMAL」回到正常模式\n";
+            msg += "「,,,GAME」進入遊戲模式\n";
             msg += "「,,,C」簡體模式\n";
             msg += "「,,,T」繁體模式\n";
             msg += "「,,,S」UI變窄\n";

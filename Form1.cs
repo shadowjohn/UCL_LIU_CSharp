@@ -191,6 +191,12 @@ namespace uclliu
                 //剪貼簿與舊 SendKeys 模式會產生 injected key，但不要放行真人按鍵。
                 return OK;
             }
+            if (ucl.smartCandidates != null && SmartCandidateKeyRules.ShouldEndContext(ea, keydown))
+            {
+                ucl.smartCandidates.EndContext();
+                ucl.refresh_smart_candidate_label();
+                return OK;
+            }
             //如果是需要跳過的 app ，就跳過
             string foregroundProcessName = ucl.getForegroundWindowProcessName();
             if (TextOutputRouter.MatchesProcess(foregroundProcessName, ucl.sendkey_not_use_ucl_apps))
@@ -246,6 +252,11 @@ namespace uclliu
                 ucl.last_key = "";
             }
 
+            if (keydown && ESC && ucl.has_visible_smart_candidates())
+            {
+                ucl.cancel_smart_candidates();
+                return NO;
+            }
 
             if (ucl.flag_is_gamemode)
             {
@@ -376,6 +387,21 @@ namespace uclliu
                     ucl.debug_print("Debug14");
                 }
                 return OK;
+            }
+
+            int smartCandidateNumber = SmartCandidateKeyRules.SelectionNumber(ea, ucl.flag_is_shift_down);
+            if (keydown && smartCandidateNumber > 0 && ucl.try_select_smart_candidate(smartCandidateNumber))
+            {
+                return NO;
+            }
+
+            if (keydown && ea == 32 && ucl.flag_is_shift_down
+                && ucl.smartCandidates != null
+                && SmartCandidateKeyRules.ShouldPageOnShiftSpace(ucl.has_visible_smart_candidates(), ucl.smartCandidates.HasNextPage)
+                && ucl.try_page_smart_candidates())
+            {
+                ucl.flag_is_play_otherkey = true;
+                return NO;
             }
 
             HalfFullShortcutDecision halfFullShortcutDecision = HalfFullShortcutRules.EvaluateShiftSpace(ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] == "1", ucl.flag_is_shift_down);
@@ -627,6 +653,10 @@ namespace uclliu
                         //# Play ucl
                         //#print("Play UCL")
                         //#print(thekey)
+                        if (ucl.play_ucl_label.Length == 0)
+                        {
+                            ucl.cancel_smart_candidates();
+                        }
                         int kac = ea;
                         switch (kac)
                         {
@@ -1611,6 +1641,51 @@ namespace uclliu
             }
             ucl.saveConfig();
         }
+        private void menu_open_candidate_download(object sender, EventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://github.com/shadowjohn/UCL_LIU_CSharp",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "無法開啟候選字下載頁面：" + ex.Message, TrayMenuText.CandidateDownload, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+        private void menu_toggle_smart_candidate(object sender, EventArgs e)
+        {
+            bool enabled = ucl.config["DEFAULT"]["SMART_CANDIDATE_ENABLE"] != "1";
+            ucl.config["DEFAULT"]["SMART_CANDIDATE_ENABLE"] = enabled ? "1" : "0";
+            if (ucl.smartCandidates != null)
+            {
+                ucl.smartCandidates.Enabled = enabled && ucl.has_smart_candidate_table();
+                if (!enabled)
+                {
+                    ucl.smartCandidates.EndContext();
+                }
+                ucl.refresh_smart_candidate_label();
+            }
+            ucl.saveConfig();
+        }
+        private void menu_toggle_smart_candidate_continuous(object sender, EventArgs e)
+        {
+            bool enabled = ucl.config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] != "1";
+            ucl.config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] = enabled ? "1" : "0";
+            if (ucl.smartCandidates != null)
+            {
+                ucl.smartCandidates.ContinuousEnabled = enabled;
+                if (!enabled)
+                {
+                    ucl.smartCandidates.Cancel();
+                }
+                ucl.refresh_smart_candidate_label();
+            }
+            ucl.saveConfig();
+        }
         private void menu_run_exit(object sender, EventArgs e)
         {
             this.Close();
@@ -1736,7 +1811,32 @@ namespace uclliu
             cMenu.MenuItems.Add(TrayMenuText.ToggleItem("10.", ucl.config["DEFAULT"]["ENABLE_HALF_FULL"] == "1", "允許(Shift+Space)切換 全形/半形"), this.menu_toggle_half_full);
 
             cMenu.MenuItems.Add("11. 自定詞庫", this.menu_open_custom_dict);
-            cMenu.MenuItems.Add("12. 離開(Quit)", this.menu_run_exit);
+
+            MenuItem candidateMenu = new MenuItem();
+            candidateMenu.Text = TrayMenuText.CandidateMenu;
+            CandidateMenuItemDescriptor[] candidateItems = CandidateMenuModel.Build(
+                ucl.has_smart_candidate_table(),
+                ucl.config["DEFAULT"]["SMART_CANDIDATE_ENABLE"] == "1",
+                ucl.config["DEFAULT"]["SMART_CANDIDATE_CONTINUOUS"] == "1");
+            foreach (CandidateMenuItemDescriptor item in candidateItems)
+            {
+                EventHandler handler = null;
+                switch (item.Kind)
+                {
+                    case CandidateMenuItemKind.Download:
+                        handler = this.menu_open_candidate_download;
+                        break;
+                    case CandidateMenuItemKind.Enable:
+                        handler = this.menu_toggle_smart_candidate;
+                        break;
+                    case CandidateMenuItemKind.Continuous:
+                        handler = this.menu_toggle_smart_candidate_continuous;
+                        break;
+                }
+                candidateMenu.MenuItems.Add(item.Text, handler);
+            }
+            cMenu.MenuItems.Add(candidateMenu);
+            cMenu.MenuItems.Add(TrayMenuText.Exit, this.menu_run_exit);
         }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)

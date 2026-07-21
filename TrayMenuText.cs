@@ -4,6 +4,10 @@ namespace uclliu
 {
     public static class TrayMenuText
     {
+        public const string CandidateMenu = "12. 候選字相關";
+        public const string CandidateDownload = "請先下載候選字";
+        public const string Exit = "13. 離開(Quit)";
+
         public static string Mark(bool enabled)
         {
             return enabled ? "●" : "　";
@@ -44,9 +48,57 @@ namespace uclliu
             return isRegistered ? "TSF Bridge 已註冊" : "TSF Bridge 未註冊";
         }
 
+        public static string CandidateEnable(bool enabled)
+        {
+            return ToggleItem("", enabled, "啟動候選字表");
+        }
+
+        public static string CandidateContinuous(bool enabled)
+        {
+            return ToggleItem("", enabled, "連續出字功能");
+        }
+
         private static bool IsOutputType(string outputType, string expected)
         {
             return (outputType ?? "DEFAULT").Trim().ToUpperInvariant() == expected;
+        }
+    }
+
+    public enum CandidateMenuItemKind
+    {
+        Download,
+        Enable,
+        Continuous
+    }
+
+    public sealed class CandidateMenuItemDescriptor
+    {
+        public CandidateMenuItemDescriptor(CandidateMenuItemKind kind, string text)
+        {
+            Kind = kind;
+            Text = text;
+        }
+
+        public CandidateMenuItemKind Kind { get; private set; }
+        public string Text { get; private set; }
+    }
+
+    public static class CandidateMenuModel
+    {
+        public static CandidateMenuItemDescriptor[] Build(bool tableAvailable, bool enabled, bool continuousEnabled)
+        {
+            if (!tableAvailable)
+            {
+                return new CandidateMenuItemDescriptor[]
+                {
+                    new CandidateMenuItemDescriptor(CandidateMenuItemKind.Download, TrayMenuText.CandidateDownload)
+                };
+            }
+            return new CandidateMenuItemDescriptor[]
+            {
+                new CandidateMenuItemDescriptor(CandidateMenuItemKind.Enable, TrayMenuText.CandidateEnable(enabled)),
+                new CandidateMenuItemDescriptor(CandidateMenuItemKind.Continuous, TrayMenuText.CandidateContinuous(continuousEnabled))
+            };
         }
     }
 
