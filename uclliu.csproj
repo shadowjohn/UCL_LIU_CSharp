@@ -124,7 +124,9 @@
     <Compile Include="App_Code\include.cs" />
     <Compile Include="CustomDictionaryStore.cs" />
     <Compile Include="AltTabWindowStyle.cs" />
-    <Compile Include="ChromeButton.cs" />
+    <Compile Include="ChromeButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="ChromeButtonTextAlignment.cs" />
     <Compile Include="ElevatedRestart.cs" />
     <Compile Include="ForegroundProcessSnapshot.cs" />
