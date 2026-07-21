@@ -300,16 +300,16 @@ dotnet run --project .\tools\UclLiuCoreTests\UclLiuCoreTests.csproj
 ```bat
 build.bat
 build.bat Release
-build.bat Debug artifacts\debug-run\
+build.bat Debug bin\Debug\
 ```
 
-`build.bat` 會自動尋找 Visual Studio / Build Tools 的 MSBuild，預設編譯 Debug 並輸出到 `artifacts\build-Debug\`，也可指定 Release 或第二個參數改輸出目錄；這樣目前執行中的 `bin\Debug\uclliu.exe` 被鎖住時仍可直接編譯。若開發機缺 `.NETFramework,Version=v4.5.2` reference assemblies，完整 build 會在環境檢查階段失敗；核心測試仍可用 .NET SDK 驗證純邏輯。
+`build.bat` 會自動尋找 Visual Studio / Build Tools 的 MSBuild，預設等同 `build.bat Debug bin\Debug\`；建置前若發現 `uclliu.exe` 正在執行會先關閉，再重建標準 `bin\Debug` / `bin\Release` 輸出。也可指定 Release 或第二個參數改輸出目錄。若開發機缺 `.NETFramework,Version=v4.5.2` reference assemblies，完整 build 會在環境檢查階段失敗；核心測試仍可用 .NET SDK 驗證純邏輯。
 
 啟動除錯輸出：
 
 ```bat
 run_debug.bat
-artifacts\build-Debug\uclliu.exe --debug
+bin\Debug\uclliu.exe --debug
 ```
 
 `run_debug.bat` 會用相對路徑啟動 Debug build；`--debug` 會開啟 console 並輸出既有的 `debug_print` 訊息。

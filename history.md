@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-07-21 - build.bat 回到 bin Debug 輸出
+
+### 實作紀錄
+
+- 依使用者偏好，`build.bat` 未指定輸出目錄時改回 `bin\%CONFIGURATION%\`，預設等同 `build.bat Debug bin\Debug\`。
+- `build.bat` 在 MSBuild 前會偵測 `uclliu.exe`，先嘗試正常關閉；若 1 秒後仍存在，再用 `taskkill /f` 強制關閉，避免 `bin\Debug\uclliu.exe` 鎖住輸出檔。
+- `run_debug.bat` 改回相對啟動 `bin\Debug\uclliu.exe --debug`。
+- README / CHANGELOG 同步移除 `artifacts\build-Debug` 作為預設 build 位置的說明。
+
+### 驗證紀錄
+
+- `cmd /c build.bat` 通過，輸出 `bin\Debug\uclliu.exe`。
+- 保留既有 `Form1.lParam` 未使用 warning；`bin\Debug\tsf_bridge\x64\x86` DLL 仍可能被瀏覽器、Explorer、Teams、波斯菊等已載入 TSF 的程序鎖住，但不影響本次主程式 exe 建置。
+
+---
+
 ## 2026-07-21 - v0.17 固定候選字補併
 
 ### 實作紀錄

@@ -7,7 +7,7 @@ pushd "%ROOT_DIR%" >nul
 set "CONFIGURATION=%~1"
 if "%CONFIGURATION%"=="" set "CONFIGURATION=Debug"
 set "OUT_DIR=%~2"
-if "%OUT_DIR%"=="" set "OUT_DIR=artifacts\build-%CONFIGURATION%"
+if "%OUT_DIR%"=="" set "OUT_DIR=bin\%CONFIGURATION%"
 if not "%OUT_DIR%"=="" (
   set "LAST_OUT_DIR_CHAR=!OUT_DIR:~-1!"
   if not "!LAST_OUT_DIR_CHAR!"=="\" set "OUT_DIR=!OUT_DIR!\"
@@ -47,6 +47,8 @@ if not exist "%PROJECT%" (
   exit /b 1
 )
 
+call :CloseRunningUclLiu
+
 echo [INFO] MSBuild: %MSBUILD%
 echo [INFO] Build %PROJECT% %CONFIGURATION% AnyCPU...
 echo [INFO] Output: %OUT_DIR%
@@ -63,4 +65,16 @@ exit /b 0
 
 :UseMSBuild
 if exist "%~1" set "MSBUILD=%~1"
+exit /b 0
+
+:CloseRunningUclLiu
+tasklist /fi "imagename eq uclliu.exe" 2>nul | find /i "uclliu.exe" >nul
+if errorlevel 1 exit /b 0
+echo [INFO] Closing running uclliu.exe...
+taskkill /im uclliu.exe >nul 2>nul
+timeout /t 1 /nobreak >nul
+tasklist /fi "imagename eq uclliu.exe" 2>nul | find /i "uclliu.exe" >nul
+if errorlevel 1 exit /b 0
+echo [INFO] Force closing uclliu.exe...
+taskkill /f /im uclliu.exe >nul 2>nul
 exit /b 0

@@ -13,7 +13,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 - 新增 `SmartCandidateTable` / `SmartCandidateSession` 核心測試，涵蓋候選載入、去重、上下文、分頁、按鍵規則與 tray menu 狀態。
 - 新增 `build.bat`，可不開 Visual Studio 直接用 MSBuild 編譯 Debug / Release。
 - 新增 `--debug` 啟動參數，會開啟 console 並輸出既有 `debug_print` 訊息。
-- 新增 `run_debug.bat`，用相對路徑啟動 `artifacts\build-Debug\uclliu.exe --debug`。
+- 新增 `run_debug.bat`，用相對路徑啟動 `bin\Debug\uclliu.exe --debug`。
 
 ### Changed
 
@@ -23,7 +23,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ### Fixed
 
-- 修正 `build.bat` 未帶輸出目錄時的 batch 語法錯誤，並預設輸出到 `artifacts\build-Debug\` / `artifacts\build-Release\`，避免覆蓋正在執行中的 `bin\Debug\uclliu.exe`。
+- 修正 `build.bat` 未帶輸出目錄時的 batch 語法錯誤，並預設輸出到 `bin\Debug\` / `bin\Release\`；建置前若 `uclliu.exe` 正在執行會先關閉再重建。
 - 修正瀏覽器 PTT / BBS 標題相容規則：`批踢踢實業坊`、`term.ptt.cc`、`ws.ptt.cc`、`bbs` 皆固定使用 `Shift+Insert` 貼上，避免 Python 版 `f_arr` set 順序造成的不穩定。
 - 固定候選字不顯示與目前上下文直接重複的候選，避免送出後立刻推薦同一段文字。
 
