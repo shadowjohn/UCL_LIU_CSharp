@@ -1,6 +1,6 @@
 # UCL_LIU_CSharp
 
-C# / WinForms 版肥米輸入法，目前版本 v0.16。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
+C# / WinForms 版肥米輸入法，目前版本 v0.17。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
 
 目前 C# 版已進入可日用測試的現代化復刻狀態：已補上多來源字碼表自動轉換、自定詞庫、Unicode SendInput 出字、剪貼簿 fallback、打字音效、同音/注音查詢、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback、管理員重啟導引與核心測試。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
 
@@ -11,7 +11,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.16。這個分支的目標是
 | 版本 | 實用成熟度 | 工程可維護性 | 日用信心 | 定位 |
 | --- | ---: | ---: | ---: | --- |
 | Python 版 v1.67 | 8.5 / 10 | 6.5 / 10 | 8.5 / 10 | 功能最完整的正史版，多年實戰相容性最足 |
-| C# 版 v0.16 | 8.3 / 10 | 8.3 / 10 | 8.2 / 10 | 收錄 Benson9954029 協助修正的大 bug，維持低依賴、可維護的現代化復刻版 |
+| C# 版 v0.17 | 8.4 / 10 | 8.4 / 10 | 8.3 / 10 | 修正 PTT/BBS 貼上規則並補齊免開 VS build/debug 腳本，維持低依賴、可維護的現代化復刻版 |
 
 ## 目前狀態
 
@@ -31,7 +31,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.16。這個分支的目標是
 
 ## 低依賴狀態
 
-C# 版 v0.16 目前已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。主程式只使用 .NET Framework 4.5.2 內建 reference，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。TSF Bridge 的 C++ 原始碼也已納入 `tsf_bridge\UclTsfBridge`，可由本 repo 自行重建。
+C# 版 v0.17 目前已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。主程式只使用 .NET Framework 4.5.2 內建 reference，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。TSF Bridge 的 C++ 原始碼也已納入 `tsf_bridge\UclTsfBridge`，可由本 repo 自行重建。
 
 TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預設出字流程；只有手動切到 `TSF出字模式` 時才會透過 named pipe 呼叫 `tsf_bridge\UclTsfBridge.dll`。
 
@@ -77,19 +77,19 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 
 | 檔案 | 說明 |
 | --- | --- |
-| [uclliu-v0.16.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.16/uclliu-v0.16.zip) | v0.16 推薦下載包，含 `uclliu.exe`、`pinyi.txt`、`tsf_bridge`、README 與 LICENSE |
-| [uclliu.exe](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.16/uclliu.exe) | v0.16 單檔版，不含 TSF Bridge、同音/注音資料與音效素材 |
+| [uclliu-v0.17.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.17/uclliu-v0.17.zip) | v0.17 推薦下載包，含 `uclliu.exe`、`pinyi.txt`、`tsf_bridge`、README 與 LICENSE |
+| [uclliu.exe](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.17/uclliu.exe) | v0.17 單檔版，不含 TSF Bridge、同音/注音資料與音效素材 |
 | [RELEASE/0.12/uclliu.zip](RELEASE/0.12/uclliu.zip) | v0.12 推薦下載包，含 `uclliu.exe`、`tsf_bridge` 外掛、註冊/解除註冊腳本 |
 | [RELEASE/0.12/uclliu.exe](RELEASE/0.12/uclliu.exe) | v0.12 單檔版，不含 TSF Bridge；只適合不需要 TSF 的使用者 |
 | [RELEASE/0.11/uclliu.exe](RELEASE/0.11/uclliu.exe) | v0.11 開發分支打包版 |
 | [RELEASE/0.11/uclliu.zip](RELEASE/0.11/uclliu.zip) | v0.11 壓縮版 |
 | [RELEASE/0.1/uclliu.exe](RELEASE/0.1/uclliu.exe) | 2019 初版備份 |
 
-v0.16 發行日期：2026-07-07，收錄 Benson9954029 協助修正的大 bug；發行檔由 GitHub Actions 自動測試、編譯 TSF Bridge 與打包。v0.12 病毒碼掃描已提交 Microsoft WDSI：[submission a42546c1-4432-40f2-8cc6-6e226617cf19](https://www.microsoft.com/en-us/wdsi/submission/a42546c1-4432-40f2-8cc6-6e226617cf19)。
+v0.17 發行日期：2026-07-21，修正 PTT/BBS 瀏覽器標題固定使用 `Shift+Insert` 貼上，並補上免開 Visual Studio 的 build/debug 腳本；發行檔由 GitHub Actions 自動測試、編譯 TSF Bridge 與打包。v0.12 病毒碼掃描已提交 Microsoft WDSI：[submission a42546c1-4432-40f2-8cc6-6e226617cf19](https://www.microsoft.com/en-us/wdsi/submission/a42546c1-4432-40f2-8cc6-6e226617cf19)。
 
 v0.11 病毒碼掃描紀錄：[submission 2a365b04-dea0-496f-937f-9051b163a968](https://www.microsoft.com/en-us/wdsi/submission/2a365b04-dea0-496f-937f-9051b163a968)。
 
-v0.16 推薦下載包 `uclliu-v0.16.zip` 內含：
+v0.17 推薦下載包 `uclliu-v0.17.zip` 內含：
 
 | 檔案 / 目錄 | 用途 |
 | --- | --- |
@@ -122,7 +122,7 @@ v0.16 推薦下載包 `uclliu-v0.16.zip` 內含：
 
 `pinyi.txt` 放在 `uclliu.exe` 同一目錄後會啟用同音字與注音功能。`'ucl` 可用最後一個已出字的字查同音候選；`';zo6` 可用注音鍵盤碼查 `ㄈㄟˊ`，候選會包含「肥」；`';a` 後按空白可查 `ㄇ` 這類單獨注音符號候選。注音候選顯示後，可按數字鍵選字，按空白送出第一候選；候選有下一頁時，`Shift+Space` 會先換頁。右下角選單開啟「顯示提示注音」後，出字後會顯示 `音:ㄈㄟˊ` 類提示。
 
-v0.16 推薦下載包已內含 `pinyi.txt`；若只下載單檔 `uclliu.exe`，需要自行補上 `pinyi.txt` 才會有同音字與注音查詢。
+v0.17 推薦下載包已內含 `pinyi.txt`；若只下載單檔 `uclliu.exe`，需要自行補上 `pinyi.txt` 才會有同音字與注音查詢。
 
 ## 打字音效
 
@@ -145,7 +145,7 @@ C# 版目前右下角選單提供四種出字模式：
 
 ### TSF Bridge 管理
 
-TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下載 `uclliu-v0.16.zip` 並完整解壓縮，讓 `tsf_bridge` 目錄與 `uclliu.exe` 放在同一層。只下載單檔 `uclliu.exe` 時不會包含 TSF Bridge。
+TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下載 `uclliu-v0.17.zip` 並完整解壓縮，讓 `tsf_bridge` 目錄與 `uclliu.exe` 放在同一層。只下載單檔 `uclliu.exe` 時不會包含 TSF Bridge。
 
 右下角選單提供「TSF Bridge 管理」：
 
@@ -158,7 +158,7 @@ TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下�
 
 建議啟用流程：
 
-1. 下載並解壓縮 [uclliu-v0.16.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.16/uclliu-v0.16.zip)。
+1. 下載並解壓縮 [uclliu-v0.17.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.17/uclliu-v0.17.zip)。
 2. 執行 `uclliu.exe`。
 3. 若右下角肥米選單出現「★以系統管理員身分重新啟動肥米」，先點選並允許 UAC。
 4. 從右下角肥米選單進入 `4.TSF Bridge 管理`。
@@ -308,7 +308,7 @@ build_tsf.bat
 發行打包：
 
 ```powershell
-& .\tools\package-release.ps1 -Version v0.16 -Configuration Release -OutputDirectory .\artifacts
+& .\tools\package-release.ps1 -Version v0.17 -Configuration Release -OutputDirectory .\artifacts
 ```
 
 官方打包預設不包含 `wavs`。若是私用或已確認音效可再散布，可加上 `-IncludeWavs` 封入本機 `wavs` 目錄。
@@ -316,11 +316,11 @@ build_tsf.bat
 GitHub Actions 會在 `master` push / PR 時自動跑核心測試與 Release build，並上傳 artifact。推送 `v*` tag 時會自動建立或更新 GitHub Release：
 
 ```powershell
-git tag v0.16
-git push origin v0.16
+git tag v0.17
+git push origin v0.17
 ```
 
-自動 Release 會上傳兩個檔案：`uclliu-v0.16.zip` 是推薦下載包，含 TSF Bridge 與同音/注音資料；`uclliu.exe` 是單檔版，不含 TSF Bridge。
+自動 Release 會上傳兩個檔案：`uclliu-v0.17.zip` 是推薦下載包，含 TSF Bridge 與同音/注音資料；`uclliu.exe` 是單檔版，不含 TSF Bridge。
 
 ## 專案檔案
 

@@ -4,7 +4,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ---
 
-## [Unreleased] - 2026-07-21
+## [0.17] - 2026-07-21
 
 ### Added
 
@@ -20,6 +20,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 ### Documentation
 
 - README 補上 `build.bat`、`run_debug.bat`、`--debug` 與 PTT/BBS `Shift+Insert` 相容說明。
+- 程式版本、exe meta、README 與 CHANGELOG 更新至 v0.17。
 
 ---
 

@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-07-21 - v0.17 版號與 release meta
+
+### 實作紀錄
+
+- `UclLiuAppInfo.Version` 更新為 `0.17`，關於視窗與 `,,,VERSION` 會顯示新版本。
+- `AssemblyVersion`、`AssemblyFileVersion` 更新為 `0.17.0.0`，`AssemblyInformationalVersion` 繼續共用 `UclLiuAppInfo.Version`。
+- README 發行下載、打包/tag 範例與 CHANGELOG 更新為 v0.17，記錄 PTT/BBS `Shift+Insert` 與 build/debug 腳本。
+- `uclliu.csproj` 的 ClickOnce `ApplicationVersion=1.0.0.*` 是舊專案 metadata；該檔目前另有 Visual Studio 自動改動，這次 release 不納入。
+
+### 驗證紀錄
+
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `cmd /c build.bat` 通過，輸出 `artifacts\build-Debug\uclliu.exe`；保留既有 `Form1.lParam` 未使用警告。
+- 檢查 `artifacts\build-Debug\uclliu.exe` version meta：`FileVersion=0.17.0.0`、`ProductVersion=0.17`、`Comments=Authors: FeatherMountain (https://3wa.tw), Benson9954029`。
+
+---
+
 ## 2026-07-21 - 新增 --debug 啟動參數
 
 ### 實作紀錄
