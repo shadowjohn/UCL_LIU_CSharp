@@ -179,7 +179,7 @@ TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下�
 
 | 環境 | 判斷方式 | 出字模式 |
 | --- | --- | --- |
-| Chrome / Edge / Brave / Firefox / Opera 開 PTT | 視窗標題包含 `批踢踢實業坊`、`term.ptt.cc` 或 `ws.ptt.cc` | `Ctrl+V` 貼上 |
+| Chrome / Edge / Brave / Firefox / Opera 開 PTT | 視窗標題包含 `批踢踢實業坊`、`term.ptt.cc`、`ws.ptt.cc` 或 `bbs` | `Shift+Insert` 貼上 |
 | Win11 Notepad | Windows build >= 22000 且 process 為 `notepad` / `notepad.exe` | `Ctrl+V` 貼上 |
 | Notepad++ | process 為 `notepad++` / `notepad++.exe`，焦點控制項通常為 Scintilla | 逐字 Unicode `SendInput`，不使用剪貼簿；建議關閉 Notepad++ 自動完成 |
 | PuTTY / PCMan / Pietty / Windows Terminal / mintty / RimWorld 等 | process 相容清單 | `Shift+Insert` 貼上 |
@@ -280,11 +280,22 @@ dotnet run --project .\tools\UclLiuCoreTests\UclLiuCoreTests.csproj
 
 完整舊專案 build：
 
-```powershell
-& 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' .\uclliu.csproj /t:Rebuild /p:Configuration=Debug /p:Platform=AnyCPU
+```bat
+build.bat
+build.bat Release
+build.bat Debug artifacts\debug-run\
 ```
 
-若開發機缺 `.NETFramework,Version=v4.5.2` reference assemblies，完整 build 會在環境檢查階段失敗；核心測試仍可用 .NET SDK 驗證純邏輯。
+`build.bat` 會自動尋找 Visual Studio / Build Tools 的 MSBuild，預設編譯 Debug 並輸出到 `artifacts\build-Debug\`，也可指定 Release 或第二個參數改輸出目錄；這樣目前執行中的 `bin\Debug\uclliu.exe` 被鎖住時仍可直接編譯。若開發機缺 `.NETFramework,Version=v4.5.2` reference assemblies，完整 build 會在環境檢查階段失敗；核心測試仍可用 .NET SDK 驗證純邏輯。
+
+啟動除錯輸出：
+
+```bat
+run_debug.bat
+artifacts\build-Debug\uclliu.exe --debug
+```
+
+`run_debug.bat` 會用相對路徑啟動 Debug build；`--debug` 會開啟 console 並輸出既有的 `debug_print` 訊息。
 
 TSF Bridge native build：
 
@@ -329,6 +340,8 @@ git push origin v0.16
 | `UclLiuAppInfo.cs` | 版本、作者、exe 詳細資料欄位 |
 | `UiLayoutCalculator.cs` | 可測試的 UI 寬度計算 |
 | `tools/UclLiuCoreTests` | 核心測試 harness |
+| `build.bat` | 不開 Visual Studio 的主程式 Debug / Release build |
+| `run_debug.bat` | 用相對路徑啟動 Debug build 並開啟 `--debug` |
 | `tools/package-release.ps1` | 本機與 GitHub Actions 共用的發行打包腳本 |
 | `build_tsf.bat` | 編譯 TSF Bridge x64/x86 並同步到開發輸出目錄 |
 | `.github/workflows/build-and-release.yml` | GitHub Actions 測試、編譯、打包與 tag Release |

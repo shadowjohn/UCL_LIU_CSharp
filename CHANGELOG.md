@@ -4,6 +4,25 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ---
 
+## [Unreleased] - 2026-07-21
+
+### Added
+
+- 新增 `build.bat`，可不開 Visual Studio 直接用 MSBuild 編譯 Debug / Release。
+- 新增 `--debug` 啟動參數，會開啟 console 並輸出既有 `debug_print` 訊息。
+- 新增 `run_debug.bat`，用相對路徑啟動 `artifacts\build-Debug\uclliu.exe --debug`。
+
+### Fixed
+
+- 修正 `build.bat` 未帶輸出目錄時的 batch 語法錯誤，並預設輸出到 `artifacts\build-Debug\` / `artifacts\build-Release\`，避免覆蓋正在執行中的 `bin\Debug\uclliu.exe`。
+- 修正瀏覽器 PTT / BBS 標題相容規則：`批踢踢實業坊`、`term.ptt.cc`、`ws.ptt.cc`、`bbs` 皆固定使用 `Shift+Insert` 貼上，避免 Python 版 `f_arr` set 順序造成的不穩定。
+
+### Documentation
+
+- README 補上 `build.bat`、`run_debug.bat`、`--debug` 與 PTT/BBS `Shift+Insert` 相容說明。
+
+---
+
 ## [0.16] - 2026-07-07
 
 ### Fixed

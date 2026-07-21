@@ -36,4 +36,25 @@ namespace uclliu
             return msg;
         }
     }
+
+    public static class UclLiuCommandLine
+    {
+        public static bool IsDebugMode(string[] args)
+        {
+            if (args == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (string.Equals(args[i], "--debug", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
 }

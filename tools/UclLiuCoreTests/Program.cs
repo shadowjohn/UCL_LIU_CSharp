@@ -20,6 +20,7 @@ internal static class Program
         failed += Run("ensure json converts wuxiami text", TestEnsureJsonConvertsWuxiamiText);
         failed += Run("ensure json converts uniliu text", TestEnsureJsonConvertsUniliuText);
         failed += Run("app info exposes version and author message", TestAppInfoExposesVersionAndAuthorMessage);
+        failed += Run("command line enables debug mode", TestCommandLineEnablesDebugMode);
         failed += Run("alt tab window style hides tool window from switcher", TestAltTabWindowStyleHidesToolWindowFromSwitcher);
         failed += Run("foreground process snapshot normalizes process name", TestForegroundProcessSnapshotNormalizesProcessName);
         failed += Run("tray menu text marks current output mode", TestTrayMenuTextMarksCurrentOutputMode);
@@ -78,7 +79,7 @@ internal static class Program
         failed += Run("tsf bridge output tries pid pipe before global pipe", TestTsfBridgeOutputTriesPidPipeBeforeGlobalPipe);
         failed += Run("tsf bridge output does not try global pipe after commit failure", TestTsfBridgeOutputDoesNotTryGlobalPipeAfterCommitFailure);
         failed += Run("window message char output posts each character to focused control", TestWindowMessageCharOutputPostsToFocusedControl);
-        failed += Run("output router forces paste for PTT browser titles", TestOutputRouterForcesPasteForPttBrowserTitles);
+        failed += Run("output router uses shift insert for PTT browser titles", TestOutputRouterUsesShiftInsertForPttBrowserTitles);
         failed += Run("output router forces paste for Windows 11 Notepad", TestOutputRouterForcesPasteForWindows11Notepad);
         failed += Run("typing sound volume clamps to supported range", TestTypingSoundVolumeClamp);
         failed += Run("typing sound suppresses repeated keydown until keyup", TestTypingSoundKeyState);
@@ -265,6 +266,14 @@ internal static class Program
         AssertEqual("Copyright (c) MIT 3WA Studio (https://3wa.tw)", UclLiuAppInfo.Copyright);
         AssertEqual("Authors: FeatherMountain (https://3wa.tw), Benson9954029", UclLiuAppInfo.Comments);
         AssertEqual(expected, UclLiuAppInfo.BuildAboutText());
+    }
+
+    private static void TestCommandLineEnablesDebugMode()
+    {
+        AssertTrue(UclLiuCommandLine.IsDebugMode(new string[] { "uclliu.exe", "--debug" }), "--debug should enable debug mode");
+        AssertTrue(UclLiuCommandLine.IsDebugMode(new string[] { "uclliu.exe", "--DEBUG" }), "--DEBUG should enable debug mode");
+        AssertTrue(!UclLiuCommandLine.IsDebugMode(new string[] { "uclliu.exe" }), "missing --debug should keep debug mode off");
+        AssertTrue(!UclLiuCommandLine.IsDebugMode(null), "null args should keep debug mode off");
     }
 
     private static void TestAltTabWindowStyleHidesToolWindowFromSwitcher()
@@ -1286,13 +1295,15 @@ internal static class Program
         AssertSequence(new string[] { "uclliu_tsf_bridge_123" }, factory.CreatedPipes.ToArray());
     }
 
-    private static void TestOutputRouterForcesPasteForPttBrowserTitles()
+    private static void TestOutputRouterUsesShiftInsertForPttBrowserTitles()
     {
         List<string> empty = new List<string>();
 
-        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("chrome", "批踢踢實業坊 - Google Chrome", false), empty, empty, empty));
-        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("msedge", "ws.ptt.cc - 個人 - Microsoft Edge", false), empty, empty, empty));
-        AssertEqual((int)TextOutputMode.PasteCtrlV, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("brave", "term.ptt.cc - Brave", false), empty, empty, empty));
+        AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("chrome", "批踢踢實業坊 - Google Chrome", false), empty, empty, empty));
+        AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("msedge", "ws.ptt.cc - 個人 - Microsoft Edge", false), empty, empty, empty));
+        AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("brave", "term.ptt.cc - Brave", false), empty, empty, empty));
+        AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("chrome", "BBS - Google Chrome", false), empty, empty, empty));
+        AssertEqual((int)TextOutputMode.PasteShiftInsert, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("brave", "bbs - Brave", false), empty, empty, empty));
         AssertEqual((int)TextOutputMode.UnicodeSendInput, (int)TextOutputRouter.Select("DEFAULT", new TextOutputContext("chrome", "一般網頁 - Google Chrome", false), empty, empty, empty));
     }
 

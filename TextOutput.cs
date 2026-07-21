@@ -73,7 +73,7 @@ namespace uclliu
 
             if (IsPttWindow(context.WindowTitle))
             {
-                return TextOutputMode.PasteCtrlV;
+                return TextOutputMode.PasteShiftInsert;
             }
 
             if (context.IsWindows11 && MatchesProcess(context.ProcessName, new string[] { "notepad" }))
@@ -153,7 +153,8 @@ namespace uclliu
             string title = windowTitle.Trim().ToLowerInvariant();
             return title.IndexOf("批踢踢實業坊", StringComparison.Ordinal) >= 0
                 || title.IndexOf("term.ptt.cc", StringComparison.Ordinal) >= 0
-                || title.IndexOf("ws.ptt.cc", StringComparison.Ordinal) >= 0;
+                || title.IndexOf("ws.ptt.cc", StringComparison.Ordinal) >= 0
+                || title.IndexOf("bbs", StringComparison.Ordinal) >= 0;
         }
     }
 

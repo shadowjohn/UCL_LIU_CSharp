@@ -1136,6 +1136,12 @@ namespace uclliu
             //https://stackoverflow.com/questions/12983427/accessing-forms-controls-from-another-class
             form = this;
             ucl = new uclliu(ref form);
+            if (UclLiuCommandLine.IsDebugMode(Environment.GetCommandLineArgs()))
+            {
+                AllocConsole();
+                ucl.is_DEBUG_mode = true;
+                ucl.debug_print("Debug mode enabled.");
+            }
         }
 
         //令 form 可以移動 

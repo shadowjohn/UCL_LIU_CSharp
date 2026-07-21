@@ -2,6 +2,72 @@
 
 ---
 
+## 2026-07-21 - 新增 --debug 啟動參數
+
+### 實作紀錄
+
+- 新增 `UclLiuCommandLine.IsDebugMode()`，命令列包含 `--debug` 時啟用既有 `is_DEBUG_mode`。
+- `Form1` 啟動時偵測 `--debug`，呼叫既有 `AllocConsole()` 並讓 `debug_print` 可輸出到 console。
+- 新增 `run_debug.bat`，使用相對路徑啟動 `artifacts\build-Debug\uclliu.exe --debug`。
+- README 補上 `run_debug.bat` 與 `artifacts\build-Debug\uclliu.exe --debug` 用法。
+- CHANGELOG 補上本輪 build/debug/PTT-BBS 相容更新。
+
+### 驗證紀錄
+
+- 先新增核心測試確認紅燈：`UclLiuCommandLine` 尚不存在。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `cmd /c build.bat` 第一次遇到 `obj\Debug\uclliu.exe.manifest` 暫時鎖定，重跑通過並輸出 `artifacts\build-Debug\uclliu.exe`；保留既有 `Form1.lParam` 未使用警告。
+
+---
+
+## 2026-07-21 - BBS/PTT 瀏覽器標題強制貼上
+
+### 問題觀察
+
+- 使用者回報不走 TSF 時，在 bbs 裡打字無法成功出字。
+- 對照 `D:\mytools\UCL_LIU\uclliu.pyw`，Python 版對 PTT / term.ptt.cc 視窗是強制 paste，不是 Big5；Big5 仍只在 `f_big5_arr` / `BIG5` 模式。
+- C# 版已有 `批踢踢實業坊`、`term.ptt.cc`、`ws.ptt.cc` 標題規則，但 `BBS - Google Chrome` / `bbs - Brave` 類標題沒有命中，會落回 Unicode `SendInput`。
+- 再次對照 Python 版 `send_data`：PTT / `ws.ptt.cc` 標題命中 `f_arr` paste 分支，該分支先放 Unicode clipboard；除 `oxygennotincluded.exe` / `iedit_.exe` 例外走 `^v` 外，一般 paste 使用 `+{INSERT}`。
+- Python 版 `f_arr = list(set(f_arr))` 會讓 PTT 命中時的 `k` 順序不穩，C# 版改採明確規則：PTT / BBS 一律 `PasteShiftInsert`。
+
+### 實作紀錄
+
+- `TextOutputRouter` 的 PTT 視窗判斷補上 title 包含 `bbs`。
+- 依使用者確認，PTT / BBS 瀏覽器標題命中後應走 `PasteShiftInsert`，不是 `PasteCtrlV`。
+- README 內建相容規則補上 `bbs` 標題。
+
+### 驗證紀錄
+
+- 先新增核心測試確認紅燈：`BBS - Google Chrome` 原本未命中 PTT 規則而得到 `UnicodeSendInput`。
+- 再將 PTT / BBS 測試改為期待 `PasteShiftInsert`，確認原 `PasteCtrlV` 行為紅燈。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過。
+- `cmd /c build.bat` 通過，輸出 `artifacts\build-Debug\uclliu.exe`；保留既有 `Form1.lParam` 未使用警告。
+
+---
+
+## 2026-07-21 - 新增主程式 build.bat
+
+### 實作紀錄
+
+- 新增 `build.bat`，自動尋找 Visual Studio 2026 / 2022 / 2019 或 Build Tools 的 MSBuild。
+- `build.bat` 預設執行 `uclliu.csproj` Debug rebuild 並輸出到 `artifacts\build-Debug\`，也支援 `build.bat Release` 與第二參數自訂輸出目錄。
+- 修正第二參數自動補尾端反斜線的 batch substring 判斷；未帶輸出目錄時原寫法會讓 `cmd.exe` 直接回報「命令語法不正確」。
+- 未指定第二參數時改用 `artifacts\build-<Configuration>\`，避免目前執行中的 `bin\Debug\uclliu.exe` 鎖住預設 build。
+- README build 小節改用 `build.bat`，專案檔案表補上此腳本。
+
+### 驗證紀錄
+
+- 實作前執行 `cmd /c build.bat Debug` 確認紅燈：`build.bat` 尚不存在。
+- 初次執行 `cmd /c build.bat Debug` 可找到 MSBuild 並開始編譯，但 `bin\Debug\uclliu.exe` 正被執行中的肥米鎖住，輸出覆蓋失敗。
+- `OutDir` 參數一開始使用 `/p:OutDir="artifacts\debug-run\"`，尾端反斜線讓 MSBuild 把後續 `/nr:false /m` 誤吃進路徑；改成不包引號的 `/p:OutDir=...`。
+- `cmd /c build.bat Debug artifacts\debug-run\` 通過，輸出 `artifacts\debug-run\uclliu.exe`；保留既有 `Form1.lParam` 未使用警告。
+- `cmd /c build.bat Release artifacts\release-run\` 通過，輸出 `artifacts\release-run\uclliu.exe`；保留既有 `Form1.lParam` 未使用警告。
+- 使用者回報直接執行 `build.bat` 會顯示「命令語法不正確」；重現後改用 delayed expansion 判斷輸出目錄尾端字元。
+- `cmd /c build.bat` 通過，輸出 `artifacts\build-Debug\uclliu.exe`；保留既有 `Form1.lParam` 未使用警告。
+- `cmd /c build.bat Release` 通過，輸出 `artifacts\build-Release\uclliu.exe`；保留既有 `Form1.lParam` 未使用警告。
+
+---
+
 ## 2026-07-07 - v0.16 版號與 Benson9954029 作者名單
 
 ### 實作紀錄
