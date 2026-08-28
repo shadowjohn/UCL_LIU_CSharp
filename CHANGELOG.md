@@ -4,6 +4,15 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- 補回 Python 版注音輸入防呆：聲母、介音、韻母同層重打時改為置換，介音晚補時會插到韻母前，避免注音查詢變成 `ㄅㄆㄇ...` 連續追加。
+- `build.bat` 關閉執行中 `uclliu.exe` 時不再使用 `timeout`，避免非互動 shell 出現 input redirection 錯誤；若權限不足無法關閉，會提早停止並提示關閉 tray 程式或用管理員重跑。
+
+---
+
 ## [0.17] - 2026-07-21
 
 ### Added

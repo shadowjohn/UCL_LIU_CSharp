@@ -2,6 +2,51 @@
 
 ---
 
+## 2026-08-28 - 注音輸入分級置換補回
+
+### 問題觀察
+
+- 使用者指出 Python 版曾針對注音模式做「優先置換」設計：聲母如 `ㄅㄆㄇ`、介音如 `ㄧㄨㄩ`、韻母如 `ㄛ` 分層處理，同層重打不是追加，而是置換。
+- 對照 `D:\mytools\UCL_LIU\python3\uclliu.pyw` 後確認，Python 版 issue 166 區塊會將聲母固定在最前、介音放在韻母前，並對同層符號做替換。
+- C# 版 `handle_phone_key()` 只做長度與聲調結尾防呆，其他注音鍵直接 append，因此會出現 `ㄅㄆㄇ...`、`ㄨㄩ`、`ㄛㄜ` 這類連續追加。
+
+### 實作紀錄
+
+- 新增 `PhoneInputComposer` 與 `PhoneInputComposeResult`，集中處理注音字串分級規則。
+- `handle_phone_key()` 改用 `PhoneInputComposer.Apply()` 更新 `play_ucl_label`，同層重打時置換，介音晚補時插到第一個韻母前。
+- 有效注音變更時同步清掉既有候選頁狀態，避免沿用上一個注音查詢結果。
+- `build.bat` 關閉執行中 `uclliu.exe` 時改用 `ping` 等待，避免非互動 shell 的 `timeout` input redirection 錯誤；若權限不足無法關閉，會提早停止並提示關閉 tray 程式或用管理員重跑。
+- README / CHANGELOG / GOALS 補上注音分級置換行為。
+
+### 驗證紀錄
+
+- 先新增核心測試並確認紅燈：缺少 `PhoneInputComposer` / `PhoneInputComposeResult`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過，新增覆蓋聲母、介音、韻母同層置換、前層插入與重複/聲調結尾拒絕。
+- `cmd /c build.bat` 在目前環境提早停止，因已執行的 `uclliu.exe (21620)` 權限較高，`taskkill /f /pid 21620 /t` 回報 `Access is denied`；這次驗證了新提示路徑。
+- 改用隔離輸出 `artifacts\verify-Debug\` 執行 MSBuild Debug rebuild 通過，僅保留既有 `Form1.lParam` 未使用警告。
+
+### 未驗證邊界
+
+- 尚未做真人 Notepad++ / browser 實機輸入測試；本次先以核心狀態機測試與隔離輸出建置驗證。
+- 由於目前 `bin\Debug\uclliu.exe` 被較高權限程序鎖住，尚未覆蓋標準 `bin\Debug\uclliu.exe`。
+
+---
+
+## 2026-08-28 - Notepad++ 非 TSF 卡頓追蹤工項
+
+### 決策紀錄
+
+- 使用者回報 Notepad++ 若不是 TSF 模式，打字似乎會卡頓。
+- 目前本機未找到 UCLLIU / Notepad++ crash 或 errorlog；既有檔案型 slow log 已移除，需用 `run_debug.bat` 觀察 console 的 `PERF slow keyboard hook`。
+- 已知 Notepad++ auto-completion 可能干擾 Scintilla；目前使用者設定檔曾觀察到 `autoCAction=3`、`triggerFromNbChar=1`。
+- `GOALS.md` 新增後續小工項：先比較 TSF / 非 TSF、關閉 Notepad++ auto-completion、關閉固定候選字，再決定是否讓 `notepad++.exe` 自動優先 TSF。
+
+### 未驗證邊界
+
+- 尚未進行真人 Notepad++ 重現測試，也尚未確認關閉 auto-completion 或固定候選字是否改善。
+
+---
+
 ## 2026-07-21 - build.bat 回到 bin Debug 輸出
 
 ### 實作紀錄

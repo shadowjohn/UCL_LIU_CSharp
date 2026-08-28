@@ -48,6 +48,12 @@ if not exist "%PROJECT%" (
 )
 
 call :CloseRunningUclLiu
+if errorlevel 1 (
+  echo [ERROR] Unable to close running uclliu.exe.
+  echo [HINT] Close uclliu.exe from tray or run this script as Administrator, then retry.
+  popd >nul
+  exit /b 1
+)
 
 echo [INFO] MSBuild: %MSBUILD%
 echo [INFO] Build %PROJECT% %CONFIGURATION% AnyCPU...
@@ -71,10 +77,21 @@ exit /b 0
 tasklist /fi "imagename eq uclliu.exe" 2>nul | find /i "uclliu.exe" >nul
 if errorlevel 1 exit /b 0
 echo [INFO] Closing running uclliu.exe...
-taskkill /im uclliu.exe >nul 2>nul
-timeout /t 1 /nobreak >nul
+taskkill /im uclliu.exe /t >nul 2>nul
+call :WaitForUclLiuExit
 tasklist /fi "imagename eq uclliu.exe" 2>nul | find /i "uclliu.exe" >nul
 if errorlevel 1 exit /b 0
 echo [INFO] Force closing uclliu.exe...
-taskkill /f /im uclliu.exe >nul 2>nul
+taskkill /f /im uclliu.exe /t >nul 2>nul
+call :WaitForUclLiuExit
+tasklist /fi "imagename eq uclliu.exe" 2>nul | find /i "uclliu.exe" >nul
+if errorlevel 1 exit /b 0
+exit /b 1
+
+:WaitForUclLiuExit
+for /l %%i in (1,1,5) do (
+  tasklist /fi "imagename eq uclliu.exe" 2>nul | find /i "uclliu.exe" >nul
+  if errorlevel 1 exit /b 0
+  ping -n 2 127.0.0.1 >nul
+)
 exit /b 0

@@ -1539,23 +1539,19 @@ namespace uclliu
                 return false;
             }
 
-            if (play_ucl_label.Length >= 4)
+            PhoneInputComposeResult input = PhoneInputComposer.Apply(play_ucl_label, phone);
+            if (!input.Accepted)
             {
                 return true;
             }
 
-            if (play_ucl_label.Length > 0 && is_phone_tone(play_ucl_label[play_ucl_label.Length - 1].ToString()))
-            {
-                return true;
-            }
-
-            play_ucl_label = play_ucl_label + phone;
-            type_label_set_text("", !is_phone_tone(phone));
+            play_ucl_label = input.Text;
+            ucl_find_data = new List<string>();
+            phone_candidate_page_source = new List<string>();
+            same_sound_index = 0;
+            is_has_more_page = false;
+            type_label_set_text("", input.ShowOnly);
             return true;
-        }
-        private bool is_phone_tone(string phone)
-        {
-            return phone == "ˊ" || phone == "ˇ" || phone == "ˋ" || phone == "˙";
         }
         public void toggle_gamemode()
         {

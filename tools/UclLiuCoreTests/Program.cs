@@ -99,6 +99,9 @@ internal static class Program
         failed += Run("candidate selection rejects non digit virtual keys", TestCandidateSelectionRejectsNonDigitVirtualKeys);
         failed += Run("phone candidate space defers to first candidate commit", TestPhoneCandidateSpaceDefersToFirstCandidateCommit);
         failed += Run("phone candidate shift space pages before half full toggle", TestPhoneCandidateShiftSpacePagesBeforeHalfFullToggle);
+        failed += Run("phone input composer replaces same-level symbols", TestPhoneInputComposerReplacesSameLevelSymbols);
+        failed += Run("phone input composer inserts earlier levels before later levels", TestPhoneInputComposerInsertsEarlierLevels);
+        failed += Run("phone input composer rejects exact repeats and closed tones", TestPhoneInputComposerRejectsRepeatsAndClosedTones);
         failed += Run("shift space toggles half full only when enabled", TestShiftSpaceTogglesHalfFullOnlyWhenEnabled);
         failed += Run("pinyi v001 same sound skips phonetic code and bopomofo tokens", TestPinyiV001SkipsPhoneCodeAndBopomofo);
         failed += Run("pinyi v001 same sound sorts by closest token index", TestPinyiV001SortsByClosestTokenIndex);
@@ -1542,6 +1545,28 @@ internal static class Program
         AssertTrue(!PhoneCandidateKeyRules.ShouldPageOnShiftSpace(true, true, false), "disabled shift+space shortcut should not page");
     }
 
+    private static void TestPhoneInputComposerReplacesSameLevelSymbols()
+    {
+        AssertPhoneInput("ㄆ", "ㄅ", "ㄆ");
+        AssertPhoneInput("ㄇㄧ", "ㄅㄧ", "ㄇ");
+        AssertPhoneInput("ㄅㄩㄛ", "ㄅㄨㄛ", "ㄩ");
+        AssertPhoneInput("ㄅㄨㄜ", "ㄅㄨㄛ", "ㄜ");
+    }
+
+    private static void TestPhoneInputComposerInsertsEarlierLevels()
+    {
+        AssertPhoneInput("ㄅㄨㄛ", "ㄨㄛ", "ㄅ");
+        AssertPhoneInput("ㄨㄛ", "ㄛ", "ㄨ");
+        AssertPhoneInput("ㄅㄨㄛ", "ㄅㄛ", "ㄨ");
+    }
+
+    private static void TestPhoneInputComposerRejectsRepeatsAndClosedTones()
+    {
+        AssertPhoneInputRejected("ㄅ", "ㄅ");
+        AssertPhoneInputRejected("ㄅㄨㄛ", "ㄨ");
+        AssertPhoneInputRejected("ㄅˊ", "ㄇ");
+    }
+
     private static void TestShiftSpaceTogglesHalfFullOnlyWhenEnabled()
     {
         AssertTrue(HalfFullShortcutRules.ShouldToggleOnShiftSpace(true, true), "enabled Shift+Space should toggle half/full");
@@ -1763,6 +1788,20 @@ internal static class Program
         {
             throw new Exception("Expected to find '" + needle + "' in: " + haystack);
         }
+    }
+
+    private static void AssertPhoneInput(string expected, string current, string phone)
+    {
+        PhoneInputComposeResult result = PhoneInputComposer.Apply(current, phone);
+        AssertTrue(result.Accepted, "phone input should be accepted");
+        AssertEqual(expected, result.Text);
+    }
+
+    private static void AssertPhoneInputRejected(string current, string phone)
+    {
+        PhoneInputComposeResult result = PhoneInputComposer.Apply(current, phone);
+        AssertTrue(!result.Accepted, "phone input should be rejected");
+        AssertEqual(current, result.Text);
     }
 
     private static void AssertTrue(bool condition, string message)

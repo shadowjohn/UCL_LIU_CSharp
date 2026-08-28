@@ -28,6 +28,11 @@
 - [x] 補 Python 版常見外部字碼表來源轉換：RIME / fcitx / 小小輸入法 / uniliu。
 - [ ] 評估 OpenCC / 特殊字修正移植範圍。
 
+## 後續小工項
+
+- [x] 補回 Python 版注音輸入分級置換：聲母、介音、韻母同層重打時覆蓋，介音晚補時插到韻母前，避免 `ㄅㄆㄇ...` 一路追加。
+- [ ] 追 Notepad++ 非 TSF 模式打字卡頓：用 `run_debug.bat` 收集 `PERF slow keyboard hook` 證據，比較 TSF / 非 TSF、關閉 Notepad++ auto-completion、關閉固定候選字三種狀態；若問題只落在 `SendInput` / Scintilla，再評估 `notepad++.exe` 自動優先 TSF 並保留未註冊 fallback。
+
 ## 持續原則
 
 - 小步 commit，每次只混 2~3 個相關項目。

@@ -125,7 +125,7 @@ v0.17 推薦下載包 `uclliu-v0.17.zip` 內含：
 
 ## 同音字與注音查詢
 
-`pinyi.txt` 放在 `uclliu.exe` 同一目錄後會啟用同音字與注音功能。`'ucl` 可用最後一個已出字的字查同音候選；`';zo6` 可用注音鍵盤碼查 `ㄈㄟˊ`，候選會包含「肥」；`';a` 後按空白可查 `ㄇ` 這類單獨注音符號候選。注音候選顯示後，可按數字鍵選字，按空白送出第一候選；候選有下一頁時，`Shift+Space` 會先換頁。右下角選單開啟「顯示提示注音」後，出字後會顯示 `音:ㄈㄟˊ` 類提示。
+`pinyi.txt` 放在 `uclliu.exe` 同一目錄後會啟用同音字與注音功能。`'ucl` 可用最後一個已出字的字查同音候選；`';zo6` 可用注音鍵盤碼查 `ㄈㄟˊ`，候選會包含「肥」；`';a` 後按空白可查 `ㄇ` 這類單獨注音符號候選。注音模式會依聲母、介音、韻母分層防呆，同層重打時會置換既有符號，介音晚補時會插到韻母前，避免 `ㄅㄆㄇ...` 一直追加。注音候選顯示後，可按數字鍵選字，按空白送出第一候選；候選有下一頁時，`Shift+Space` 會先換頁。右下角選單開啟「顯示提示注音」後，出字後會顯示 `音:ㄈㄟˊ` 類提示。
 
 v0.17 推薦下載包已內含 `pinyi.txt` 與 `candidate.txt`；若只下載單檔 `uclliu.exe`，需要自行補上 `pinyi.txt` 才會有同音字與注音查詢，補上 `candidate.txt` 才會有固定候選字。
 
@@ -303,7 +303,7 @@ build.bat Release
 build.bat Debug bin\Debug\
 ```
 
-`build.bat` 會自動尋找 Visual Studio / Build Tools 的 MSBuild，預設等同 `build.bat Debug bin\Debug\`；建置前若發現 `uclliu.exe` 正在執行會先關閉，再重建標準 `bin\Debug` / `bin\Release` 輸出。也可指定 Release 或第二個參數改輸出目錄。若開發機缺 `.NETFramework,Version=v4.5.2` reference assemblies，完整 build 會在環境檢查階段失敗；核心測試仍可用 .NET SDK 驗證純邏輯。
+`build.bat` 會自動尋找 Visual Studio / Build Tools 的 MSBuild，預設等同 `build.bat Debug bin\Debug\`；建置前若發現 `uclliu.exe` 正在執行會先關閉，再重建標準 `bin\Debug` / `bin\Release` 輸出。一般權限的 shell 無法關閉系統管理員權限啟動的肥米，這時請先從 tray 關掉肥米，或用系統管理員身分重跑 `build.bat`。也可指定 Release 或第二個參數改輸出目錄。若開發機缺 `.NETFramework,Version=v4.5.2` reference assemblies，完整 build 會在環境檢查階段失敗；核心測試仍可用 .NET SDK 驗證純邏輯。
 
 啟動除錯輸出：
 
