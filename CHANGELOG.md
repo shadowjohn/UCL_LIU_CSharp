@@ -6,6 +6,10 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ## [Unreleased]
 
+---
+
+## [0.18] - 2026-08-29
+
 ### Added
 
 - Debug 模式新增非阻塞 console writer，以及出字模式、成功率、平均值、p50、p95、最大耗時與剪貼簿各階段耗時摘要。
