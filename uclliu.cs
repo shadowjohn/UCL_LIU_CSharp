@@ -19,11 +19,15 @@ namespace uclliu
         private readonly TsfBridgeOutput tsfBridgeOutput = new TsfBridgeOutput();
         private readonly SelectedTextTransformCommand selectedTextTransformCommand = new SelectedTextTransformCommand();
         private readonly SelectedTextTransformDispatcher selectedTextTransformDispatcher;
+        private readonly StaActionDispatcher textOutputWorker;
         private readonly DeferredTextOutputDispatcher deferredTextOutputDispatcher;
         private readonly UiLabelUpdateBatcher labelUpdateBatcher;
         private readonly OutputHintComposer outputHintComposer = new OutputHintComposer();
         private readonly TypingSoundPlayer typingSoundPlayer = new TypingSoundPlayer();
         private readonly KeyboardHookLatencyMonitor keyboardHookLatencyMonitor = new KeyboardHookLatencyMonitor(KeyboardHookPerformancePolicy.SlowHookThresholdMilliseconds, KeyboardHookPerformancePolicy.SlowHookLogIntervalMilliseconds);
+        private readonly OutputPerformanceTelemetry outputPerformanceTelemetry = new OutputPerformanceTelemetry(5000, 10);
+        private readonly object debugWriterSync = new object();
+        private volatile BackgroundDebugWriter debugWriter;
         public readonly TsfBridgeManager tsfBridgeManager;
         private const int ShortModeTextPadding = 8;
         public const string CANDIDATE_FILE = "candidate.txt";
@@ -52,7 +56,7 @@ namespace uclliu
         public List<string> m_TC_CDATA = new List<string>();
         public SimpleIniData config = new SimpleIniData();
         public string last_key = ""; //用來紀錄最字的字碼，處理 ,,, 使用的
-        public bool is_send_ucl = false;
+        public volatile bool is_send_ucl = false;
         public bool flag_is_ucl = true;
         public bool flag_is_hf = true;
         public bool flag_is_play_otherkey = false;
@@ -108,7 +112,11 @@ namespace uclliu
             f = _f;
             tsfBridgeManager = new TsfBridgeManager(my.pwd());
             selectedTextTransformDispatcher = new SelectedTextTransformDispatcher(post_ui_action, set_is_send_ucl, debug_print);
-            deferredTextOutputDispatcher = new DeferredTextOutputDispatcher(post_ui_action);
+            textOutputWorker = new StaActionDispatcher(delegate(Exception ex)
+            {
+                debug_print("text output worker failed: " + ex.Message);
+            });
+            deferredTextOutputDispatcher = new DeferredTextOutputDispatcher(textOutputWorker.Post);
             labelUpdateBatcher = new UiLabelUpdateBatcher(post_form_ui_action, apply_label_update_batch);
         }
         //感謝台灣碼農
@@ -396,7 +404,7 @@ namespace uclliu
                 prepare_senddata_text,
                 delegate(string output)
                 {
-                    complete_smart_candidate_output(pendingCommit, send_prepared_output(output), output);
+                    send_prepared_output_on_worker(pendingCommit, output);
                 });
         }
         public void queue_senddata_with_labels(string data)
@@ -414,7 +422,7 @@ namespace uclliu
                 },
                 delegate(string output)
                 {
-                    complete_smart_candidate_output(pendingCommit, send_prepared_output(output), output);
+                    send_prepared_output_on_worker(pendingCommit, output);
                 });
         }
         public bool has_smart_candidate_table()
@@ -444,9 +452,32 @@ namespace uclliu
                 prepare_senddata_text,
                 delegate(string output)
                 {
-                    complete_smart_candidate_output(pendingCommit, send_prepared_output(output), output);
+                    send_prepared_output_on_worker(pendingCommit, output);
                 });
             return true;
+        }
+
+        private void send_prepared_output_on_worker(SmartCandidateOutputCommit pendingCommit, string output)
+        {
+            bool succeeded = false;
+            try
+            {
+                succeeded = send_prepared_output(output);
+            }
+            catch (Exception ex)
+            {
+                debug_print("text output worker failed: " + ex.Message);
+            }
+
+            post_ui_action(delegate
+            {
+                complete_smart_candidate_output(pendingCommit, succeeded, output);
+            });
+        }
+
+        public void shutdown_output_dispatcher()
+        {
+            textOutputWorker.Dispose();
         }
         public bool try_page_smart_candidates()
         {
@@ -1671,9 +1702,38 @@ namespace uclliu
         }
         public void debug_print(string data)
         {
-            if (is_DEBUG_mode)
+            if (!is_DEBUG_mode)
             {
-                Console.WriteLine(data);
+                return;
+            }
+
+            BackgroundDebugWriter writer = debugWriter;
+            if (writer == null)
+            {
+                lock (debugWriterSync)
+                {
+                    writer = debugWriter;
+                    if (writer == null)
+                    {
+                        writer = new BackgroundDebugWriter(delegate(string message) { Console.WriteLine(message); });
+                        debugWriter = writer;
+                    }
+                }
+            }
+            writer.Write(data);
+        }
+        public void shutdown_debug_output()
+        {
+            is_DEBUG_mode = false;
+            BackgroundDebugWriter writer;
+            lock (debugWriterSync)
+            {
+                writer = debugWriter;
+                debugWriter = null;
+            }
+            if (writer != null)
+            {
+                writer.Dispose();
             }
         }
         public void apply_runtime_performance_tuning()
@@ -2049,7 +2109,7 @@ namespace uclliu
             return foregroundProcessNameCache;
         }
 
-        private bool try_send_output(TextOutputMode outputMode, string data, int foregroundProcessId, out string error)
+        private bool try_send_output(TextOutputMode outputMode, string data, int foregroundProcessId, Action<ClipboardPasteStageSample> clipboardStageObserver, out string error)
         {
             error = null;
             is_send_ucl = true;
@@ -2062,11 +2122,11 @@ namespace uclliu
                     case TextOutputMode.WindowMessageChar:
                         return windowMessageCharOutput.TrySendText(data, out error);
                     case TextOutputMode.PasteShiftInsert:
-                        return clipboardPasteOutput.TryPasteText(data, "+{INSERT}", out error);
+                        return clipboardPasteOutput.TryPasteText(data, "+{INSERT}", clipboardStageObserver, out error);
                     case TextOutputMode.PasteCtrlV:
-                        return clipboardPasteOutput.TryPasteText(data, "^{v}", out error);
+                        return clipboardPasteOutput.TryPasteText(data, "^{v}", clipboardStageObserver, out error);
                     case TextOutputMode.PasteBig5:
-                        return clipboardPasteOutput.TryPasteAnsiText(my.UTF8toBig5(data), "^{v}", out error);
+                        return clipboardPasteOutput.TryPasteAnsiText(my.UTF8toBig5(data), "^{v}", clipboardStageObserver, out error);
                     case TextOutputMode.TsfBridge:
                         return tsfBridgeOutput.TryCommitText(data, foregroundProcessId, get_tsf_bridge_timeout_ms(), out error);
                     default:
@@ -2197,7 +2257,7 @@ namespace uclliu
             Int32.TryParse(p_info["PROCESS_PID"], out foregroundProcessId);
 
             string outputError;
-            if (try_send_output(outputMode, data, foregroundProcessId, out outputError))
+            if (try_send_output_with_telemetry(outputMode, data, foregroundProcessId, p_info["PROCESS_NAME"], out outputError))
             {
                 return true;
             }
@@ -2205,7 +2265,7 @@ namespace uclliu
             debug_print("senddata primary output failed:" + outputError);
             if (outputMode != TextOutputMode.UnicodeSendInput && outputMode != TextOutputMode.PasteBig5)
             {
-                if (try_send_output(TextOutputMode.UnicodeSendInput, data, foregroundProcessId, out outputError))
+                if (try_send_output_with_telemetry(TextOutputMode.UnicodeSendInput, data, foregroundProcessId, p_info["PROCESS_NAME"], out outputError))
                 {
                     return true;
                 }
@@ -2220,6 +2280,52 @@ namespace uclliu
             debug_print("senddata legacy fallback failed:" + outputError);
             return false;
 
+        }
+        private bool try_send_output_with_telemetry(TextOutputMode outputMode, string data, int foregroundProcessId, string processName, out string error)
+        {
+            if (!is_DEBUG_mode)
+            {
+                return try_send_output(outputMode, data, foregroundProcessId, null, out error);
+            }
+
+            long startedTicks = Stopwatch.GetTimestamp();
+            Action<ClipboardPasteStageSample> clipboardStageObserver = create_clipboard_stage_observer(outputMode, processName);
+            bool succeeded = try_send_output(outputMode, data, foregroundProcessId, clipboardStageObserver, out error);
+            int elapsedMilliseconds = KeyboardHookLatencyMonitor.TicksToMilliseconds(Stopwatch.GetTimestamp() - startedTicks);
+            long nowMilliseconds = get_performance_now_milliseconds();
+            string summary = outputPerformanceTelemetry.Record(outputMode.ToString(), processName, elapsedMilliseconds, succeeded, nowMilliseconds);
+            if (summary != null)
+            {
+                debug_print(summary);
+            }
+            return succeeded;
+        }
+        private Action<ClipboardPasteStageSample> create_clipboard_stage_observer(TextOutputMode outputMode, string processName)
+        {
+            if (outputMode != TextOutputMode.PasteShiftInsert
+                && outputMode != TextOutputMode.PasteCtrlV
+                && outputMode != TextOutputMode.PasteBig5)
+            {
+                return null;
+            }
+
+            return delegate(ClipboardPasteStageSample sample)
+            {
+                string summary = outputPerformanceTelemetry.Record(
+                    outputMode.ToString() + "." + sample.Stage,
+                    processName,
+                    sample.ElapsedMilliseconds,
+                    sample.Succeeded,
+                    get_performance_now_milliseconds());
+                if (summary != null)
+                {
+                    debug_print(summary);
+                }
+            };
+        }
+        private static long get_performance_now_milliseconds()
+        {
+            return (long)((Stopwatch.GetTimestamp() * 1000.0) / Stopwatch.Frequency);
         }
         private void complete_smart_candidate_output(SmartCandidateOutputCommit pendingCommit, bool outputSucceeded, string preparedText)
         {

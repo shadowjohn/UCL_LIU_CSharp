@@ -123,6 +123,7 @@
     </Compile>
     <Compile Include="App_Code\include.cs" />
     <Compile Include="CustomDictionaryStore.cs" />
+    <Compile Include="DebugPerformanceTelemetry.cs" />
     <Compile Include="AltTabWindowStyle.cs" />
     <Compile Include="ChromeButton.cs">
       <SubType>Component</SubType>

@@ -1,8 +1,8 @@
 # UCL_LIU_CSharp
 
-C# / WinForms 版肥米輸入法，目前版本 v0.17。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
+C# / WinForms 版肥米輸入法，目前開發版本 v0.18。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
 
-目前 C# 版已進入可日用測試的現代化復刻狀態：已補上多來源字碼表自動轉換、自定詞庫、Unicode SendInput 出字、剪貼簿 fallback、打字音效、同音/注音查詢、固定候選字、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback、管理員重啟導引與核心測試。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
+目前 C# 版已進入可日用測試的現代化復刻狀態：已補上多來源字碼表自動轉換、自定詞庫、Unicode SendInput 出字、非阻塞剪貼簿 fallback、打字音效、同音/注音查詢、固定候選字、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback、管理員重啟導引與核心測試。v0.18 將送字移到獨立 STA 訊息迴圈，PTT 與 Notepad++ 不需依賴 TSF 也能維持順暢輸入。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
 
 ![UCL_LIU C# screenshot](screenshot/ucl_1.png)
 
@@ -11,28 +11,28 @@ C# / WinForms 版肥米輸入法，目前版本 v0.17。這個分支的目標是
 | 版本 | 實用成熟度 | 工程可維護性 | 日用信心 | 定位 |
 | --- | ---: | ---: | ---: | --- |
 | Python 版 v1.67 | 8.5 / 10 | 6.5 / 10 | 8.5 / 10 | 功能最完整的正史版，多年實戰相容性最足 |
-| C# 版 v0.17 | 8.4 / 10 | 8.4 / 10 | 8.3 / 10 | 新增固定候選字、修正 PTT/BBS 貼上規則並補齊免開 VS build/debug 腳本，維持低依賴、可維護的現代化復刻版 |
+| C# 版 v0.18 | 8.7 / 10 | 8.7 / 10 | 8.6 / 10 | 送字與 debug 輸出脫離 keyboard hook / UI 執行緒，PTT、Notepad++ 一般模式已完成實機順暢輸入驗證 |
 
 ## 目前狀態
 
 | 項目 | C# 版目前狀態 | Python 版對照 |
 | --- | --- | --- |
 | 核心輸入 | WinForms + low-level keyboard hook | PyHook / PyWin32 |
-| 預設出字 | Python-style 逐字 Unicode `SendInput`，失敗 fallback 舊 `SendKeys` | TSF 可選，失敗 fallback `SendKeysCtypes` / paste |
-| 貼上模式 | 已封裝 retry、timeout、try/finally 還原剪貼簿 | 已有大量 App 特例 |
+| 預設出字 | Python-style 逐字 Unicode `SendInput`；送字工作交由獨立 STA worker 依序執行，不阻塞 keyboard hook / UI | TSF 可選，失敗 fallback `SendKeysCtypes` / paste |
+| 貼上模式 | 已封裝 retry、timeout、文字剪貼簿值複製、try/finally 還原；`SendKeys.SendWait` 在獨立 WinForms message loop 執行 | 已有大量 App 特例 |
 | 字碼表 | 支援 `liu.json`、`liu.cin`、`liu-uni.tab`、RIME/fcitx/小小輸入法等來源自動轉換 | 支援來源較多，另含部分需手動整理的長尾碼表 |
 | 自定詞庫 | 支援 `custom.json`、右下角選單、`,,,BOX`、單例視窗 | v1.63-v1.65 已完整支援 |
 | 固定候選字 | 支援本機 `candidate.txt` 靜態詞組預測、每頁 5 筆、`Shift+1`～`Shift+5` 選字、`Shift+Space` 翻頁；不做個人學習、不自動下載 | Python 版曾有實驗功能，C# 版 v0.17 收斂為固定表 |
-| UI 效能 | 已降低短版模式與 foreground process 查詢熱路徑負擔；短版啟動即套用 packed layout，`肥` / `半` / `╳` chrome 尺寸與長版一致，並移除按鈕 focus 後的按下視覺殘留 | Python 版後期另有多輪 Win11/位置修正 |
+| UI 效能 | keyboard hook / UI 不等待實際送字與 console 輸出；另已降低短版模式與 foreground process 查詢熱路徑負擔 | Python 版後期另有多輪 Win11/位置修正 |
 | TSF Bridge | 已移植為手動 `TSF出字模式`，透過 named pipe 呼叫外掛 DLL，失敗 fallback Unicode `SendInput`；右下角選單可檢查/註冊/解除註冊，非管理員時可導引重新以系統管理員啟動 | v1.67 實驗性支援 |
 | 打字音效 | 支援自備 `wavs\*.wav`、開關、10%-100% 音量、特殊鍵音效、防長按連發；官方發行檔不內含授權不明音效素材 | 已支援音效與音量設定 |
 | 同音/注音 | 支援新版 `pinyi.txt` 同音字、`';` 注音查詢、注音候選空白出字、`Shift+Space` 換頁與出字後提示注音 | 已支援 |
 | 啟動與半全形 UX | 支援啟動預設肥/英、允許停用 `Shift+Space` 半全形切換；按住 Shift 連按 Space 可連續切換半/全 | 已支援 |
-| 測試 | `tools/UclLiuCoreTests` 可用 .NET SDK 跑核心測試 | Python 版以實機與歷史回報為主 |
+| 測試 | `tools/UclLiuCoreTests` 可用 .NET SDK 跑核心測試，涵蓋 STA message loop、FIFO、剪貼簿保存與效能診斷 | Python 版以實機與歷史回報為主 |
 
 ## 低依賴狀態
 
-C# 版 v0.17 目前已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。主程式只使用 .NET Framework 4.5.2 內建 reference，固定候選字也只讀本機 `candidate.txt`，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。TSF Bridge 的 C++ 原始碼也已納入 `tsf_bridge\UclTsfBridge`，可由本 repo 自行重建。
+C# 版 v0.18 目前已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。主程式只使用 .NET Framework 4.5.2 內建 reference，固定候選字也只讀本機 `candidate.txt`，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。TSF Bridge 的 C++ 原始碼也已納入 `tsf_bridge\UclTsfBridge`，可由本 repo 自行重建。
 
 TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預設出字流程；只有手動切到 `TSF出字模式` 時才會透過 named pipe 呼叫 `tsf_bridge\UclTsfBridge.dll`。
 
@@ -54,6 +54,15 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 - `System.Drawing`
 - `System.Web.Extensions`
 - `System.Windows.Forms`
+
+## v0.18 重點
+
+- 一般出字與貼上出字改由獨立 STA worker 依序執行；worker 具備 WinForms message loop，可安全使用 `SendKeys.SendWait`，keyboard hook / UI 不再等待實際送字完成。
+- PTT／BBS 瀏覽器維持 `Shift+Insert` 貼上，不需啟用 TSF；Notepad++ 一般 Unicode 模式也已完成實機順暢輸入驗證。
+- debug console 改為背景佇列輸出，console 暫時變慢時不會反向堵住 keyboard hook。
+- 剪貼簿原本是文字時會先複製成記憶體中的字串，送字後等待 45ms 再還原；圖片、檔案等非文字格式則沿用 `IDataObject` 盡力保存。
+- 貼上模式會短暫寫入並還原剪貼簿，Windows 或第三方剪貼簿工具的 icon 可能在上字時閃爍，不影響原文字剪貼簿還原。
+- Debug 模式加入輸出模式與剪貼簿各階段耗時摘要，方便追查特定程式的長尾卡頓。
 
 ## 快速開始
 
@@ -154,7 +163,7 @@ C# 版目前右下角選單提供四種出字模式：
 | 複製貼上模式 | 使用剪貼簿貼上，適合 PuTTY、PCMan、部分遊戲或特殊文字框 |
 | TSF出字模式 | 透過外掛 `UclTsfBridge.dll` named pipe 出字；若 pipe、TSF context 或 DLL 狀態失敗，會 fallback 回 Unicode `SendInput`。實機測試 Notepad++ 開啟自動完成時也可正常出字 |
 
-貼上流程已改為集中封裝：先備份剪貼簿、設定輸出文字、送出 `Ctrl+V` 或 `Shift+Insert`、最後盡量還原原本剪貼簿。
+貼上流程已改為集中封裝：先備份剪貼簿、設定輸出文字、送出 `Ctrl+V` 或 `Shift+Insert`、等待目標程式取值後還原原本剪貼簿。v0.18 在獨立 STA WinForms message loop 執行這段流程；原剪貼簿是文字時採值複製保存，避免舊 `IDataObject` ownership 讓背景輸出卡住。貼上期間系統或第三方剪貼簿工具的 icon 可能短暫閃爍。
 
 ### TSF Bridge 管理
 
@@ -194,14 +203,14 @@ TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下�
 | --- | --- | --- |
 | Chrome / Edge / Brave / Firefox / Opera 開 PTT | 視窗標題包含 `批踢踢實業坊`、`term.ptt.cc`、`ws.ptt.cc` 或 `bbs` | `Shift+Insert` 貼上 |
 | Win11 Notepad | Windows build >= 22000 且 process 為 `notepad` / `notepad.exe` | `Ctrl+V` 貼上 |
-| Notepad++ | process 為 `notepad++` / `notepad++.exe`，焦點控制項通常為 Scintilla | 逐字 Unicode `SendInput`，不使用剪貼簿；建議關閉 Notepad++ 自動完成 |
+| Notepad++ | process 為 `notepad++` / `notepad++.exe`，焦點控制項通常為 Scintilla | 逐字 Unicode `SendInput`，由背景輸出 worker 依序送出，不需要 TSF |
 | PuTTY / PCMan / Pietty / Windows Terminal / mintty / RimWorld 等 | process 相容清單 | `Shift+Insert` 貼上 |
 | Oxygen Not Included / PhotoImpact `iedit_` | process 相容清單 | `Ctrl+V` 貼上 |
 | zip32w / DaqKing / EWinner | process 相容清單 | Big5 `Ctrl+V` 貼上 |
 
 process 規則會自動忽略大小寫與 `.exe` 副檔名，`notepad` 與 `notepad.exe` 視為同一個程式。
 
-Notepad++ 若啟用自動完成，彈出的候選視窗可能攔截 Scintilla 的按鍵與焦點流程，造成肥米字根漏進編輯區或出字失敗。實機測試關閉 Notepad++ 自動完成後，逐字 Unicode `SendInput` 可正常打字。
+Notepad++ 的 Scintilla 編輯器對送字時序較敏感。v0.18 將實際送字移出 keyboard hook / UI 執行緒後，一般 Unicode 模式已完成實機順暢輸入驗證，不需要切到 TSF；若特定版本仍受自動完成視窗攔截，可再比較關閉自動完成後的行為。
 
 ## 自定詞庫
 
@@ -325,7 +334,7 @@ build_tsf.bat
 發行打包：
 
 ```powershell
-& .\tools\package-release.ps1 -Version v0.17 -Configuration Release -OutputDirectory .\artifacts
+& .\tools\package-release.ps1 -Version v0.18 -Configuration Release -OutputDirectory .\artifacts
 ```
 
 官方打包預設不包含 `wavs`。若是私用或已確認音效可再散布，可加上 `-IncludeWavs` 封入本機 `wavs` 目錄。
@@ -333,11 +342,11 @@ build_tsf.bat
 GitHub Actions 會在 `master` push / PR 時自動跑核心測試與 Release build，並上傳 artifact。推送 `v*` tag 時會自動建立或更新 GitHub Release：
 
 ```powershell
-git tag v0.17
-git push origin v0.17
+git tag v0.18
+git push origin v0.18
 ```
 
-自動 Release 會上傳兩個檔案：`uclliu-v0.17.zip` 是推薦下載包，含 TSF Bridge、同音/注音資料、固定候選資料與 LGPL 授權聲明；`uclliu.exe` 是單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材。
+自動 Release 會上傳兩個檔案：`uclliu-v0.18.zip` 是推薦下載包，含 TSF Bridge、同音/注音資料、固定候選資料與 LGPL 授權聲明；`uclliu.exe` 是單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材。
 
 ## 專案檔案
 
@@ -352,10 +361,11 @@ git push origin v0.17
 | `PhoneCodeTable.cs` | 新版 `pinyi.txt` 注音查詢與反向讀音表 |
 | `SmartCandidateTable.cs` | `candidate.txt` 固定候選字資料載入與去重 |
 | `SmartCandidateSession.cs` | 固定候選字上下文、分頁、選字與設定策略 |
-| `SmartCandidateMemory.cs` | v0.17 固定候選字記憶介面，這版不讀寫個人學習資料 |
+| `SmartCandidateMemory.cs` | 固定候選字記憶介面，目前不讀寫個人學習資料 |
 | `LiuTableConverter.cs` | `liu-uni.tab` / `liu.cin` / `liu.json` 與外部字碼表轉換 |
 | `CustomDictionaryStore.cs` | `custom.json` 載入、儲存、合併 |
 | `CustomDictionaryForm.cs` | 自定詞庫編輯器 |
+| `DebugPerformanceTelemetry.cs` | 非阻塞 debug writer 與出字耗時摘要 |
 | `SimpleIni.cs` | 內建 INI 讀寫，取代外部 ini-parser |
 | `UclLiuAppInfo.cs` | 版本、作者、exe 詳細資料欄位 |
 | `UiLayoutCalculator.cs` | 可測試的 UI 寬度計算 |

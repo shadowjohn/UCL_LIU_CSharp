@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 using uclliu;
 
@@ -67,11 +68,20 @@ internal static class Program
         failed += Run("keyboard hook performance policy raises priority and cache duration", TestKeyboardHookPerformancePolicy);
         failed += Run("keyboard hook latency monitor detects slow callbacks with throttle", TestKeyboardHookLatencyMonitor);
         failed += Run("performance log file sink is retired", TestPerformanceLogFileSinkIsRetired);
+        failed += Run("background debug writer returns while sink is blocked", TestBackgroundDebugWriterReturnsWhileSinkIsBlocked);
+        failed += Run("background debug writer dispose is idempotent", TestBackgroundDebugWriterDisposeIsIdempotent);
+        failed += Run("output performance telemetry reports percentile summary", TestOutputPerformanceTelemetryReportsPercentileSummary);
+        failed += Run("output performance telemetry reports after time interval", TestOutputPerformanceTelemetryReportsAfterTimeInterval);
+        failed += Run("clipboard paste reports successful stage timings in order", TestClipboardPasteReportsSuccessfulStageTimingsInOrder);
+        failed += Run("clipboard paste stage timings preserve send failure", TestClipboardPasteStageTimingsPreserveSendFailure);
+        failed += Run("clipboard paste snapshots existing text without opaque data object", TestClipboardPasteSnapshotsExistingTextWithoutOpaqueDataObject);
         failed += Run("clipboard paste restores original text after send failure", TestClipboardPasteRestoresOriginalTextAfterSendFailure);
         failed += Run("clipboard paste reports set clipboard failure before send", TestClipboardPasteReportsSetClipboardFailureBeforeSend);
         failed += Run("selected text transform copies selection and restores clipboard", TestSelectedTextTransformCopiesSelectionAndRestoresClipboard);
         failed += Run("selected text transform does not use stale clipboard", TestSelectedTextTransformDoesNotUseStaleClipboard);
         failed += Run("selected text transform dispatcher posts work outside hook", TestSelectedTextTransformDispatcherPostsWorkOutsideHook);
+        failed += Run("STA action dispatcher keeps caller responsive and preserves FIFO", TestStaActionDispatcherKeepsCallerResponsiveAndPreservesFifo);
+        failed += Run("STA action dispatcher owns a WinForms message loop", TestStaActionDispatcherOwnsWinFormsMessageLoop);
         failed += Run("deferred text output dispatcher posts send outside hook", TestDeferredTextOutputDispatcherPostsSendOutsideHook);
         failed += Run("deferred text output dispatcher prepares before posting", TestDeferredTextOutputDispatcherPreparesBeforePosting);
         failed += Run("deferred text output dispatcher preserves label update order", TestDeferredTextOutputDispatcherPreservesLabelUpdateOrder);
@@ -248,7 +258,7 @@ internal static class Program
     {
         string expected = "UCLLIU 肥米輸入法 C# 版\n\n"
             + "作者：羽山秋人 (https://3wa.tw)、Benson9954029\n"
-            + "版本：0.17\n\n"
+            + "版本：0.18\n\n"
             + "熱鍵提示：\n\n"
             + "「,,,VERSION」目前版本\n"
             + "「'ucl」同音字查詢\n"
@@ -265,7 +275,7 @@ internal static class Program
             + "「,,,Z」框字的文字變成字根\n"
             + "「,,,BOX」開啟自定詞庫\n";
 
-        AssertEqual("0.17", UclLiuAppInfo.Version);
+        AssertEqual("0.18", UclLiuAppInfo.Version);
         AssertEqual("UCLLIU 肥米輸入法 C# 版", UclLiuAppInfo.AboutTitle);
         AssertEqual("Fastest Chinese Input Method", UclLiuAppInfo.FileDescription);
         AssertEqual("UCLLIU Input Method", UclLiuAppInfo.ProductName);
@@ -1070,6 +1080,127 @@ internal static class Program
         AssertTrue(loggerType == null, "AsyncPerformanceLogger should be removed with UCLLIU_performance.log");
     }
 
+    private static void TestBackgroundDebugWriterReturnsWhileSinkIsBlocked()
+    {
+        ManualResetEvent sinkStarted = new ManualResetEvent(false);
+        ManualResetEvent releaseSink = new ManualResetEvent(false);
+        ManualResetEvent writeReturned = new ManualResetEvent(false);
+        BackgroundDebugWriter writer = new BackgroundDebugWriter(delegate(string message)
+        {
+            sinkStarted.Set();
+            releaseSink.WaitOne(2000);
+        });
+        Thread caller = new Thread(delegate()
+        {
+            writer.Write("hook line");
+            writeReturned.Set();
+        });
+
+        caller.Start();
+        bool returnedWithoutSink = writeReturned.WaitOne(500);
+        bool sinkWasCalled = sinkStarted.WaitOne(1000);
+        releaseSink.Set();
+        caller.Join(1000);
+        writer.Dispose();
+
+        AssertTrue(sinkWasCalled, "background sink should receive the debug line");
+        AssertTrue(returnedWithoutSink, "debug caller should not wait for a blocked console sink");
+    }
+
+    private static void TestBackgroundDebugWriterDisposeIsIdempotent()
+    {
+        BackgroundDebugWriter writer = new BackgroundDebugWriter(delegate(string message) { });
+
+        writer.Write("last line");
+        writer.Dispose();
+        writer.Dispose();
+    }
+
+    private static void TestOutputPerformanceTelemetryReportsPercentileSummary()
+    {
+        OutputPerformanceTelemetry telemetry = new OutputPerformanceTelemetry(5000, 5);
+
+        AssertEqual(null, telemetry.Record("TsfBridge", "notepad++", 10, true, 0));
+        AssertEqual(null, telemetry.Record("TsfBridge", "notepad++", 20, true, 1000));
+        AssertEqual(null, telemetry.Record("TsfBridge", "notepad++", 30, true, 2000));
+        AssertEqual(null, telemetry.Record("TsfBridge", "notepad++", 40, true, 3000));
+        string summary = telemetry.Record("TsfBridge", "notepad++", 100, false, 4000);
+
+        AssertEqual("PERF output mode=TsfBridge process=notepad++ count=5 success=4 failure=1 avg=40ms p50=30ms p95=100ms max=100ms", summary);
+    }
+
+    private static void TestOutputPerformanceTelemetryReportsAfterTimeInterval()
+    {
+        OutputPerformanceTelemetry telemetry = new OutputPerformanceTelemetry(5000, 10);
+
+        AssertEqual(null, telemetry.Record("PasteShiftInsert", "chrome", 45, true, 1000));
+        string summary = telemetry.Record("PasteShiftInsert", "chrome", 55, true, 6000);
+
+        AssertEqual("PERF output mode=PasteShiftInsert process=chrome count=2 success=2 failure=0 avg=50ms p50=45ms p95=55ms max=55ms", summary);
+    }
+
+    private static void TestClipboardPasteReportsSuccessfulStageTimingsInOrder()
+    {
+        FakeClipboardGateway clipboard = new FakeClipboardGateway("原剪貼簿");
+        FakeKeySender keySender = new FakeKeySender();
+        List<ClipboardPasteStageSample> samples = new List<ClipboardPasteStageSample>();
+        ClipboardPasteOutput output = new ClipboardPasteOutput(clipboard, keySender, delegate(int ms) { });
+
+        string error;
+        bool ok = output.TryPasteText("肥米", "+{INSERT}", delegate(ClipboardPasteStageSample sample) { samples.Add(sample); }, out error);
+
+        AssertTrue(ok, "paste should succeed");
+        AssertEqual(null, error);
+        AssertSequence(new string[] { "capture", "set", "send", "wait", "restore" }, samples.ConvertAll(delegate(ClipboardPasteStageSample sample) { return sample.Stage; }).ToArray());
+        for (int i = 0; i < samples.Count; i++)
+        {
+            AssertTrue(samples[i].Succeeded, "successful paste stage should be marked successful");
+            AssertTrue(samples[i].ElapsedMilliseconds >= 0, "stage duration should not be negative");
+        }
+    }
+
+    private static void TestClipboardPasteStageTimingsPreserveSendFailure()
+    {
+        FakeClipboardGateway clipboard = new FakeClipboardGateway("原剪貼簿");
+        FakeKeySender keySender = new FakeKeySender();
+        keySender.ThrowOnSend = true;
+        List<ClipboardPasteStageSample> samples = new List<ClipboardPasteStageSample>();
+        ClipboardPasteOutput output = new ClipboardPasteOutput(clipboard, keySender, delegate(int ms) { });
+
+        string error;
+        bool ok = output.TryPasteText("肥米", "+{INSERT}", delegate(ClipboardPasteStageSample sample) { samples.Add(sample); }, out error);
+
+        AssertTrue(!ok, "paste should report send failure");
+        AssertContains(error, "send keys failed");
+        AssertSequence(new string[] { "capture", "set", "send", "restore" }, samples.ConvertAll(delegate(ClipboardPasteStageSample sample) { return sample.Stage; }).ToArray());
+        AssertTrue(samples[0].Succeeded, "capture should succeed before send failure");
+        AssertTrue(samples[1].Succeeded, "set should succeed before send failure");
+        AssertTrue(!samples[2].Succeeded, "send failure should be visible in telemetry");
+        AssertTrue(samples[3].Succeeded, "restore should still succeed after send failure");
+    }
+
+    private static void TestClipboardPasteSnapshotsExistingTextWithoutOpaqueDataObject()
+    {
+        FakeClipboardGateway clipboard = new FakeClipboardGateway("先前複製的文字");
+        clipboard.ThrowOnGetDataObject = true;
+        FakeKeySender keySender = new FakeKeySender();
+        keySender.OnSend = delegate(string keys)
+        {
+            AssertEqual("+{INSERT}", keys);
+            AssertEqual("肥米", clipboard.Text);
+        };
+        ClipboardPasteOutput output = new ClipboardPasteOutput(clipboard, keySender, delegate(int ms) { });
+
+        string error;
+        bool ok = output.TryPasteText("肥米", "+{INSERT}", out error);
+
+        AssertTrue(ok, "existing text clipboard should not require the opaque data object");
+        AssertEqual(null, error);
+        AssertEqual("先前複製的文字", clipboard.Text);
+        AssertEqual(0, clipboard.GetDataObjectCount);
+        AssertEqual(1, keySender.SendCount);
+    }
+
     private static void TestClipboardPasteRestoresOriginalTextAfterSendFailure()
     {
         FakeClipboardGateway clipboard = new FakeClipboardGateway("原剪貼簿");
@@ -1213,6 +1344,81 @@ internal static class Program
         postedActions[0]();
 
         AssertSequence(new string[] { "post", "send:肥" }, events.ToArray());
+    }
+
+    private static void TestStaActionDispatcherKeepsCallerResponsiveAndPreservesFifo()
+    {
+        int callerThreadId = Thread.CurrentThread.ManagedThreadId;
+        int workerThreadId = 0;
+        int workerApartment = -1;
+        List<string> events = new List<string>();
+        ManualResetEvent firstStarted = new ManualResetEvent(false);
+        ManualResetEvent releaseFirst = new ManualResetEvent(false);
+        ManualResetEvent secondCompleted = new ManualResetEvent(false);
+
+        using (StaActionDispatcher dispatcher = new StaActionDispatcher(null))
+        {
+            dispatcher.Post(delegate
+            {
+                workerThreadId = Thread.CurrentThread.ManagedThreadId;
+                workerApartment = (int)Thread.CurrentThread.GetApartmentState();
+                lock (events)
+                {
+                    events.Add("first-start");
+                }
+                firstStarted.Set();
+                releaseFirst.WaitOne(2000);
+                lock (events)
+                {
+                    events.Add("first-end");
+                }
+            });
+
+            AssertTrue(firstStarted.WaitOne(1000), "first STA action should start");
+            dispatcher.Post(delegate
+            {
+                lock (events)
+                {
+                    events.Add("second");
+                }
+                secondCompleted.Set();
+            });
+
+            AssertTrue(!secondCompleted.WaitOne(50), "second post should return without overtaking blocked first action");
+            releaseFirst.Set();
+            AssertTrue(secondCompleted.WaitOne(1000), "second STA action should run after first action completes");
+        }
+
+        AssertTrue(workerThreadId != callerThreadId, "STA actions must not run on the hook/UI caller thread");
+        AssertEqual((int)ApartmentState.STA, workerApartment);
+        lock (events)
+        {
+            AssertSequence(new string[] { "first-start", "first-end", "second" }, events.ToArray());
+        }
+
+        firstStarted.Close();
+        releaseFirst.Close();
+        secondCompleted.Close();
+    }
+
+    private static void TestStaActionDispatcherOwnsWinFormsMessageLoop()
+    {
+        bool hasMessageLoop = false;
+        ManualResetEvent completed = new ManualResetEvent(false);
+
+        using (StaActionDispatcher dispatcher = new StaActionDispatcher(null))
+        {
+            dispatcher.Post(delegate
+            {
+                hasMessageLoop = Application.MessageLoop;
+                completed.Set();
+            });
+
+            AssertTrue(completed.WaitOne(1000), "STA action should run");
+        }
+
+        completed.Close();
+        AssertTrue(hasMessageLoop, "STA output worker must pump WinForms messages for SendKeys.SendWait");
     }
 
     private static void TestDeferredTextOutputDispatcherPreparesBeforePosting()
@@ -1886,9 +2092,16 @@ internal static class Program
 
         public string Text { get; private set; }
         public bool ThrowOnSetText { get; set; }
+        public bool ThrowOnGetDataObject { get; set; }
+        public int GetDataObjectCount { get; private set; }
 
         public object GetDataObject()
         {
+            GetDataObjectCount++;
+            if (ThrowOnGetDataObject)
+            {
+                throw new InvalidOperationException("opaque clipboard object unavailable");
+            }
             return Text;
         }
 

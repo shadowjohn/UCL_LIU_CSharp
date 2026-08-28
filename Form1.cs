@@ -1295,6 +1295,7 @@ namespace uclliu
         private void btn_X_Click(object sender, EventArgs e)
         {
             ucl.debug_print("Bye Bye!");
+            ucl.shutdown_debug_output();
             notifyIcon1.Dispose();
             Application.Exit();
         }
@@ -1841,6 +1842,7 @@ namespace uclliu
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
+            ucl.shutdown_output_dispatcher();
             if (intLLKey != 0)
             {
                 UnhookWindowsHookEx(intLLKey);

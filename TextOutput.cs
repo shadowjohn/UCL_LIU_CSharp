@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -155,6 +156,146 @@ namespace uclliu
                 || title.IndexOf("term.ptt.cc", StringComparison.Ordinal) >= 0
                 || title.IndexOf("ws.ptt.cc", StringComparison.Ordinal) >= 0
                 || title.IndexOf("bbs", StringComparison.Ordinal) >= 0;
+        }
+    }
+
+    internal sealed class StaActionDispatcher : IDisposable
+    {
+        private readonly object sync = new object();
+        private readonly ManualResetEvent readySignal = new ManualResetEvent(false);
+        private readonly Action<Exception> errorHandler;
+        private readonly Thread worker;
+        private Control invoker;
+        private Exception startupError;
+        private bool stopping;
+
+        public StaActionDispatcher(Action<Exception> errorHandler)
+        {
+            this.errorHandler = errorHandler;
+            worker = new Thread(run);
+            worker.IsBackground = true;
+            worker.Name = "UCLLIU text output";
+            worker.SetApartmentState(ApartmentState.STA);
+            worker.Start();
+
+            if (!readySignal.WaitOne(2000))
+            {
+                throw new TimeoutException("STA text output worker did not start");
+            }
+            if (startupError != null)
+            {
+                throw new InvalidOperationException("STA text output worker failed to start", startupError);
+            }
+        }
+
+        public void Post(Action action)
+        {
+            if (action == null)
+            {
+                throw new ArgumentNullException("action");
+            }
+
+            lock (sync)
+            {
+                if (stopping)
+                {
+                    return;
+                }
+
+                invoker.BeginInvoke((MethodInvoker)delegate
+                {
+                    try
+                    {
+                        action();
+                    }
+                    catch (Exception ex)
+                    {
+                        report_error(ex);
+                    }
+                });
+            }
+        }
+
+        private void run()
+        {
+            Control control = null;
+            try
+            {
+                control = new Control();
+                IntPtr handle = control.Handle;
+                lock (sync)
+                {
+                    invoker = control;
+                }
+                readySignal.Set();
+
+                // SendKeys.SendWait 需要呼叫執行緒具備 Windows 訊息迴圈；
+                // 用隱藏 Control 承接工作，避免剪貼簿輸出堵住主 UI 與鍵盤 hook。
+                Application.Run();
+            }
+            catch (Exception ex)
+            {
+                startupError = ex;
+                readySignal.Set();
+                report_error(ex);
+            }
+            finally
+            {
+                if (control != null)
+                {
+                    control.Dispose();
+                }
+            }
+        }
+
+        private void report_error(Exception ex)
+        {
+            if (errorHandler != null)
+            {
+                try
+                {
+                    errorHandler(ex);
+                }
+                catch
+                {
+                    // 背景輸出錯誤不能讓工作執行緒停止。
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            Control control;
+            lock (sync)
+            {
+                if (stopping)
+                {
+                    return;
+                }
+                stopping = true;
+                control = invoker;
+            }
+
+            if (Thread.CurrentThread == worker)
+            {
+                Application.ExitThread();
+                return;
+            }
+
+            if (control != null && !control.IsDisposed)
+            {
+                try
+                {
+                    control.BeginInvoke((MethodInvoker)delegate { Application.ExitThread(); });
+                }
+                catch (InvalidOperationException)
+                {
+                    // 訊息迴圈已經結束。
+                }
+            }
+
+            worker.Join(500);
+            readySignal.Close();
         }
     }
 
@@ -485,6 +626,14 @@ namespace uclliu
         void SendWait(string keys);
     }
 
+    internal sealed class SendKeysKeySender : IKeySender
+    {
+        public void SendWait(string keys)
+        {
+            SendKeys.SendWait(keys);
+        }
+    }
+
     internal interface ISelectedTextTransformCommand
     {
         bool TryRun(Func<string, string> transform, Action<string> sendOutput, out string error);
@@ -521,14 +670,6 @@ namespace uclliu
         public void SetDataObject(object dataObject)
         {
             Clipboard.SetDataObject(dataObject, true);
-        }
-    }
-
-    internal sealed class SendKeysKeySender : IKeySender
-    {
-        public void SendWait(string keys)
-        {
-            SendKeys.SendWait(keys);
         }
     }
 
@@ -900,6 +1041,20 @@ namespace uclliu
         }
     }
 
+    internal sealed class ClipboardPasteStageSample
+    {
+        public ClipboardPasteStageSample(string stage, int elapsedMilliseconds, bool succeeded)
+        {
+            Stage = stage;
+            ElapsedMilliseconds = elapsedMilliseconds;
+            Succeeded = succeeded;
+        }
+
+        public string Stage { get; private set; }
+        public int ElapsedMilliseconds { get; private set; }
+        public bool Succeeded { get; private set; }
+    }
+
     public sealed class ClipboardPasteOutput
     {
         private readonly IClipboardGateway clipboard;
@@ -937,20 +1092,33 @@ namespace uclliu
 
         public bool TryPasteText(string text, string sendKeys, out string error)
         {
-            return TryPasteText(text, ClipboardTextKind.Unicode, sendKeys, out error);
+            return TryPasteText(text, ClipboardTextKind.Unicode, sendKeys, null, out error);
+        }
+
+        internal bool TryPasteText(string text, string sendKeys, Action<ClipboardPasteStageSample> stageObserver, out string error)
+        {
+            return TryPasteText(text, ClipboardTextKind.Unicode, sendKeys, stageObserver, out error);
         }
 
         public bool TryPasteAnsiText(string text, string sendKeys, out string error)
         {
-            return TryPasteText(text, ClipboardTextKind.Ansi, sendKeys, out error);
+            return TryPasteText(text, ClipboardTextKind.Ansi, sendKeys, null, out error);
         }
 
-        private bool TryPasteText(string text, ClipboardTextKind textKind, string sendKeys, out string error)
+        internal bool TryPasteAnsiText(string text, string sendKeys, Action<ClipboardPasteStageSample> stageObserver, out string error)
+        {
+            return TryPasteText(text, ClipboardTextKind.Ansi, sendKeys, stageObserver, out error);
+        }
+
+        private bool TryPasteText(string text, ClipboardTextKind textKind, string sendKeys, Action<ClipboardPasteStageSample> stageObserver, out string error)
         {
             error = null;
 
             ClipboardBackup backup;
-            if (!TryCaptureBackup(out backup, out error))
+            long stageStarted = start_stage(stageObserver);
+            bool captured = TryCaptureBackup(out backup, out error);
+            report_stage(stageObserver, "capture", stageStarted, captured);
+            if (!captured)
             {
                 return false;
             }
@@ -961,24 +1129,41 @@ namespace uclliu
 
             try
             {
-                if (!TryClipboardAction(delegate { clipboard.SetText(text, textKind); }, "set clipboard failed", out operationError))
+                stageStarted = start_stage(stageObserver);
+                bool textSet = TryClipboardAction(delegate { clipboard.SetText(text, textKind); }, "set clipboard failed", out operationError);
+                report_stage(stageObserver, "set", stageStarted, textSet);
+                if (!textSet)
                 {
                     success = false;
                 }
                 else
                 {
                     shouldRestore = true;
+                    bool sendReported = false;
                     try
                     {
+                        stageStarted = start_stage(stageObserver);
                         keySender.SendWait(sendKeys);
+                        report_stage(stageObserver, "send", stageStarted, true);
+                        sendReported = true;
                         if (RestoreDelayMs > 0)
                         {
+                            stageStarted = start_stage(stageObserver);
                             sleep(RestoreDelayMs);
+                            report_stage(stageObserver, "wait", stageStarted, true);
                         }
                         success = true;
                     }
                     catch (Exception ex)
                     {
+                        if (!sendReported)
+                        {
+                            report_stage(stageObserver, "send", stageStarted, false);
+                        }
+                        else if (RestoreDelayMs > 0)
+                        {
+                            report_stage(stageObserver, "wait", stageStarted, false);
+                        }
                         operationError = "send keys failed: " + ex.Message;
                     }
                 }
@@ -988,7 +1173,10 @@ namespace uclliu
                 if (shouldRestore)
                 {
                     string restoreError;
-                    if (!TryRestoreBackup(backup, out restoreError) && operationError == null)
+                    stageStarted = start_stage(stageObserver);
+                    bool restored = TryRestoreBackup(backup, out restoreError);
+                    report_stage(stageObserver, "restore", stageStarted, restored);
+                    if (!restored && operationError == null)
                     {
                         operationError = restoreError;
                         success = false;
@@ -1000,15 +1188,46 @@ namespace uclliu
             return success && error == null;
         }
 
+        private static long start_stage(Action<ClipboardPasteStageSample> stageObserver)
+        {
+            return stageObserver == null ? 0 : Stopwatch.GetTimestamp();
+        }
+
+        private static void report_stage(Action<ClipboardPasteStageSample> stageObserver, string stage, long startedTicks, bool succeeded)
+        {
+            if (stageObserver == null)
+            {
+                return;
+            }
+
+            int elapsedMilliseconds = (int)(((Stopwatch.GetTimestamp() - startedTicks) * 1000.0) / Stopwatch.Frequency);
+            try
+            {
+                stageObserver(new ClipboardPasteStageSample(stage, elapsedMilliseconds, succeeded));
+            }
+            catch
+            {
+                // 診斷回呼不能改變剪貼簿送字的成功或失敗結果。
+            }
+        }
+
         private bool TryCaptureBackup(out ClipboardBackup backup, out string error)
         {
             ClipboardBackup captured = new ClipboardBackup();
             bool ok = TryClipboardAction(
                 delegate
                 {
-                    captured.DataObject = clipboard.GetDataObject();
                     captured.HasText = clipboard.ContainsText();
-                    captured.Text = captured.HasText ? clipboard.GetText() : null;
+                    if (captured.HasText)
+                    {
+                        // 文字用值複製保存；原始 IDataObject 可能仍依附舊剪貼簿擁有者，
+                        // 覆蓋剪貼簿後再重用會讓 PTT 的背景送字卡在備份或還原。
+                        captured.Text = clipboard.GetText();
+                    }
+                    else
+                    {
+                        captured.DataObject = clipboard.GetDataObject();
+                    }
                 },
                 "capture clipboard failed",
                 out error);
@@ -1022,13 +1241,13 @@ namespace uclliu
             return TryClipboardAction(
                 delegate
                 {
-                    if (backup.DataObject != null)
-                    {
-                        clipboard.SetDataObject(backup.DataObject);
-                    }
-                    else if (backup.HasText)
+                    if (backup.HasText)
                     {
                         clipboard.SetText(backup.Text, ClipboardTextKind.Unicode);
+                    }
+                    else if (backup.DataObject != null)
+                    {
+                        clipboard.SetDataObject(backup.DataObject);
                     }
                     else
                     {

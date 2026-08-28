@@ -6,10 +6,28 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ## [Unreleased]
 
+### Added
+
+- Debug 模式新增非阻塞 console writer，以及出字模式、成功率、平均值、p50、p95、最大耗時與剪貼簿各階段耗時摘要。
+- 核心測試新增 STA worker message loop、FIFO、呼叫端不阻塞、剪貼簿既有文字保存與輸出 telemetry 回歸案例。
+
+### Changed
+
+- 一般出字與剪貼簿貼上改由獨立 STA worker 依序執行；worker 使用 WinForms message loop，keyboard hook / UI 不再等待 `SendKeys.SendWait` 或實際出字完成。
+- 剪貼簿原內容是文字時改為值複製到記憶體，送字後再還原；圖片、檔案等非文字格式維持 `IDataObject` 保存路徑。
+
 ### Fixed
 
+- 修正 PTT／BBS 使用 `Shift+Insert` 時，背景執行緒沒有 WinForms message loop，造成第一字後停止、累積十多字才一次送出的問題。
+- 修正 raw `SendInput` 快捷鍵過早還原剪貼簿，造成 PTT 完全無法出字；恢復在獨立 STA message loop 使用 `SendKeys.SendWait`。
+- 修正原剪貼簿已有文字時，備份／還原 opaque `IDataObject` 可能讓 PTT 背景送字卡住；文字剪貼簿不再依賴原 owner 的延遲呈現物件。
+- debug console 改為背景佇列輸出，避免 console 暫停或無法顯示文字時反向堵住 keyboard hook。
 - 補回 Python 版注音輸入防呆：聲母、介音、韻母同層重打時改為置換，介音晚補時會插到韻母前，避免注音查詢變成 `ㄅㄆㄇ...` 連續追加。
 - `build.bat` 關閉執行中 `uclliu.exe` 時不再使用 `timeout`，避免非互動 shell 出現 input redirection 錯誤；若權限不足無法關閉，會提早停止並提示關閉 tray 程式或用管理員重跑。
+
+### Documentation
+
+- README 更新至 v0.18，補上非阻塞出字架構、PTT／Notepad++ 實機狀態、45ms 剪貼簿還原與剪貼簿 icon 可能閃爍的已知現象。
 
 ---
 
