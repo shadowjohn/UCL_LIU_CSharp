@@ -33,5 +33,6 @@
     <Compile Include="..\..\TypingSound.cs" Link="TypingSound.cs" />
     <Compile Include="..\..\UclLiuAppInfo.cs" Link="UclLiuAppInfo.cs" />
     <Compile Include="..\..\UiLayoutCalculator.cs" Link="UiLayoutCalculator.cs" />
+    <Compile Include="..\..\WindowDragGesture.cs" Link="WindowDragGesture.cs" />
   </ItemGroup>
 </Project>

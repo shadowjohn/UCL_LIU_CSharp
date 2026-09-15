@@ -31,6 +31,8 @@
 ## 後續小工項
 
 - [x] 補回 Python 版注音輸入分級置換：聲母、介音、韻母同層重打時覆蓋，介音晚補時插到韻母前，避免 `ㄅㄆㄇ...` 一路追加。
+- [x] v0.19 補短版 chrome 拖移：肥／英、半／全、短版切換、模式與 X 都可拖移；移動後抑制原 Click，避免拖 X 誤關閉。
+- [x] v0.19 單一注音符號固定放在第 0 候選，保留 `pinyi.txt` 一般漢字候選的過濾與完整讀音排序。
 - [ ] 追 Notepad++ 非 TSF 模式打字卡頓：用 `run_debug.bat` 收集 `PERF slow keyboard hook` 證據，比較 TSF / 非 TSF、關閉 Notepad++ auto-completion、關閉固定候選字三種狀態；目前本機 `autoCAction=3`、輸入 1 字即觸發 auto-completion。若問題只落在 `SendInput` / Scintilla，再評估 `notepad++.exe` 自動優先 TSF 並保留未註冊 fallback。
 - [ ] 追瀏覽器 `term.ptt.cc` 一般模式打字卡頓：先確認 debug console 每次皆命中 `PasteShiftInsert`，分開量測 hook 與延後輸出耗時；比較固定候選字開／關，並檢查剪貼簿備份、貼上、固定 45ms 等待與還原各階段，確認瓶頸後再調整，不先改成 TSF 或縮短等待。
 

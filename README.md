@@ -1,8 +1,8 @@
 # UCL_LIU_CSharp
 
-C# / WinForms 版肥米輸入法，目前版本 v0.18。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
+C# / WinForms 版肥米輸入法，目前版本 v0.19。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
 
-目前 C# 版已進入可日用測試的現代化復刻狀態：已補上多來源字碼表自動轉換、自定詞庫、Unicode SendInput 出字、非阻塞剪貼簿 fallback、打字音效、同音/注音查詢、固定候選字、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback、管理員重啟導引與核心測試。v0.18 將送字移到獨立 STA 訊息迴圈，PTT 與 Notepad++ 不需依賴 TSF 也能維持順暢輸入。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
+目前 C# 版已進入可日用測試的現代化復刻狀態：已補上多來源字碼表自動轉換、自定詞庫、Unicode SendInput 出字、非阻塞剪貼簿 fallback、打字音效、同音/注音查詢、固定候選字、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback、管理員重啟導引與核心測試。v0.18 將送字移到獨立 STA 訊息迴圈；v0.19 補上短版 chrome 拖移與單一注音符號第 0 候選。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
 
 ![UCL_LIU C# screenshot](screenshot/ucl_1.png)
 
@@ -11,7 +11,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.18。這個分支的目標是
 | 版本 | 實用成熟度 | 工程可維護性 | 日用信心 | 定位 |
 | --- | ---: | ---: | ---: | --- |
 | Python 版 v1.67 | 8.5 / 10 | 6.5 / 10 | 8.5 / 10 | 功能最完整的正史版，多年實戰相容性最足 |
-| C# 版 v0.18 | 8.7 / 10 | 8.7 / 10 | 8.6 / 10 | 送字與 debug 輸出脫離 keyboard hook / UI 執行緒，PTT、Notepad++ 一般模式已完成實機順暢輸入驗證 |
+| C# 版 v0.19 | 8.7 / 10 | 8.8 / 10 | 8.6 / 10 | 送字與 debug 輸出脫離 keyboard hook / UI 執行緒；短版 chrome 可安全拖移，單一注音符號可直接選第 0 候選 |
 
 ## 目前狀態
 
@@ -26,13 +26,13 @@ C# / WinForms 版肥米輸入法，目前版本 v0.18。這個分支的目標是
 | UI 效能 | keyboard hook / UI 不等待實際送字與 console 輸出；另已降低短版模式與 foreground process 查詢熱路徑負擔 | Python 版後期另有多輪 Win11/位置修正 |
 | TSF Bridge | 已移植為手動 `TSF出字模式`，透過 named pipe 呼叫外掛 DLL，失敗 fallback Unicode `SendInput`；右下角選單可檢查/註冊/解除註冊，非管理員時可導引重新以系統管理員啟動 | v1.67 實驗性支援 |
 | 打字音效 | 支援自備 `wavs\*.wav`、開關、10%-100% 音量、特殊鍵音效、防長按連發；官方發行檔不內含授權不明音效素材 | 已支援音效與音量設定 |
-| 同音/注音 | 支援新版 `pinyi.txt` 同音字、`';` 注音查詢、注音候選空白出字、`Shift+Space` 換頁與出字後提示注音 | 已支援 |
+| 同音/注音 | 支援新版 `pinyi.txt` 同音字、`';` 注音查詢、單一注音符號第 0 候選、注音候選空白出字、`Shift+Space` 換頁與出字後提示注音 | 已支援 |
 | 啟動與半全形 UX | 支援啟動預設肥/英、允許停用 `Shift+Space` 半全形切換；按住 Shift 連按 Space 可連續切換半/全 | 已支援 |
 | 測試 | `tools/UclLiuCoreTests` 可用 .NET SDK 跑核心測試，涵蓋 STA message loop、FIFO、剪貼簿保存與效能診斷 | Python 版以實機與歷史回報為主 |
 
 ## 低依賴狀態
 
-C# 版 v0.18 目前已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。主程式只使用 .NET Framework 4.5.2 內建 reference，固定候選字也只讀本機 `candidate.txt`，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。TSF Bridge 的 C++ 原始碼也已納入 `tsf_bridge\UclTsfBridge`，可由本 repo 自行重建。
+C# 版 v0.19 目前已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。主程式只使用 .NET Framework 4.5.2 內建 reference，固定候選字也只讀本機 `candidate.txt`，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。TSF Bridge 的 C++ 原始碼也已納入 `tsf_bridge\UclTsfBridge`，可由本 repo 自行重建。
 
 TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預設出字流程；只有手動切到 `TSF出字模式` 時才會透過 named pipe 呼叫 `tsf_bridge\UclTsfBridge.dll`。
 
@@ -54,6 +54,11 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 - `System.Drawing`
 - `System.Web.Extensions`
 - `System.Windows.Forms`
+
+## v0.19 重點
+
+- 肥／英、半／全、短版切換、正常／遊戲模式與關閉按鈕都可拖移視窗；移動超過 4px 才會吃掉原按鈕 Click，因此原本點擊操作不變，拖曳 X 也不會關閉程式。
+- `';` 注音查詢時，單一合法注音符號固定在第 0 候選，例如 `';l` 查 `ㄠ` 時可直接選 `0ㄠ`；完整讀音如 `ㄈㄟˊ` 保持既有漢字候選排序。
 
 ## v0.18 重點
 
@@ -133,10 +138,11 @@ v0.18 推薦下載包 `uclliu-v0.18.zip` 內含：
 | `,,,BOX` | 開啟自定詞庫 |
 | `';zo6` | 注音查詢「ㄈㄟˊ」，例如候選會含「肥」 |
 | `';a` + 空白 | 注音查詢「ㄇ」，例如候選會含「ㄇ」 |
+| `';l` | 注音查詢「ㄠ」，第 0 候選固定為「ㄠ」 |
 
 ## 同音字與注音查詢
 
-`pinyi.txt` 放在 `uclliu.exe` 同一目錄後會啟用同音字與注音功能。`'ucl` 可用最後一個已出字的字查同音候選；`';zo6` 可用注音鍵盤碼查 `ㄈㄟˊ`，候選會包含「肥」；`';a` 後按空白可查 `ㄇ` 這類單獨注音符號候選。注音模式會依聲母、介音、韻母分層防呆，同層重打時會置換既有符號，介音晚補時會插到韻母前，避免 `ㄅㄆㄇ...` 一直追加。注音候選顯示後，可按數字鍵選字，按空白送出第一候選；候選有下一頁時，`Shift+Space` 會先換頁。右下角選單開啟「顯示提示注音」後，出字後會顯示 `音:ㄈㄟˊ` 類提示。
+`pinyi.txt` 放在 `uclliu.exe` 同一目錄後會啟用同音字與注音功能。`'ucl` 可用最後一個已出字的字查同音候選；`';zo6` 可用注音鍵盤碼查 `ㄈㄟˊ`，候選會包含「肥」；`';a` 後按空白可查 `ㄇ` 這類單獨注音符號候選。單一合法注音符號會固定補為第 0 候選，例如 `';l` 的 `0ㄠ`，不需依賴 `pinyi.txt` 中是否剛好有該符號。注音模式會依聲母、介音、韻母分層防呆，同層重打時會置換既有符號，介音晚補時會插到韻母前，避免 `ㄅㄆㄇ...` 一直追加。注音候選顯示後，可按數字鍵選字，按空白送出第一候選；候選有下一頁時，`Shift+Space` 會先換頁。右下角選單開啟「顯示提示注音」後，出字後會顯示 `音:ㄈㄟˊ` 類提示。
 
 v0.18 推薦下載包已內含 `pinyi.txt` 與 `candidate.txt`；若只下載單檔 `uclliu.exe`，需要自行補上 `pinyi.txt` 才會有同音字與注音查詢，補上 `candidate.txt` 才會有固定候選字。
 

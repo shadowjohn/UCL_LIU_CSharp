@@ -117,7 +117,10 @@ internal static class Program
         failed += Run("pinyi v001 same sound sorts by closest token index", TestPinyiV001SortsByClosestTokenIndex);
         failed += Run("pinyi legacy same sound keeps whole matching lines", TestPinyiLegacyKeepsWholeMatchingLines);
         failed += Run("phone table converts zhuyin query to candidates", TestPhoneTableConvertsZhuyinQueryToCandidates);
+        failed += Run("phone table puts a single zhuyin symbol before word candidates", TestPhoneTablePutsSingleZhuyinSymbolFirst);
         failed += Run("phone table maps words back to zhuyin labels", TestPhoneTableMapsWordsBackToZhuyinLabels);
+        failed += Run("window drag gesture preserves clicks until the pointer moves", TestWindowDragGesturePreservesClicksUntilMoved);
+        failed += Run("chrome button consumes the click armed by a drag", TestChromeButtonConsumesTheClickArmedByADrag);
 
         if (failed > 0)
         {
@@ -258,7 +261,7 @@ internal static class Program
     {
         string expected = "UCLLIU 肥米輸入法 C# 版\n\n"
             + "作者：羽山秋人 (https://3wa.tw)、Benson9954029\n"
-            + "版本：0.18\n\n"
+            + "版本：0.19\n\n"
             + "熱鍵提示：\n\n"
             + "「,,,VERSION」目前版本\n"
             + "「'ucl」同音字查詢\n"
@@ -275,7 +278,7 @@ internal static class Program
             + "「,,,Z」框字的文字變成字根\n"
             + "「,,,BOX」開啟自定詞庫\n";
 
-        AssertEqual("0.18", UclLiuAppInfo.Version);
+        AssertEqual("0.19", UclLiuAppInfo.Version);
         AssertEqual("UCLLIU 肥米輸入法 C# 版", UclLiuAppInfo.AboutTitle);
         AssertEqual("Fastest Chinese Input Method", UclLiuAppInfo.FileDescription);
         AssertEqual("UCLLIU Input Method", UclLiuAppInfo.ProductName);
@@ -1850,7 +1853,56 @@ internal static class Program
         AssertEqual("zo6", table.PhoneCodeToKeyboard("ㄈㄟˊ"));
         AssertSequence(new string[] { "肥", "淝", "腓" }, table.FindCandidatesByPhoneCode("ㄈㄟˊ").ToArray());
         AssertSequence(new string[] { "ㄇ" }, table.FindCandidatesByPhoneCode("ㄇ").ToArray());
-        AssertSequence(new string[] { "一", "壹", "衣" }, table.FindCandidatesByPhoneCode("ㄧ").ToArray());
+        AssertSequence(new string[] { "ㄧ", "一", "壹", "衣" }, table.FindCandidatesByPhoneCode("ㄧ").ToArray());
+    }
+
+    private static void TestPhoneTablePutsSingleZhuyinSymbolFirst()
+    {
+        PhoneCodeTable table = PhoneCodeTable.Parse(new string[]
+        {
+            "VERSION_0.01",
+            ", - . / 0 1 2 3 4 5 6 7 8 9 ; a b c d e f g h i j k l m n o p q r s t u v w x y z",
+            "ㄝ ㄦ ㄡ ㄥ ㄢ ㄅ ㄉ ˇ ˋ ㄓ ˊ ˙ ㄚ ㄞ ㄤ ㄇ ㄖ ㄏ ㄎ ㄍ ㄑ ㄕ ㄘ ㄛ ㄨ ㄜ ㄠ ㄩ ㄙ ㄟ ㄣ ㄆ ㄐ ㄋ ㄔ ㄧ ㄒ ㄊ ㄌ ㄗ ㄈ",
+            "l 凹 ㄠ 坳",
+            "zo6 肥"
+        });
+
+        AssertSequence(new string[] { "ㄠ", "凹", "坳" }, table.FindCandidatesByPhoneCode("ㄠ").ToArray());
+        AssertSequence(new string[] { "肥" }, table.FindCandidatesByPhoneCode("ㄈㄟˊ").ToArray());
+    }
+
+    private static void TestWindowDragGesturePreservesClicksUntilMoved()
+    {
+        WindowDragGesture gesture = new WindowDragGesture(4);
+
+        gesture.Begin(new Point(100, 100), new Point(10, 20));
+        Point clickLocation = gesture.Move(new Point(103, 103));
+        AssertTrue(!gesture.IsDragging, "pointer jitter below the threshold should remain a click");
+        AssertTrue(clickLocation == new Point(10, 20), "pointer jitter should not move the window");
+
+        Point draggedLocation = gesture.Move(new Point(105, 103));
+        AssertTrue(gesture.IsDragging, "pointer movement past the threshold should start a drag");
+        AssertTrue(draggedLocation == new Point(15, 23), "dragged window location should retain the original pointer offset");
+        AssertTrue(gesture.Complete(), "completed drag should request suppression of the originating button click");
+    }
+
+    private static void TestChromeButtonConsumesTheClickArmedByADrag()
+    {
+        TestChromeButton button = new TestChromeButton();
+        int clicks = 0;
+        button.Click += delegate { clicks++; };
+
+        button.SuppressNextClickFromDrag();
+        button.SimulateClick();
+        AssertTrue(clicks == 0, "the click produced when a dragged button is released should be consumed before its handlers run");
+
+        button.SimulateClick();
+        AssertTrue(clicks == 1, "only the click associated with the drag should be consumed");
+
+        button.SuppressNextClickFromDrag();
+        button.SimulateLeftMouseDown();
+        button.SimulateClick();
+        AssertTrue(clicks == 2, "a later real pointer down should clear an unconsumed drag suppression");
     }
 
     private static void TestPhoneTableMapsWordsBackToZhuyinLabels()
@@ -2271,6 +2323,19 @@ internal static class Program
             sendOutput(transform(selectedText));
             error = null;
             return true;
+        }
+    }
+
+    private sealed class TestChromeButton : ChromeButton
+    {
+        public void SimulateClick()
+        {
+            base.OnClick(EventArgs.Empty);
+        }
+
+        public void SimulateLeftMouseDown()
+        {
+            base.OnMouseDown(new MouseEventArgs(MouseButtons.Left, 1, 0, 0, 0));
         }
     }
 

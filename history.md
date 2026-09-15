@@ -2,6 +2,82 @@
 
 ---
 
+## 2026-09-15 - v0.19 chrome 拖移改由按鈕本體攔截 Click
+
+### 問題觀察
+
+- 使用者實機回報上一輪拖移肥／英、半／全、模式或 X 後放開仍會觸發 Click。
+- 上一輪的 suppression 雖會保留到 Click，但仍是在外部 `MouseUp` handler 才設定；按鈕本體可能已在同一輪訊息處理中先送出 Click，因此設定時機仍然太晚。
+
+### 實作紀錄
+
+- 將一次性的抑制旗標移入既有 `ChromeButton`：`OnClick()` 在通知外部 Click handler 前先消費被武裝的拖移 Click。
+- `Form1` 只在游標首次越過 4px 拖移門檻時武裝該按鈕；`MouseUp` 不再重新武裝。
+- 下一次真實左鍵 `MouseDown` 會清除尚未消費的旗標，純點擊與後續正常點擊維持原行為。
+
+### 驗證紀錄
+
+- 先加入 `ChromeButton.SuppressNextClickFromDrag()` 回歸測試並確認紅燈，因方法尚不存在。
+- 核心測試覆蓋：拖移武裝的第一次 Click 不進 handler、下一次 Click 正常進入、未消費旗標會在下一次 pointer down 清除。
+
+### 未驗證邊界
+
+- 尚待使用者以實機再次拖移四個 chrome 按鈕驗收；本輪環境仍沒有可控制的 native app surface。
+
+---
+
+## 2026-09-15 - v0.19 拖移放開仍觸發 chrome Click 修正
+
+### 問題觀察
+
+- 使用者實機回報拖移後放開仍會變動肥／英、半／全或觸發 X。
+- 原本 `Form1.suppress_drag_click()` 在 `MouseUp` 後立即以 `BeginInvoke` 清空抑制來源；WinForms 實機事件時序會讓 callback 先於按鈕 Click 執行，因此 Click 看不到抑制狀態。
+
+### 實作紀錄
+
+- `WindowDragGesture.cs` 新增 `ChromeDragClickSuppression`，拖移後保留來源控制項，直到同一控制項的 Click 消費它。
+- 下一次左鍵 `MouseDown` 會清掉未被消費的舊狀態，避免沒有產生 Click 的拖移讓下一次正常點擊遭誤吞。
+- `Form1` 移除 `BeginInvoke` 清除邏輯，改由共用 suppression lifecycle 處理。
+
+### 驗證紀錄
+
+- 先新增測試並確認紅燈：`ChromeDragClickSuppression` 尚不存在。
+- 核心測試覆蓋不同控制項不應消費、原控制項下一個 Click 必須被消費，以及下一次 pointer down 清除舊狀態。
+
+### 未驗證邊界
+
+- 尚待使用者以實機再確認拖肥／半／模式／X 後放開皆不會觸發原 Click。
+
+---
+
+## 2026-09-15 - v0.19 短版 chrome 拖移與注音第 0 候選
+
+### 問題觀察
+
+- 使用者希望短版 `,,,s` 時，肥／英、半／全、短版切換、模式與 X 都可以拖移視窗；拖曳 X 不可誤觸退出。
+- `pinyi.txt` 的 `l 凹 ㄠ 坳 柪` 本來就有 `ㄠ`，但 C# `PhoneCodeTable.Parse()` 為避免將注音 token 混入一般漢字候選，會在同列有漢字時濾掉 `ㄠ`；因此不是來源資料遺漏。
+- 使用者選擇肥米的規則 A：單一合法注音符號固定排第 0 候選，完整讀音不額外加入原注音字串。
+
+### 實作紀錄
+
+- 新增 `WindowDragGesture`，以 4px 門檻區分純點擊與拖曳，保留原始 pointer offset；拖曳結束後抑制同一 chrome 控制項隨後的 Click。
+- `Form1` 將肥／英、半／全、短版切換、正常／遊戲模式與 X 接入共用拖移流程；純點擊仍保留原本切換／退出功能，拖移後才儲存視窗位置。
+- `PhoneCodeTable.FindCandidatesByPhoneCode()` 在有效單一注音查詢時先補入該符號，再合併既有漢字候選；解析時原本的注音 token 過濾與完整讀音順序不變。
+- 版本資訊更新為 `0.19` / `0.19.0.0`，README、CHANGELOG、GOALS 同步補上行為與驗收方式。
+
+### 驗證紀錄
+
+- 先新增核心測試，確認舊行為紅燈：`ㄠ` 只有兩個漢字候選，且沒有 `WindowDragGesture`；版本測試也先確認期待 `0.19` 時仍顯示 `0.18`。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過，包含單一注音第 0 候選、完整讀音不注入、拖移門檻／位移／Click 抑制及既有全部核心測試。
+- `cmd /c build.bat Debug artifacts\verify-v019\` 通過，輸出 `artifacts\verify-v019\uclliu.exe`；只有既有 `Form1.lParam` 未使用 warning。
+- 隔離 exe metadata：`FileVersion=0.19.0.0`、`ProductVersion=0.19`。
+
+### 未驗證邊界
+
+- 尚未做真人桌面拖移與注音選字驗收；本輪電腦自動化環境沒有可控制的 native app surface，故未假稱 UI 實機通過。
+
+---
+
 ## 2026-08-28 - 注音輸入分級置換補回
 
 ### 問題觀察

@@ -14,6 +14,8 @@ namespace uclliu
     public partial class Form1 : Form
     {
         myinclude my = new myinclude();
+        private readonly WindowDragGesture windowDragGesture = new WindowDragGesture(4);
+        private Control dragSource;
         protected override CreateParams CreateParams
         {
             get
@@ -1161,6 +1163,11 @@ namespace uclliu
         public Form1()
         {
             InitializeComponent();
+            enable_chrome_drag(this.btn_UCL);
+            enable_chrome_drag(this.btn_HALF);
+            enable_chrome_drag(this.btn_simple);
+            enable_chrome_drag(this.btn_gamemode);
+            enable_chrome_drag(this.btn_X);
             cMenu.Popup += cMenu_Popup;
             notifyIcon1.ContextMenu = cMenu;
             //https://stackoverflow.com/questions/12983427/accessing-forms-controls-from-another-class
@@ -1174,25 +1181,49 @@ namespace uclliu
             }
         }
 
-        //令 form 可以移動 
-        //From : https://stackoverflow.com/questions/1592876/make-a-borderless-form-movable
-        private bool mouseDown;
-        private Point lastLocation;
+        //令 form 可以移動
+        private void enable_chrome_drag(Control control)
+        {
+            control.MouseDown += LP_MouseDown;
+            control.MouseMove += LP_MouseMove;
+            control.MouseUp += LP_MouseUp;
+        }
 
         private void Form1_MouseMove(object sender, MouseEventArgs e)
         {
-            if (mouseDown)
+            bool wasDragging = windowDragGesture.IsDragging;
+            Point nextLocation = windowDragGesture.Move(Cursor.Position);
+            if (windowDragGesture.IsDragging)
             {
-                this.Location = new Point(
-                    (this.Location.X - lastLocation.X) + e.X, (this.Location.Y - lastLocation.Y) + e.Y);
+                if (!wasDragging)
+                {
+                    arm_drag_click_suppression(dragSource);
+                }
 
+                this.Location = nextLocation;
                 this.Update();
             }
         }
 
         private void Form1_MouseUp(object sender, MouseEventArgs e)
         {
-            mouseDown = false;
+            if (e.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            Control source = dragSource;
+            if (source != null)
+            {
+                source.Capture = false;
+            }
+            dragSource = null;
+
+            if (!windowDragGesture.Complete())
+            {
+                return;
+            }
+
             //如果超過畫面，要彈回來
             ucl.toAlphaOrNonAlpha();
             //換新位置了
@@ -1203,8 +1234,26 @@ namespace uclliu
         }
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {
-            mouseDown = true;
-            lastLocation = e.Location;
+            if (e.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            dragSource = sender as Control;
+            if (dragSource != null)
+            {
+                dragSource.Capture = true;
+            }
+            windowDragGesture.Begin(Cursor.Position, this.Location);
+        }
+
+        private void arm_drag_click_suppression(Control source)
+        {
+            ChromeButton chromeButton = source as ChromeButton;
+            if (chromeButton != null)
+            {
+                chromeButton.SuppressNextClickFromDrag();
+            }
         }
         private void Form1_Load(object sender, EventArgs e)
         {

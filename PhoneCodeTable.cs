@@ -169,11 +169,26 @@ namespace uclliu
         {
             string keyboardCode = PhoneCodeToKeyboard(phoneCode);
             List<string> candidates;
-            if (keyboardCode.Length == 0 || !candidatesByKeyboardCode.TryGetValue(keyboardCode, out candidates))
+            if (keyboardCode.Length == 0)
             {
                 return new List<string>();
             }
-            return new List<string>(candidates);
+
+            List<string> output = new List<string>();
+            if (phoneCode.Length == 1)
+            {
+                AddUnique(output, phoneCode);
+            }
+
+            if (candidatesByKeyboardCode.TryGetValue(keyboardCode, out candidates))
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    AddUnique(output, candidates[i]);
+                }
+            }
+
+            return output;
         }
 
         public List<string> GetPhonesForWord(string word)
