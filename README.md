@@ -93,13 +93,15 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 
 | 檔案 | 說明 |
 | --- | --- |
-| [uclliu-v0.18.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.18/uclliu-v0.18.zip) | v0.18 推薦下載包，含 `uclliu.exe`、`pinyi.txt`、`candidate.txt`、候選資料授權聲明、`tsf_bridge`、README 與 LICENSE |
-| [uclliu.exe](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.18/uclliu.exe) | v0.18 單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材 |
+| [uclliu-v0.19.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.19/uclliu-v0.19.zip) | v0.19 推薦下載包，含 `uclliu.exe`、`pinyi.txt`、`candidate.txt`、候選資料授權聲明、`tsf_bridge`、README 與 LICENSE |
+| [uclliu.exe](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.19/uclliu.exe) | v0.19 單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材 |
 | [RELEASE/0.12/uclliu.zip](RELEASE/0.12/uclliu.zip) | v0.12 推薦下載包，含 `uclliu.exe`、`tsf_bridge` 外掛、註冊/解除註冊腳本 |
 | [RELEASE/0.12/uclliu.exe](RELEASE/0.12/uclliu.exe) | v0.12 單檔版，不含 TSF Bridge；只適合不需要 TSF 的使用者 |
 | [RELEASE/0.11/uclliu.exe](RELEASE/0.11/uclliu.exe) | v0.11 開發分支打包版 |
 | [RELEASE/0.11/uclliu.zip](RELEASE/0.11/uclliu.zip) | v0.11 壓縮版 |
 | [RELEASE/0.1/uclliu.exe](RELEASE/0.1/uclliu.exe) | 2019 初版備份 |
+
+v0.19 發行日期：2026-09-15，補上短版 chrome 拖移，肥／英、半／全、短版切換、模式與 X 都能安全拖曳；單一注音符號固定列為第 0 候選。
 
 v0.18 發行日期：2026-08-29，將實際送字與 debug console 移出 keyboard hook / UI 執行緒，補上獨立 STA WinForms message loop、PTT／Notepad++ 實機相容、文字剪貼簿值複製還原與輸出效能摘要；一般出字不需依賴 TSF。
 
@@ -107,7 +109,7 @@ v0.17 發行日期：2026-07-21，新增固定候選字、將 `,,,lock` / `,,,un
 
 v0.11 病毒碼掃描紀錄：[submission 2a365b04-dea0-496f-937f-9051b163a968](https://www.microsoft.com/en-us/wdsi/submission/2a365b04-dea0-496f-937f-9051b163a968)。
 
-v0.18 推薦下載包 `uclliu-v0.18.zip` 內含：
+v0.19 推薦下載包 `uclliu-v0.19.zip` 內含：
 
 | 檔案 / 目錄 | 用途 |
 | --- | --- |
@@ -144,7 +146,7 @@ v0.18 推薦下載包 `uclliu-v0.18.zip` 內含：
 
 `pinyi.txt` 放在 `uclliu.exe` 同一目錄後會啟用同音字與注音功能。`'ucl` 可用最後一個已出字的字查同音候選；`';zo6` 可用注音鍵盤碼查 `ㄈㄟˊ`，候選會包含「肥」；`';a` 後按空白可查 `ㄇ` 這類單獨注音符號候選。單一合法注音符號會固定補為第 0 候選，例如 `';l` 的 `0ㄠ`，不需依賴 `pinyi.txt` 中是否剛好有該符號。注音模式會依聲母、介音、韻母分層防呆，同層重打時會置換既有符號，介音晚補時會插到韻母前，避免 `ㄅㄆㄇ...` 一直追加。注音候選顯示後，可按數字鍵選字，按空白送出第一候選；候選有下一頁時，`Shift+Space` 會先換頁。右下角選單開啟「顯示提示注音」後，出字後會顯示 `音:ㄈㄟˊ` 類提示。
 
-v0.18 推薦下載包已內含 `pinyi.txt` 與 `candidate.txt`；若只下載單檔 `uclliu.exe`，需要自行補上 `pinyi.txt` 才會有同音字與注音查詢，補上 `candidate.txt` 才會有固定候選字。
+v0.19 推薦下載包已內含 `pinyi.txt` 與 `candidate.txt`；若只下載單檔 `uclliu.exe`，需要自行補上 `pinyi.txt` 才會有同音字與注音查詢，補上 `candidate.txt` 才會有固定候選字。
 
 ## 固定候選字
 
@@ -152,7 +154,7 @@ v0.18 推薦下載包已內含 `pinyi.txt` 與 `candidate.txt`；若只下載單
 
 送字後每頁最多顯示 5 筆固定候選，可用 `Shift+1`～`Shift+5` 選字；有下一頁時 `Shift+Space` 先翻頁，否則維持半形／全形切換。Esc、Enter、新字根、切換英／肥模式與句尾會結束目前候選上下文。
 
-v0.18 仍只使用 `candidate.txt` 的固定順序，不讀寫個人記憶，也不自動下載。候選最多 3 個 Unicode scalar，與目前上下文直接重複的候選會略過。`candidate.txt` 由 libchewing-data 的 `dict/chewing/tsi.csv` 轉換，採 LGPL-2.1-or-later；來源、SHA-256、轉換方式與再散布條件見 [第三方候選資料聲明](THIRD_PARTY_CANDIDATE_DATA.md)，授權全文見 [LGPL-2.1-or-later](LICENSES/LGPL-2.1-or-later.txt)。
+v0.19 仍只使用 `candidate.txt` 的固定順序，不讀寫個人記憶，也不自動下載。候選最多 3 個 Unicode scalar，與目前上下文直接重複的候選會略過。`candidate.txt` 由 libchewing-data 的 `dict/chewing/tsi.csv` 轉換，採 LGPL-2.1-or-later；來源、SHA-256、轉換方式與再散布條件見 [第三方候選資料聲明](THIRD_PARTY_CANDIDATE_DATA.md)，授權全文見 [LGPL-2.1-or-later](LICENSES/LGPL-2.1-or-later.txt)。
 
 ## 打字音效
 
@@ -175,7 +177,7 @@ C# 版目前右下角選單提供四種出字模式：
 
 ### TSF Bridge 管理
 
-TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下載 `uclliu-v0.18.zip` 並完整解壓縮，讓 `tsf_bridge` 目錄與 `uclliu.exe` 放在同一層。只下載單檔 `uclliu.exe` 時不會包含 TSF Bridge。
+TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下載 `uclliu-v0.19.zip` 並完整解壓縮，讓 `tsf_bridge` 目錄與 `uclliu.exe` 放在同一層。只下載單檔 `uclliu.exe` 時不會包含 TSF Bridge。
 
 右下角選單提供「TSF Bridge 管理」：
 
@@ -188,7 +190,7 @@ TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下�
 
 建議啟用流程：
 
-1. 下載並解壓縮 [uclliu-v0.18.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.18/uclliu-v0.18.zip)。
+1. 下載並解壓縮 [uclliu-v0.19.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.19/uclliu-v0.19.zip)。
 2. 執行 `uclliu.exe`。
 3. 若右下角肥米選單出現「★以系統管理員身分重新啟動肥米」，先點選並允許 UAC。
 4. 從右下角肥米選單進入 `4.TSF Bridge 管理`。
@@ -342,7 +344,7 @@ build_tsf.bat
 發行打包：
 
 ```powershell
-& .\tools\package-release.ps1 -Version v0.18 -Configuration Release -OutputDirectory .\artifacts
+& .\tools\package-release.ps1 -Version v0.19 -Configuration Release -OutputDirectory .\artifacts
 ```
 
 官方打包預設不包含 `wavs`。若是私用或已確認音效可再散布，可加上 `-IncludeWavs` 封入本機 `wavs` 目錄。
@@ -350,11 +352,11 @@ build_tsf.bat
 GitHub Actions 會在 `master` push / PR 時自動跑核心測試與 Release build，並上傳 artifact。推送 `v*` tag 時會自動建立或更新 GitHub Release：
 
 ```powershell
-git tag v0.18
-git push origin v0.18
+git tag v0.19
+git push origin v0.19
 ```
 
-自動 Release 會上傳兩個檔案：`uclliu-v0.18.zip` 是推薦下載包，含 TSF Bridge、同音/注音資料、固定候選資料與 LGPL 授權聲明；`uclliu.exe` 是單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材。
+自動 Release 會上傳兩個檔案：`uclliu-v0.19.zip` 是推薦下載包，含 TSF Bridge、同音/注音資料、固定候選資料與 LGPL 授權聲明；`uclliu.exe` 是單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材。
 
 ## 專案檔案
 
