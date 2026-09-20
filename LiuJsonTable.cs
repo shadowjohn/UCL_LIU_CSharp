@@ -46,7 +46,7 @@ namespace uclliu
                 throw new InvalidDataException("liu.json 缺少 chardefs。");
             }
 
-            return NormalizeChardefKeys(ParseStringListDictionary(chardefs));
+            return ApplyFcitxJapaneseAliases(NormalizeChardefKeys(ParseStringListDictionary(chardefs)));
         }
 
         public static Dictionary<string, List<string>> ParseStringListDictionaryJson(string json)
@@ -144,6 +144,52 @@ namespace uclliu
                 result[key].AddRange(pair.Value);
             }
             return result;
+        }
+
+        private static Dictionary<string, List<string>> ApplyFcitxJapaneseAliases(Dictionary<string, List<string>> chardefs)
+        {
+            Dictionary<string, List<string>> result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, List<string>> pair in chardefs)
+            {
+                result[pair.Key] = new List<string>(pair.Value);
+            }
+
+            foreach (KeyValuePair<string, List<string>> pair in chardefs)
+            {
+                string alias;
+                if (TryGetFcitxJapaneseAlias(pair.Key, out alias))
+                {
+                    // fcitx 表的 j 開頭日文碼才是正確 Unicode 值；覆蓋舊的 a, / a. 相容碼。
+                    result[alias] = new List<string>(pair.Value);
+                }
+            }
+            return result;
+        }
+
+        private static bool TryGetFcitxJapaneseAlias(string key, out string alias)
+        {
+            alias = null;
+            if (String.IsNullOrEmpty(key) || key.Length < 2 || key[0] != 'j')
+            {
+                return false;
+            }
+
+            char suffix = key[key.Length - 1];
+            if (suffix != ',' && suffix != '.')
+            {
+                return false;
+            }
+
+            for (int i = 1; i < key.Length - 1; i++)
+            {
+                if (key[i] < 'a' || key[i] > 'z')
+                {
+                    return false;
+                }
+            }
+
+            alias = key.Substring(1);
+            return true;
         }
 
         private static string ConvertJsonValueToString(object value)

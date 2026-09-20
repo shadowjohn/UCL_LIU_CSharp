@@ -196,6 +196,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <!-- 字碼表不納入 Git／release；本機自行提供時，建置輸出必須同步，避免直接執行 bin\Debug 的舊表。 -->
+    <Content Include="liu.json" Condition="Exists('liu.json')">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="candidate.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

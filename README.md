@@ -123,7 +123,7 @@ v0.19 推薦下載包 `uclliu-v0.19.zip` 內含：
 
 官方發行檔不內含 wav 音效素材。若要使用打字音，請在 `uclliu.exe` 同一層建立 `wavs` 目錄，放入自有、CC0 或其他具備可再散布授權的 `.wav` 檔。
 
-若自行編譯，請使用 .NET Framework 4.5.2 WinForms 專案重建。C# 版開發輸出以 `bin\Debug\uclliu.exe` 或 `bin\Release\uclliu.exe` 為準，不另外維護 `dist` 目錄；請確認 `pinyi.txt`、`candidate.txt`、自備 `wavs`、`tsf_bridge`、`liu.json` 或可轉換字碼表與 exe 放在同一目錄。
+若自行編譯，請使用 .NET Framework 4.5.2 WinForms 專案重建。C# 版開發輸出以 `bin\Debug\uclliu.exe` 或 `bin\Release\uclliu.exe` 為準，不另外維護 `dist` 目錄；專案根目錄若有本機 `liu.json`，建置時會強制同步到輸出目錄，避免直接執行 `bin\Debug` 時誤用舊表。其他情況請確認 `pinyi.txt`、`candidate.txt`、自備 `wavs`、`tsf_bridge`、`liu.json` 或可轉換字碼表與 exe 放在同一目錄。
 
 ## 常用命令
 
@@ -233,7 +233,7 @@ Notepad++ 的 Scintilla 編輯器對送字時序較敏感。v0.18 將實際送�
 - 編輯器儲存後立即重載字根
 - 同一時間只開一個自定詞庫視窗，已開啟時會聚焦
 
-字根規則目前與 Python 版後期一致：允許 `a-z,.]['`，最長 5 碼，會統一轉小寫。
+字根規則目前與 Python 版後期一致：允許 `a-z,.]['`，最長 5 碼，會統一轉小寫。日文假名使用字根末碼區分：`a,` 輸入平假名（`あ`／`ぁ`），`a.` 輸入片假名（`ア`／`ァ`）；同樣規則適用於 `ka,`／`ka.` 等音節。fcitx 表格中的 `ja,`／`ja.` 安全日文碼會自動提供成這些相容字根。
 
 ## 設定檔
 
@@ -273,6 +273,7 @@ C# 版已追上的重點：
 - `liu-uni.tab -> liu.cin -> liu.json`
 - `liu.cin -> liu.json`
 - Python 版常見外部字碼表來源轉換：`wuxiami.txt`、`liur_trad.dict.yaml` / `liur_Trad.dict.yaml`、`terry_boshiamy.txt`、`fcitx_boshiamy.txt`、`uniliu.txt`
+- `fcitx_boshiamy.txt` 匯入會沿用 Python 版日文修正：以 `j` 開頭的日文字碼建立 `a,` 平假名與 `a.` 片假名等相容字根，避開舊表的異體／私用字元
 - `liu.json` 字根 key 載入時統一轉小寫，可吃到大寫 root 的特殊碼表
 - `custom.json` 自定詞庫
 - `,,,BOX`

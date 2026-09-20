@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-09-20 - fcitx 日文假名字根相容
+
+### 問題觀察
+
+- 對照 Python 版 `D:\mytools\UCL_LIU\uclliu.pyw`，日文假名正確的相容字根是 `a,`，不是 `,a`；逗號對應平假名、句點對應片假名。
+- Python 版匯入 `fcitx_boshiamy.txt` 時會移除舊的非 `j` 日文字碼，並把安全的 `ja,` / `ja.` 另建成 `a,` / `a.`。C# 原本的通用 fcitx 轉檔沒有這段處理，重新產生字表後可能保留異體或私用字元。
+- 實機截圖顯示 `A,` 已進入 composition、但候選區空白；確認 `bin\Debug\liu.json` 是 2026-05 的 610 KB 舊表，沒有 `a,`／`a.`，而專案根目錄的本機 1.2 MB 表才含正確假名。主專案沒有把該本機字碼表同步至開發輸出。
+
+### 實作紀錄
+
+- `LiuTableConverter` 新增 fcitx 專用轉檔：保留 `j` 開頭正確日文字碼、移除舊碼，並建立去掉 `j` 的相容字根；例如 `ja, → a,`、`jka. → ka.`。
+- `LiuJsonTable` 載入既有 `liu.json` 時同樣套用覆蓋，讓舊版已產生的表不必先刪檔重建。
+- `uclliu.csproj` 在本機有 `liu.json` 時才將它設為 `Always` 輸出內容；字碼表仍不會納入 Git 或 release，CI 沒有該檔時也不會失敗。
+- README / CHANGELOG 補上日文輸入規則與 fcitx 匯入行為。
+
+### 驗證紀錄
+
+- 先新增核心測試，確認舊版缺少 fcitx 日文轉檔 API 而無法建置。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 通過，覆蓋 `a,` / `a.`、`ka,` / `ka.` 與既有錯誤 `liu.json` 載入覆蓋。
+- 以隔離輸出 `artifacts\verify-japanese\` 完成 .NET Framework 4.5.2 Debug Rebuild；僅保留既有 `Form1.lParam` 未使用 warning。
+- `cmd /c build.bat Debug` 成功，確認 `bin\Debug\liu.json` 的 SHA-256 已與專案根目錄表一致，並可讀出 `a, = あ／ぁ`、`a. = ア／ァ`、`ka, = か`、`ka. = カ`；另有既有 TSF x64 DLL 被其他桌面程序鎖定的清理 warning，未影響輸出同步或建置成功。
+
+### 未驗證邊界
+
+- 尚未以真人桌面目標程式驗收全域 hook 的選字流程；使用時先輸入字根（例如 `a,`），再以既有 Space / 數字選字流程送出。
+
+---
+
 ## 2026-09-15 - v0.19 chrome 拖移改由按鈕本體攔截 Click
 
 ### 問題觀察

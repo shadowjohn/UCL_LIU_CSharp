@@ -276,6 +276,44 @@ namespace uclliu
             return CinHead + rows.ToString() + CinTail;
         }
 
+        public static string ConvertFcitxBoshiamyTextToCinText(string tableText)
+        {
+            string cinText = ConvertLooseTextTableToCinText(
+                tableText,
+                new string[] { "[數據]", "[数据]", "[Data]", "[DATA]" });
+            string body = ExtractChardefBody(cinText);
+            StringBuilder rows = new StringBuilder();
+
+            using (StringReader reader = new StringReader(body))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    string key;
+                    string[] words;
+                    if (!TryParseLooseTableLine(line, out key, out words))
+                    {
+                        continue;
+                    }
+
+                    if (IsFcitxLegacyJapaneseRoot(key))
+                    {
+                        continue;
+                    }
+
+                    AppendCinRow(rows, key, words);
+
+                    string alias;
+                    if (TryGetFcitxJapaneseAlias(key, out alias))
+                    {
+                        AppendCinRow(rows, alias, words);
+                    }
+                }
+            }
+
+            return CinHead + rows.ToString() + CinTail;
+        }
+
         public static void ConvertRimeYamlToCinFile(string yamlPath, string cinPath)
         {
             string yamlText = ReadTextBestEffort(yamlPath);
@@ -381,7 +419,7 @@ namespace uclliu
             sourcePath = Path.Combine(directory, "fcitx_boshiamy.txt");
             if (File.Exists(sourcePath))
             {
-                ImportLooseTextTable(sourcePath, cinPath, log, new string[] { "[數據]", "[数据]", "[Data]", "[DATA]" });
+                ImportFcitxBoshiamyText(sourcePath, cinPath, log);
                 return;
             }
 
@@ -399,6 +437,16 @@ namespace uclliu
                 log("開始轉換 " + Path.GetFileName(sourcePath) + " -> liu.cin");
             }
             ConvertLooseTextTableToCinFile(sourcePath, cinPath, startMarkers);
+        }
+
+        private static void ImportFcitxBoshiamyText(string sourcePath, string cinPath, Action<string> log)
+        {
+            if (log != null)
+            {
+                log("開始轉換 " + Path.GetFileName(sourcePath) + " -> liu.cin");
+            }
+            string tableText = ReadTextBestEffort(sourcePath);
+            File.WriteAllText(cinPath, ConvertFcitxBoshiamyTextToCinText(tableText), Utf8NoBom);
         }
 
         private static void ImportRimeYaml(string sourcePath, string cinPath, Action<string> log)
@@ -502,6 +550,16 @@ namespace uclliu
             }
             rows.Append('\n');
             return true;
+        }
+
+        private static void AppendCinRow(StringBuilder rows, string key, string[] words)
+        {
+            rows.Append(key);
+            for (int i = 0; i < words.Length; i++)
+            {
+                rows.Append(' ').Append(words[i]);
+            }
+            rows.Append('\n');
         }
 
         private static bool TryParseLooseTableLine(string line, out string key, out string[] words)
@@ -721,6 +779,41 @@ namespace uclliu
                     return false;
                 }
             }
+            return true;
+        }
+
+        private static bool IsFcitxLegacyJapaneseRoot(string key)
+        {
+            if (String.IsNullOrEmpty(key) || key[0] == 'j')
+            {
+                return false;
+            }
+            return key.IndexOf(',') >= 0 || key.IndexOf('.') >= 0;
+        }
+
+        private static bool TryGetFcitxJapaneseAlias(string key, out string alias)
+        {
+            alias = null;
+            if (String.IsNullOrEmpty(key) || key.Length < 2 || key[0] != 'j')
+            {
+                return false;
+            }
+
+            char suffix = key[key.Length - 1];
+            if (suffix != ',' && suffix != '.')
+            {
+                return false;
+            }
+
+            for (int i = 1; i < key.Length - 1; i++)
+            {
+                if (key[i] < 'a' || key[i] > 'z')
+                {
+                    return false;
+                }
+            }
+
+            alias = key.Substring(1);
             return true;
         }
 

@@ -16,6 +16,7 @@ internal static class Program
         failed += Run("unitab converter writes expected cin entry", TestUnitabConverterWritesCinEntry);
         failed += Run("ensure json converts cin in working directory", TestEnsureJsonConvertsCin);
         failed += Run("ensure json converts fcitx boshiamy text", TestEnsureJsonConvertsFcitxBoshiamyText);
+        failed += Run("fcitx Japanese roots use standard aliases", TestFcitxJapaneseRootsUseStandardAliases);
         failed += Run("ensure json converts rime liur yaml", TestEnsureJsonConvertsRimeLiurYaml);
         failed += Run("ensure json converts terry boshiamy text", TestEnsureJsonConvertsTerryBoshiamyText);
         failed += Run("ensure json converts wuxiami text", TestEnsureJsonConvertsWuxiamiText);
@@ -192,11 +193,53 @@ internal static class Program
 
     private static void TestEnsureJsonConvertsFcitxBoshiamyText()
     {
-        AssertEnsureJsonFromTableSource(
-            "fcitx_boshiamy.txt",
-            "鍵碼=,.'abcdefghijklmnopqrstuvwxyz[]\n碼長=5\n[數據]\nucl 肥 米\n",
-            "\"ucl\"",
-            "\"肥\"");
+        string dir = Path.Combine(Path.GetTempPath(), "uclliu-core-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(dir, "fcitx_boshiamy.txt"),
+                "鍵碼=,.'abcdefghijklmnopqrstuvwxyz[]\n碼長=5\n[數據]\nucl 肥 米\na, \nja, あ ぁ\n",
+                new UTF8Encoding(false));
+
+            bool created = LiuTableConverter.EnsureLiuJson(dir, null);
+            Dictionary<string, List<string>> converted = LiuJsonTable.ParseChardefsJson(File.ReadAllText(Path.Combine(dir, "liu.json"), Encoding.UTF8));
+
+            AssertTrue(created, "EnsureLiuJson should create liu.json from fcitx_boshiamy.txt");
+            AssertSequence(new string[] { "肥", "米" }, converted["ucl"].ToArray());
+            AssertSequence(new string[] { "あ", "ぁ" }, converted["a,"].ToArray());
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    private static void TestFcitxJapaneseRootsUseStandardAliases()
+    {
+        string fcitx = "鍵碼=,.'abcdefghijklmnopqrstuvwxyz[]\n碼長=5\n[數據]\n"
+            + "a, \n"
+            + "ja, あ ぁ\n"
+            + "a. \n"
+            + "ja. ア ァ\n"
+            + "jka, か\n"
+            + "jka. カ\n";
+
+        string cin = LiuTableConverter.ConvertFcitxBoshiamyTextToCinText(fcitx);
+        Dictionary<string, List<string>> converted = LiuJsonTable.ParseChardefsJson(LiuTableConverter.ConvertCinTextToJson(cin));
+
+        AssertTrue(!cin.Contains("a, "), "fcitx legacy hiragana root should be removed");
+        AssertTrue(!cin.Contains("a. "), "fcitx legacy katakana root should be removed");
+        AssertSequence(new string[] { "あ", "ぁ" }, converted["a,"].ToArray());
+        AssertSequence(new string[] { "ア", "ァ" }, converted["a."].ToArray());
+        AssertSequence(new string[] { "か" }, converted["ka,"].ToArray());
+        AssertSequence(new string[] { "カ" }, converted["ka."].ToArray());
+
+        Dictionary<string, List<string>> existingJson = LiuJsonTable.ParseChardefsJson(
+            "{\"chardefs\":{\"a,\":[\"\"],\"ja,\":[\"あ\",\"ぁ\"],\"a.\":[\"\"],\"ja.\":[\"ア\",\"ァ\"]}}");
+
+        AssertSequence(new string[] { "あ", "ぁ" }, existingJson["a,"].ToArray());
+        AssertSequence(new string[] { "ア", "ァ" }, existingJson["a."].ToArray());
     }
 
     private static void TestEnsureJsonConvertsRimeLiurYaml()

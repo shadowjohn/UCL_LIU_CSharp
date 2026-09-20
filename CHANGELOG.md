@@ -6,6 +6,15 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ## [Unreleased]
 
+### Added
+
+- 補回 Python 版 fcitx 日文字根相容規則：`a,` 為平假名、`a.` 為片假名（例如 `a, → あ／ぁ`、`a. → ア／ァ`），並涵蓋 `ka,`／`ka.` 等音節。
+
+### Fixed
+
+- 匯入 `fcitx_boshiamy.txt` 時會改用正確的 `j...` 日文字碼建立相容字根；既有 `liu.json` 若仍含舊的錯誤字元，載入時也會以正確的日文字碼覆蓋。
+- 本機專案根目錄存在 `liu.json` 時，Debug／Release 建置會強制同步到輸出目錄，避免直接執行 `bin\Debug\uclliu.exe` 誤用過期字根表而沒有日文候選。
+
 ---
 
 ## [0.19] - 2026-09-15
