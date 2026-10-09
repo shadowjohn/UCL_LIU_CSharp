@@ -28,6 +28,7 @@
     <Compile Include="..\..\SmartCandidateTable.cs" Link="SmartCandidateTable.cs" />
     <Compile Include="..\..\TextOutput.cs" Link="TextOutput.cs" />
     <Compile Include="..\..\TableLayoutModeTransition.cs" Link="TableLayoutModeTransition.cs" />
+    <Compile Include="..\..\TrayMenuPopup.cs" Link="TrayMenuPopup.cs" />
     <Compile Include="..\..\TrayMenuText.cs" Link="TrayMenuText.cs" />
     <Compile Include="..\..\TsfBridge.cs" Link="TsfBridge.cs" />
     <Compile Include="..\..\TypingSound.cs" Link="TypingSound.cs" />

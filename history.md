@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-10-09 - tray 左鍵選單外點無法關閉
+
+### 問題觀察
+
+- 使用者回報左鍵開啟 system tray 選單後，點其他應用程式或再點 tray icon 都沒有消失，必須執行選單項目才能關閉。
+- 右鍵走 `NotifyIcon.ContextMenu` 原生流程；左鍵則直接呼叫 `ContextMenu.Show(this, ...)`，漏掉 Windows tray popup 要求的前景 owner 與結束通知。
+
+### 實作紀錄
+
+- 新增 `TrayMenuPopup`，在顯示前對同一個 owner 呼叫 `SetForegroundWindow`；在 `finally` 中送出 `WM_NULL`，補齊 Windows 原生取消與再次開啟的生命週期。
+- `Form1.show_tray_menu_at_cursor()` 使用上述流程；保留既有右鍵、選單重建及子選單，不新增 `Deactivate` 強制關閉或無條件切回舊視窗的行為。
+
+### 驗證紀錄
+
+- 新增兩個核心回歸測試：確認前景 owner → 顯示 → 結束的順序、owner handle 一致，以及選單動作丟出例外時仍會完成結束通知並保留原例外。先確認兩個測試失敗，再補上實作使其通過。
+- `dotnet run --project tools\UclLiuCoreTests\UclLiuCoreTests.csproj` 全部通過。
+- 隔離輸出 `artifacts\verify-tray-menu\` 的 .NET Framework 4.5.2 Debug Rebuild 通過；`cmd /c build.bat Debug` 同樣成功，已更新實際使用的 `bin\Debug\uclliu.exe`。
+- 保留既有 `Form1.lParam` 未使用 warning；實際輸出重建另有已載入的 TSF x64／x86 DLL 無法清理 warning，沒有修改或強制關閉載入 DLL 的其他應用程式。
+- 使用者回報「驗收通過，這樣比較方便」，並授權提交及推送此修正。
+
+### 未驗證邊界
+
+- 核心測試驗證 popup 呼叫順序，不會操作真人桌面；tray 選單原問題已由使用者驗收通過。Esc 與子選單操作未另行逐項回報。
+
+---
+
 ## 2026-09-20 - fcitx 日文假名字根相容
 
 ### 問題觀察

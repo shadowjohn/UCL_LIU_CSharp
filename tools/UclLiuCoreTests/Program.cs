@@ -33,6 +33,8 @@ internal static class Program
         failed += Run("tray menu text marks boolean settings", TestTrayMenuTextMarksBooleanSettings);
         failed += Run("tray menu text shows administrator restart action", TestTrayMenuTextShowsAdministratorRestartAction);
         failed += Run("tray menu opens on left and right click", TestTrayMenuOpensOnLeftAndRightClick);
+        failed += Run("tray popup activates its owner before opening and completes after closing", TestTrayPopupForegroundLifecycle);
+        failed += Run("tray popup completes its foreground lifecycle when a menu action throws", TestTrayPopupCompletesAfterFailure);
         failed += Run("chrome button does not keep focus", TestChromeButtonDoesNotKeepFocus);
         failed += Run("tsf bridge assets prefer architecture subfolder", TestTsfBridgeAssetsPreferArchitectureSubfolder);
         failed += Run("tsf bridge activation reports missing dll", TestTsfBridgeActivationReportsMissingDll);
@@ -445,6 +447,42 @@ internal static class Program
         AssertTrue(TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Left), "left click should open tray menu");
         AssertTrue(TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Right), "right click should open tray menu");
         AssertTrue(!TrayMenuClickPolicy.ShouldOpenMenu(System.Windows.Forms.MouseButtons.Middle), "middle click should not open tray menu");
+    }
+
+    private static void TestTrayPopupForegroundLifecycle()
+    {
+        IntPtr owner = new IntPtr(42);
+        List<string> calls = new List<string>();
+
+        TrayMenuPopup.Show(owner,
+            delegate { calls.Add("show"); },
+            delegate(IntPtr handle) { AssertEqual(owner, handle); calls.Add("foreground"); },
+            delegate(IntPtr handle) { AssertEqual(owner, handle); calls.Add("complete"); });
+
+        AssertSequence(new string[] { "foreground", "show", "complete" }, calls.ToArray());
+    }
+
+    private static void TestTrayPopupCompletesAfterFailure()
+    {
+        IntPtr owner = new IntPtr(43);
+        List<string> calls = new List<string>();
+        InvalidOperationException expected = new InvalidOperationException("menu action failed");
+        Exception caught = null;
+
+        try
+        {
+            TrayMenuPopup.Show(owner,
+                delegate { calls.Add("show"); throw expected; },
+                delegate(IntPtr handle) { AssertEqual(owner, handle); calls.Add("foreground"); },
+                delegate(IntPtr handle) { AssertEqual(owner, handle); calls.Add("complete"); });
+        }
+        catch (Exception ex)
+        {
+            caught = ex;
+        }
+
+        AssertTrue(Object.ReferenceEquals(expected, caught), "original menu action failure should be preserved");
+        AssertSequence(new string[] { "foreground", "show", "complete" }, calls.ToArray());
     }
 
     private static void TestChromeButtonDoesNotKeepFocus()

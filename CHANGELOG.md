@@ -12,6 +12,7 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ### Fixed
 
+- 修正左鍵開啟 system tray 選單時未設定前景 owner、導致點其他應用程式後選單仍殘留；補齊關閉後的 `WM_NULL` 通知，維持 Windows 原生選單生命週期。
 - 匯入 `fcitx_boshiamy.txt` 時會改用正確的 `j...` 日文字碼建立相容字根；既有 `liu.json` 若仍含舊的錯誤字元，載入時也會以正確的日文字碼覆蓋。
 - 本機專案根目錄存在 `liu.json` 時，Debug／Release 建置會強制同步到輸出目錄，避免直接執行 `bin\Debug\uclliu.exe` 誤用過期字根表而沒有日文候選。
 

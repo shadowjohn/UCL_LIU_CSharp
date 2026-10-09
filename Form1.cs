@@ -1797,7 +1797,10 @@ namespace uclliu
         private void show_tray_menu_at_cursor()
         {
             rebuild_tray_menu();
-            cMenu.Show(this, PointToClient(Cursor.Position));
+            TrayMenuPopup.Show(Handle, delegate
+            {
+                cMenu.Show(this, PointToClient(Cursor.Position));
+            });
         }
         private void rebuild_tray_menu()
         {

@@ -147,6 +147,7 @@
     <Compile Include="SmartCandidateTable.cs" />
     <Compile Include="TextOutput.cs" />
     <Compile Include="TableLayoutModeTransition.cs" />
+    <Compile Include="TrayMenuPopup.cs" />
     <Compile Include="TrayMenuText.cs" />
     <Compile Include="TsfBridge.cs" />
     <Compile Include="TypingSound.cs" />
