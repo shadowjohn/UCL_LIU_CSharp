@@ -14,6 +14,7 @@
     <Compile Include="..\..\DebugPerformanceTelemetry.cs" Link="DebugPerformanceTelemetry.cs" />
     <Compile Include="..\..\ElevatedRestart.cs" Link="ElevatedRestart.cs" />
     <Compile Include="..\..\ForegroundProcessSnapshot.cs" Link="ForegroundProcessSnapshot.cs" />
+    <Compile Include="..\..\FullWidthKeyConverter.cs" Link="FullWidthKeyConverter.cs" />
     <Compile Include="..\..\KeyboardHookPerformance.cs" Link="KeyboardHookPerformance.cs" />
     <Compile Include="..\..\KeyboardHookState.cs" Link="KeyboardHookState.cs" />
     <Compile Include="..\..\LiuJsonTable.cs" Link="LiuJsonTable.cs" />

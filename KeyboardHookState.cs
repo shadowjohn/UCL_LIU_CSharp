@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace uclliu
 {
@@ -28,6 +29,85 @@ namespace uclliu
         public static bool IsInjectedByUcl(int flags, IntPtr extraInfo)
         {
             return IsInjected(flags) && extraInfo == UnicodeSendInputOutput.UclExtraInfo;
+        }
+    }
+
+    public struct CtrlSpaceKeyDecision
+    {
+        public CtrlSpaceKeyDecision(bool shouldConsume, bool shouldToggleInputMode)
+        {
+            ShouldConsume = shouldConsume;
+            ShouldToggleInputMode = shouldToggleInputMode;
+        }
+
+        public bool ShouldConsume { get; private set; }
+        public bool ShouldToggleInputMode { get; private set; }
+    }
+
+    public sealed class CtrlSpaceShortcutState
+    {
+        private bool leftControlDown;
+        private bool rightControlDown;
+        private bool spaceDown;
+        private bool consumeSpaceUntilRelease;
+
+        public bool IsControlDown { get { return leftControlDown || rightControlDown; } }
+
+        public CtrlSpaceKeyDecision HandleKey(int virtualKey, bool keyDown, bool keyUp, bool enabled)
+        {
+            if (virtualKey == 162)
+            {
+                if (keyDown) leftControlDown = true;
+                else if (keyUp) leftControlDown = false;
+            }
+            else if (virtualKey == 163)
+            {
+                if (keyDown) rightControlDown = true;
+                else if (keyUp) rightControlDown = false;
+            }
+
+            if (virtualKey != 32)
+            {
+                return new CtrlSpaceKeyDecision(false, false);
+            }
+            if (keyUp)
+            {
+                bool consume = consumeSpaceUntilRelease;
+                spaceDown = false;
+                consumeSpaceUntilRelease = false;
+                return new CtrlSpaceKeyDecision(consume, false);
+            }
+            if (keyDown)
+            {
+                bool firstDown = !spaceDown;
+                spaceDown = true;
+                if (consumeSpaceUntilRelease)
+                {
+                    return new CtrlSpaceKeyDecision(true, false);
+                }
+                if (firstDown && enabled && IsControlDown)
+                {
+                    // 接管完整的 Space 按壓，不依賴 Ctrl／模式在放開時仍保持原狀。
+                    consumeSpaceUntilRelease = true;
+                    return new CtrlSpaceKeyDecision(true, true);
+                }
+            }
+            return new CtrlSpaceKeyDecision(false, false);
+        }
+    }
+
+    public sealed class KeyboardConsumedKeys
+    {
+        private readonly HashSet<int> keysDown = new HashSet<int>();
+
+        public void MarkKeyDown(int virtualKey)
+        {
+            keysDown.Add(virtualKey);
+        }
+
+        public bool TryConsumeKeyUp(int virtualKey, bool keyUp)
+        {
+            return keyUp && keysDown.Remove(virtualKey);
         }
     }
 

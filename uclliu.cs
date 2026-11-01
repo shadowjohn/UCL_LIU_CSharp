@@ -214,8 +214,7 @@ namespace uclliu
                     //# change to ucl
                     toggle_ucl();
                 }
-                f.btn_simple.Visible = true;
-                update_UI();
+                TableLayoutModeTransition.SetSimpleModeVisible(f.LP, f.btn_simple, true, update_UI);
             }
             code = ",,,t";
             if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)
@@ -230,8 +229,7 @@ namespace uclliu
                     //# change to ucl
                     toggle_ucl();
                 }
-                f.btn_simple.Visible = false;
-                update_UI();
+                TableLayoutModeTransition.SetSimpleModeVisible(f.LP, f.btn_simple, false, update_UI);
             }
             code = ",,,version";
             if (last_key.Length >= code.Length && last_key.Substring(last_key.Length - code.Length, code.Length) == code)

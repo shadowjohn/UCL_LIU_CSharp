@@ -2,6 +2,64 @@
 
 ---
 
+## 2026-11-01 - 短版切換簡中時的 FixedSize 排版 crash
+
+### 問題觀察
+
+- 使用者回報 `,,,s` 進入短版後輸入 `,,,c` 會 crash，懷疑缺少「簡」顯示區。
+- Windows Application log 的 .NET Runtime 1026 記錄顯示 `ArgumentException`，呼叫鏈為 `TableLayout.AssignRowsAndColumns → Control.SetVisibleCore → run_extra → LowLevelKeyboardProc`。
+- 短版正體的 X 按鈕跨佔剩餘欄位；`,,,c` 原本先設定 `btn_simple.Visible = true`，下一行才 `update_UI()`，因此 Visible setter 立即觸發排版時，單列 FixedSize 表格還沒有騰出「簡」的欄位。元件與新版面計算本身均已存在。
+
+### 實作紀錄
+
+- 在既有 `TableLayoutModeTransition` 新增簡繁顯示交易：先暫停 LP layout，再設定顯示狀態並更新版面，最後於 `finally` 恢復排版。
+- `,,,c` 與 `,,,t` 均透過同一流程切換；不新增欄位、不修改短版欄位規劃或簡繁轉換規則。
+- 與上一輪 Ctrl＋Space／英全修正一併交付；字碼表、個人設定及建置產物仍不納入提交。
+
+### 驗證紀錄
+
+- 新增三組真 WinForms 控制項測試：短版 type／word 四種可見狀態、反覆簡繁切換、長版原有欄位位置。
+- 原本的顯示順序先在兩組測試重現相同 FixedSize `ArgumentException`；修正後完整核心測試全部通過。
+- 隔離輸出 `artifacts\verify-short-simple-20261101\` 的 .NET Framework 4.5.2 Debug Rebuild 通過；另用 Windows PowerShell 載入該 EXE，在實際 .NET Framework WinForms 下驗證四種文字區組合及簡→繁→簡，全部通過。
+- `cmd /c build.bat Debug` 成功，已更新實際 `bin\Debug\uclliu.exe`；僅保留既有未使用欄位及 TSF DLL 已載入的清理 warning。
+- 使用者實機驗收短版切換簡中已不會當機，並授權將三項修正一併提交及推送。
+
+### 未驗證邊界
+
+- 自動化測試在未顯示的表格控制項執行；短版切換簡中的全域 hook 操作已由使用者驗收通過，簡中字詞轉換結果未另行逐項回報。
+
+---
+
+## 2026-11-01 - Ctrl＋Space 事件配對與英／全出字修正
+
+### 問題觀察
+
+- 使用者回報在 YouTube 播放器有焦點時，Ctrl＋Space 切換肥／英會連帶暫停影片。原 hook 已攔截符合快捷鍵的 Space keydown，但沒有接管對應 keyup；Ctrl 先放後仍按住 Space 時的 repeat 也可能穿透，持續按住 Ctrl 時則會重複切換。
+- 「英／全」原本兩個轉換分支都使用 `ea < 112 && ea > 123` 排除功能鍵，條件永遠不成立，空白、字母、數字與符號因而未轉為全形；舊有 Shift 符號映射也有缺漏。
+
+### 實作紀錄
+
+- `CtrlSpaceShortcutState` 記錄左右 Ctrl 與本次 Space 是否已由切換功能接管；首次按下切換一次，後續 repeat／keyup 都攔截，不依賴 Ctrl 放開順序。未啟用快捷鍵、遊戲模式及排除程式不會開始接管，已接管的 Space 則完成放開配對。
+- `FullWidthKeyConverter` 明確映射既有台灣／US 鍵盤可列印 VK：Space 為 U+3000，英文字母遵循 Shift XOR CapsLock，主鍵數字、OEM 符號與小鍵盤分別轉換；不以數值範圍把功能鍵或方向鍵誤當字元。
+- 英／全仍沿用 `queue_senddata()` 出字，並攔截已轉換按鍵的原始 keyup，避免殘留的 ASCII 事件送入前景應用程式。Ctrl、Alt、Win 快捷鍵維持原生處理，既有自身 injected output 放行順序不變。
+- CapsLock 改讀 toggle bit；Alt／Win 保護只查詢其他已按住修飾鍵的非同步狀態，不使用正在改變狀態的目前按鍵做判斷。
+
+### 驗證紀錄
+
+- Ctrl＋Space 與轉換按鍵配對先確認 7 組回歸測試 runtime 失敗，再補實作使其通過，覆蓋兩種放開順序、repeat、左右 Ctrl、停用／模式切換及一般按鍵放行。
+- 全形映射以獨立 runner 確認 stub 時 5 組可列印測試失敗，完成後 6 組全部通過；完整核心測試已整合並通過，涵蓋所有字母 Shift／CapsLock 組合、數字、OEM、小鍵盤與非列印鍵邊界。
+- `artifacts\verify-keyboard-20261101\` 的 .NET Framework 4.5.2 Debug Rebuild 成功，僅有既有 `Form1.lParam` 未使用 warning。
+- `cmd /c build.bat Debug` 成功，已更新 `bin\Debug\uclliu.exe`；有既有 TSF x64／x86 DLL 已載入而無法清理的 warning，沒有強制關閉其他桌面應用程式。
+- 以 reflection 對實際 Debug EXE 的全形映射與 Ctrl 先放開序列做無桌面副作用的 smoke test，並確認 EXE 與 `obj\Debug`、輸出字表與根目錄 `liu.json` 的 SHA-256 分別一致。
+- 使用者實機驗收 YouTube 下 Ctrl＋Space 切換及全形出字均正常。
+
+### 未驗證邊界
+
+- 自動化測試驗證狀態機及映射；YouTube 不再暫停與實際英／全出字已由使用者驗收通過。
+- 字元映射沿用既有台灣／US 鍵盤語意；沒有新增其他實體鍵盤配置的轉譯或 VK_SEPARATOR 支援。
+
+---
+
 ## 2026-10-09 - tray 左鍵選單外點無法關閉
 
 ### 問題觀察

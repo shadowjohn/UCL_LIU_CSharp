@@ -5,6 +5,22 @@ namespace uclliu
 {
     public static class TableLayoutModeTransition
     {
+        public static void SetSimpleModeVisible(TableLayoutPanel panel, Control simpleButton,
+            bool visible, Action updateLayout)
+        {
+            // Visible 會立即觸發父容器排版；必須等短版 X 跨欄重排後才恢復 layout。
+            panel.SuspendLayout();
+            try
+            {
+                simpleButton.Visible = visible;
+                updateLayout();
+            }
+            finally
+            {
+                panel.ResumeLayout(true);
+            }
+        }
+
         public static void RestoreLongModeColumns(
             TableLayoutPanel panel,
             Control typeLabel,

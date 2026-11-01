@@ -12,6 +12,9 @@ C# 版肥米輸入法更新紀錄。Python 版完整歷史請看 [UCL_LIU CHANGE
 
 ### Fixed
 
+- 修正短版模式下輸入 `,,,c` 切換簡中時，顯示「簡」按鈕與 X 按鈕跨欄尚未重排而造成的 `TableLayoutPanel` crash；簡繁顯示與版面重排改為同一次更新。
+- 修正 Ctrl＋Space 切換肥／英時只攔截 Space 按下、放開事件仍穿透的問題；現在會接管同一次按壓的重複與放開事件，且只切換一次。
+- 修正「英／全」的字元轉換分支永遠無法成立，補齊全形空白、英文字母、數字、Shift 符號與小鍵盤；字母大小寫遵循 Shift／CapsLock，Ctrl／Alt／Win 快捷鍵及非列印鍵維持原生處理。
 - 修正左鍵開啟 system tray 選單時未設定前景 owner、導致點其他應用程式後選單仍殘留；補齊關閉後的 `WM_NULL` 通知，維持 Windows 原生選單生命週期。
 - 匯入 `fcitx_boshiamy.txt` 時會改用正確的 `j...` 日文字碼建立相容字根；既有 `liu.json` 若仍含舊的錯誤字元，載入時也會以正確的日文字碼覆蓋。
 - 本機專案根目錄存在 `liu.json` 時，Debug／Release 建置會強制同步到輸出目錄，避免直接執行 `bin\Debug\uclliu.exe` 誤用過期字根表而沒有日文候選。

@@ -110,10 +110,15 @@ namespace uclliu
         private int intLLKey;
         private KBDLLHOOKSTRUCT lParam;
         private long shiftKeyDownTicks = 0;
+        private readonly CtrlSpaceShortcutState ctrlSpaceShortcut = new CtrlSpaceShortcutState();
+        private readonly KeyboardConsumedKeys fullWidthKeys = new KeyboardConsumedKeys();
 
         //https://stackoverflow.com/questions/577411/how-can-i-find-the-state-of-numlock-capslock-and-scrolllock-in-net
         [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
         public static extern short GetKeyState(int keyCode);
+
+        [DllImport("user32.dll", ExactSpelling = true)]
+        private static extern short GetAsyncKeyState(int keyCode);
 
         private struct KBDLLHOOKSTRUCT
         {
@@ -137,7 +142,7 @@ namespace uclliu
             long hookStartedTicks = KeyboardHookLatencyMonitor.GetTimestamp();
             try
             {
-            bool isCapsLock = (((ushort)GetKeyState(0x14)) & 0xffff) != 0;
+            bool isCapsLock = (GetKeyState(0x14) & 1) != 0;
             bool keydown = KeyboardHookMessage.IsKeyDown(wParam);
             bool keyup = KeyboardHookMessage.IsKeyUp(wParam);
             if (!keydown && !keyup)
@@ -201,8 +206,18 @@ namespace uclliu
             }
             //如果是需要跳過的 app ，就跳過
             string foregroundProcessName = ucl.getForegroundWindowProcessName();
-            if (TextOutputRouter.MatchesProcess(foregroundProcessName, ucl.sendkey_not_use_ucl_apps))
+            bool skipApplication = TextOutputRouter.MatchesProcess(foregroundProcessName, ucl.sendkey_not_use_ucl_apps);
+            CtrlSpaceKeyDecision ctrlSpaceDecision = ctrlSpaceShortcut.HandleKey(ea, keydown, keyup,
+                ucl.config["DEFAULT"]["CTRL_SP"] == "1" && !ucl.flag_is_gamemode && !skipApplication);
+            ucl.flag_is_ctrl_down = ctrlSpaceShortcut.IsControlDown;
+            bool consumeFullWidthRelease = fullWidthKeys.TryConsumeKeyUp(ea, keyup);
+            if (skipApplication)
             {
+                if (ctrlSpaceDecision.ShouldConsume || consumeFullWidthRelease)
+                {
+                    if (keyup) ucl.handle_typing_sound(false, true, ea);
+                    return NO;
+                }
                 if (ucl.is_ucl())
                 {
                     ucl.toggle_ucl();
@@ -210,6 +225,11 @@ namespace uclliu
                 return OK;
             }
             ucl.handle_typing_sound(keydown, keyup, ea);
+            if (consumeFullWidthRelease)
+            {
+                ucl.last_key = "";
+                return NO;
+            }
             //處理額外的功能，如 ,,,version
             //Console.WriteLine(ea);
             if (keyup && ((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109 || ea == 189 || ea == 187 || ea == 222 || ea == 186))
@@ -252,6 +272,12 @@ namespace uclliu
             else if (keyup && !((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109 || ea == 222 || ea == 186))
             {
                 ucl.last_key = "";
+            }
+
+            if (ctrlSpaceDecision.ShouldConsume)
+            {
+                if (ctrlSpaceDecision.ShouldToggleInputMode) ucl.toggle_ucl();
+                return NO;
             }
 
             if (keydown && ESC && ucl.has_visible_smart_candidates())
@@ -315,29 +341,14 @@ namespace uclliu
                 ucl.flag_is_play_capslock_otherkey = true;
                 ucl.debug_print("Debug event F");
             }
-            if (keydown && ea == 32 && ucl.config["DEFAULT"]["CTRL_SP"] == "1")
-            { // # check ctrl + space
-                if (ucl.flag_is_ctrl_down == true)
-                {
-                    ucl.toggle_ucl();
-                    return NO;
-                }
-            }
             if (keyup && CAPS)
             {
                 ucl.flag_is_capslock_down = false;
                 ucl.flag_is_play_capslock_otherkey = false;
                 ucl.debug_print("Debug event E");
             }
-            if (keydown && (LCtrl || RCtrl))
+            if (LCtrl || RCtrl)
             {
-                ucl.flag_is_ctrl_down = true;
-                ucl.debug_print("Ctrl key");
-                return OK;
-            }
-            if (keyup && (LCtrl || RCtrl))
-            {
-                ucl.flag_is_ctrl_down = false;
                 return OK;
             }
             if (keydown && ucl.flag_is_ctrl_down)
@@ -902,185 +913,18 @@ namespace uclliu
                 { // #↑←→↓
                     return OK;
                 }
-                if (keydown && !ucl.flag_is_shift_down && ((char)(ea)).ToString().Length == 1 && ucl.is_hf() == false && ea < 112 && ea > 123)  // && event.Injected == 0 :
+                string fullWidthText;
+                if (keydown && !ucl.is_hf()
+                    // 只查「其他已按住」的修飾鍵，不依賴 hook 執行緒的輸入佇列狀態。
+                    && (GetAsyncKeyState(0x12) & 0x8000) == 0
+                    && (GetAsyncKeyState(0x5B) & 0x8000) == 0
+                    && (GetAsyncKeyState(0x5C) & 0x8000) == 0
+                    && FullWidthKeyConverter.TryConvert(ea, ucl.flag_is_shift_down, isCapsLock, out fullWidthText))
                 {
-                    int kac = ea;
-                    //112~123 是 F1~F12
-                    //修正 c# 版無法偵測大小寫要作在這
-                    //如果本來就是96~105，代表右邊的數字鍵
-                    //這裡在處理 英/全
-                    //Console.WriteLine("ea:" + ea.ToString());
-                    switch (kac)
-                    {
-                        case 96:
-                        case 97:
-                        case 98:
-                        case 99:
-                        case 100:
-                        case 101:
-                        case 102:
-                        case 103:
-                        case 104:
-                        case 105:
-                            kac -= 48;
-                            break;
-                        case 106:
-                        case 107:
-                        case 108:
-                        case 109:
-                        case 110:
-                        case 111:
-                            //右邊數字鍵，英全形
-                            kac -= 64;
-                            break;
-                        case 186: // ;                                
-                            kac -= 127;
-                            break;
-                        case 220: //\
-                            kac -= 128;
-                            ucl.queue_senddata("＼");
-                            return NO;
-                        case 219: //[
-                            kac = 91;
-                            break;
-                        case 221: //]
-                            kac = 93;
-                            break;
-                        case 222:
-                            kac -= 183;
-                            break;
-                        case 187: //+
-                        case 188: //,
-                        case 189: //-                            
-                        case 190: //.
-                        case 191: ///                           
-                            kac -= 144;
-                            break;
-                        case 192: //`
-                            kac -= 96;
-                            break;
-                    }
-                    if (kac >= 65 && kac <= 90 && !isCapsLock)
-                    {
-                        kac = kac + 32;
-                    }
-                    else if (kac >= 65 && kac <= 90 && isCapsLock)
-                    {
-                        //kac = kac;
-                    }
-                    string k = ucl.widen(((char)(kac)).ToString());
-                    ucl.queue_senddata(k);
+                    // 只接管可列印鍵，Ctrl／Alt／Win 快捷鍵與功能鍵保留原生行為。
+                    fullWidthKeys.MarkKeyDown(ea);
+                    ucl.queue_senddata(fullWidthText);
                     ucl.debug_print("eng / full");
-                    //數字變全形
-                    return NO;
-                }
-                else if (keydown && ucl.flag_is_shift_down && ((char)(ea)).ToString().Length == 1 && ucl.is_hf() == false && ea < 112 && ea > 123)  // && event.Injected == 0 :
-                {
-                    //112~123 是 F1~F12
-                    //英 / 全 按著 shift 時
-                    int kac = ea;
-                    //修正 c# 版無法偵測大小寫要作在這
-                    //如果本來就是96~105，代表右邊的數字鍵
-                    //這裡在處理 英/全
-                    //Console.WriteLine("英全 + shift ea:" + ea.ToString());
-                    switch (kac)
-                    {
-                        case 186: // : 
-                            kac = 58;
-                            break;
-                        case 222: // "
-                            kac = 34;
-                            break;
-                        case 220: // |
-                            kac = 124;
-                            break;
-                        case 219: // {
-                            kac = 123;
-                            break;
-                        case 221: // }
-                            kac = 125;
-                            break;
-                        case 187: // =
-                            kac = 61;
-                            break;
-                        case 188: // <
-                            kac = 60;
-                            break;
-                        case 190: // >
-                            kac = 62;
-                            break;
-                        case 189: // _
-                            kac = 95;
-                            break;
-                        case 192: // ~
-                            kac = 126;
-                            break;
-                        case 48: // )
-                            kac = 41;
-                            break;
-                        case 49: // !
-                            kac = 33;
-                            break;
-                        case 50: // @
-                            kac = 64;
-                            break;
-                        case 51: // #
-                            kac = 35;
-                            break;
-                        case 52: // $
-                            kac = 36;
-                            break;
-                        case 53: // %
-                            kac = 37;
-                            break;
-                        case 54: // ^
-                            kac = 94;
-                            break;
-                        case 55: // &
-                            kac = 38;
-                            break;
-                        case 56: // *
-                            kac = 42;
-                            break;
-                        case 57: // (
-                            kac = 40;
-                            break;
-
-                        case 96:
-                        case 97:
-                        case 98:
-                        case 99:
-                        case 100:
-                        case 101:
-                        case 102:
-                        case 103:
-                        case 104:
-                        case 105:
-                            kac -= 48;
-                            break;
-                        case 106:
-                        case 107:
-                        case 108:
-                        case 109:
-                        case 110:
-                        case 111:
-                            //右邊數字鍵，英全形
-                            kac -= 64;
-                            break;
-
-                    }
-                    if (kac >= 65 && kac <= 90 && !isCapsLock)
-                    {
-                        kac = kac + 32;
-                    }
-                    else if (kac >= 65 && kac <= 90 && isCapsLock)
-                    {
-                        //kac = kac;
-                    }
-                    string k = ucl.widen(((char)(kac)).ToString());
-                    ucl.queue_senddata(k);
-                    ucl.debug_print("eng / full");
-                    //數字變全形
                     return NO;
                 }
                 return OK;

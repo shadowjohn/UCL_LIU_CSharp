@@ -53,6 +53,9 @@ internal static class Program
         failed += Run("short mode packed layout removes hidden column gaps", TestShortModePackedLayoutRemovesHiddenColumnGaps);
         failed += Run("short mode chrome text padding nudges button text upward", TestShortModeChromeTextPaddingNudgesButtonTextUpward);
         failed += Run("long mode transition restores columns before showing game button", TestLongModeTransitionRestoresColumnsBeforeShowingGameButton);
+        failed += Run("short mode reserves a column when simplified output is enabled", TestShortModeCanShowSimpleButton);
+        failed += Run("short mode simplified output can toggle repeatedly", TestShortModeCanToggleSimpleButtonRepeatedly);
+        failed += Run("long mode simplified output keeps original control columns", TestLongModeCanToggleSimpleButton);
         failed += Run("label update batcher coalesces short mode layout", TestLabelUpdateBatcherCoalescesShortModeLayout);
         failed += Run("output hint composer ignores stale candidate labels", TestOutputHintComposerIgnoresStaleCandidateLabels);
         failed += Run("custom root validation matches UCL rules", TestCustomRootValidation);
@@ -105,6 +108,19 @@ internal static class Program
         failed += Run("typing sound reuses loaded handle on hot playback", TestTypingSoundReusesLoadedHandleOnHotPlayback);
         failed += Run("typing sound parses pcm16 wav for independent waveout playback", TestTypingSoundParsesPcm16WavForIndependentWaveOutPlayback);
         failed += Run("keyboard hook treats system key messages as key transitions", TestKeyboardHookSystemMessages);
+        failed += Run("ctrl space consumes the whole press and toggles once", CtrlSpaceShortcutTests.TestConsumesWholePressAndTogglesOnce);
+        failed += Run("ctrl space consumes repeats after Ctrl is released first", CtrlSpaceShortcutTests.TestControlReleasedBeforeSpace);
+        failed += Run("disabled ctrl space and other shortcuts remain native", CtrlSpaceShortcutTests.TestDisabledAndOtherShortcutsRemainNative);
+        failed += Run("ordinary held space is not captured when Ctrl is pressed later", CtrlSpaceShortcutTests.TestControlPressedDuringOrdinarySpace);
+        failed += Run("ctrl space tracks both control keys independently", CtrlSpaceShortcutTests.TestBothControlKeysAreTracked);
+        failed += Run("captured ctrl space survives input mode changes", CtrlSpaceShortcutTests.TestCapturedSpaceSurvivesModeChanges);
+        failed += Run("converted full width keys consume only their matching release", CtrlSpaceShortcutTests.TestConsumedKeyReleaseIsPaired);
+        failed += Run("English full width converts space to U+3000", FullWidthKeyConverterTests.TestSpace);
+        failed += Run("English full width respects Shift XOR CapsLock for letters", FullWidthKeyConverterTests.TestLetters);
+        failed += Run("English full width converts top row digits and shifted symbols", FullWidthKeyConverterTests.TestDigits);
+        failed += Run("English full width converts OEM symbols", FullWidthKeyConverterTests.TestSymbols);
+        failed += Run("English full width converts numpad keys", FullWidthKeyConverterTests.TestNumpad);
+        failed += Run("English full width leaves non printable keys native", FullWidthKeyConverterTests.TestNonPrintableKeys);
         failed += Run("shift release clears state even when ctrl space is enabled", TestShiftReleaseClearsStateWithCtrlSpace);
         failed += Run("shift release toggles input only for standalone shift mode", TestShiftReleaseToggleRules);
         failed += Run("shift release ignores stale standalone shift", TestShiftReleaseIgnoresStaleStandaloneShift);
@@ -850,6 +866,135 @@ internal static class Program
         AssertEqual(5, fixture.Panel.GetColumn(fixture.Game));
         AssertEqual(6, fixture.Panel.GetColumn(fixture.Close));
         AssertEqual(1, fixture.Panel.GetColumnSpan(fixture.Close));
+    }
+
+    private static void TestShortModeCanShowSimpleButton()
+    {
+        bool[] typeVisible = { false, true, false, true };
+        bool[] wordVisible = { false, false, true, true };
+        int[] simpleColumns = { 2, 3, 3, 4 };
+        int[] closeColumns = { 3, 4, 4, 5 };
+        int[] closeSpans = { 4, 3, 3, 2 };
+
+        for (int i = 0; i < typeVisible.Length; i++)
+        {
+            TableLayoutFixture fixture = CreateShortModeTableLayoutFixture();
+            try
+            {
+                fixture.Panel.SuspendLayout();
+                ApplyShortModeLayoutForTest(fixture, typeVisible[i], wordVisible[i]);
+                fixture.Panel.ResumeLayout(true);
+
+                int index = i;
+                TableLayoutModeTransition.SetSimpleModeVisible(fixture.Panel, fixture.Simple, true, delegate
+                {
+                    AssertTrue(fixture.Simple.Visible, "new mode must be visible to the layout calculation");
+                    ApplyShortModeLayoutForTest(fixture, typeVisible[index], wordVisible[index]);
+                });
+
+                fixture.Panel.PerformLayout();
+                AssertEqual(simpleColumns[i], fixture.Panel.GetColumn(fixture.Simple));
+                AssertEqual(closeColumns[i], fixture.Panel.GetColumn(fixture.Close));
+                AssertEqual(closeSpans[i], fixture.Panel.GetColumnSpan(fixture.Close));
+                // GetControlFromPosition 也可能回傳仍保留相同欄位的隱藏 label；驗證可見按鈕的實際配置位置。
+                TableLayoutPanelCellPosition simplePosition = fixture.Panel.GetPositionFromControl(fixture.Simple);
+                TableLayoutPanelCellPosition closePosition = fixture.Panel.GetPositionFromControl(fixture.Close);
+                AssertEqual(simpleColumns[i], simplePosition.Column);
+                AssertEqual(0, simplePosition.Row);
+                AssertEqual(closeColumns[i], closePosition.Column);
+                AssertEqual(0, closePosition.Row);
+                AssertEqual(7, fixture.Panel.ColumnCount);
+                AssertEqual(1, fixture.Panel.RowCount);
+            }
+            finally
+            {
+                fixture.Panel.Dispose();
+            }
+        }
+    }
+
+    private static void TestShortModeCanToggleSimpleButtonRepeatedly()
+    {
+        TableLayoutFixture fixture = CreateShortModeTableLayoutFixture();
+        try
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                TableLayoutModeTransition.SetSimpleModeVisible(fixture.Panel, fixture.Simple, true, delegate
+                {
+                    ApplyShortModeLayoutForTest(fixture, false, false);
+                });
+                AssertTrue(fixture.Simple.Visible, "simplified mode must be enabled");
+                AssertEqual(2, fixture.Panel.GetColumn(fixture.Simple));
+                AssertEqual(3, fixture.Panel.GetColumn(fixture.Close));
+                AssertEqual(4, fixture.Panel.GetColumnSpan(fixture.Close));
+
+                TableLayoutModeTransition.SetSimpleModeVisible(fixture.Panel, fixture.Simple, false, delegate
+                {
+                    ApplyShortModeLayoutForTest(fixture, false, false);
+                });
+                AssertTrue(!fixture.Simple.Visible, "traditional mode must hide the indicator");
+                AssertEqual(2, fixture.Panel.GetColumn(fixture.Close));
+                AssertEqual(5, fixture.Panel.GetColumnSpan(fixture.Close));
+                fixture.Panel.PerformLayout();
+            }
+        }
+        finally
+        {
+            fixture.Panel.Dispose();
+        }
+    }
+
+    private static void TestLongModeCanToggleSimpleButton()
+    {
+        TableLayoutFixture fixture = CreateShortModeTableLayoutFixture();
+        try
+        {
+            TableLayoutModeTransition.RestoreLongModeColumns(fixture.Panel, fixture.Type,
+                fixture.Word, fixture.Simple, fixture.Game, fixture.Close);
+            fixture.Type.Visible = true;
+            fixture.Word.Visible = true;
+            fixture.Game.Visible = true;
+            foreach (bool visible in new bool[] { true, false, true })
+            {
+                TableLayoutModeTransition.SetSimpleModeVisible(fixture.Panel, fixture.Simple, visible, delegate
+                {
+                    fixture.Panel.ColumnStyles[4].Width = fixture.Simple.Visible ? 40 : 0;
+                });
+                fixture.Panel.PerformLayout();
+                AssertTrue(fixture.Simple.Visible == visible, "indicator visibility must follow selected mode");
+                AssertEqual(4, fixture.Panel.GetColumn(fixture.Simple));
+                AssertEqual(5, fixture.Panel.GetColumn(fixture.Game));
+                AssertEqual(6, fixture.Panel.GetColumn(fixture.Close));
+                AssertEqual(1, fixture.Panel.GetColumnSpan(fixture.Close));
+            }
+        }
+        finally
+        {
+            fixture.Panel.Dispose();
+        }
+    }
+
+    private static void ApplyShortModeLayoutForTest(TableLayoutFixture fixture, bool typeVisible, bool wordVisible)
+    {
+        ShortModePackedLayoutPlan plan = UiLayoutCalculator.BuildShortModePackedLayout(
+            new ShortModeLabelLayout(typeVisible ? 18 : 0, typeVisible),
+            new ShortModeLabelLayout(wordVisible ? 12 : 0, wordVisible),
+            fixture.Simple.Visible, 40, 7);
+        fixture.Type.Visible = typeVisible;
+        fixture.Word.Visible = wordVisible;
+        fixture.Panel.SetColumn(fixture.Type, plan.TypeColumn);
+        fixture.Panel.SetColumnSpan(fixture.Type, plan.TypeColumnSpan);
+        fixture.Panel.SetColumn(fixture.Word, plan.WordColumn);
+        fixture.Panel.SetColumnSpan(fixture.Word, plan.WordColumnSpan);
+        fixture.Panel.SetColumn(fixture.Simple, plan.SimpleColumn);
+        fixture.Panel.SetColumnSpan(fixture.Simple, plan.SimpleColumnSpan);
+        fixture.Panel.SetColumn(fixture.Close, plan.CloseColumn);
+        fixture.Panel.SetColumnSpan(fixture.Close, plan.CloseColumnSpan);
+        for (int i = 0; i < plan.ColumnWidths.Length; i++)
+        {
+            fixture.Panel.ColumnStyles[i].Width = plan.ColumnWidths[i];
+        }
     }
 
     private static TableLayoutFixture CreateShortModeTableLayoutFixture()
