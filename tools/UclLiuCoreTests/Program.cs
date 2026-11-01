@@ -17,6 +17,13 @@ internal static class Program
         failed += Run("ensure json converts cin in working directory", TestEnsureJsonConvertsCin);
         failed += Run("ensure json converts fcitx boshiamy text", TestEnsureJsonConvertsFcitxBoshiamyText);
         failed += Run("fcitx Japanese roots use standard aliases", TestFcitxJapaneseRootsUseStandardAliases);
+        failed += Run("standard Japanese JSON preserves i and ji roots", JapaneseAliasCompatibilityTests.TestJsonPreservesStandardJapaneseRoots);
+        failed += Run("romanized ja is not mistaken for legacy fcitx", JapaneseAliasCompatibilityTests.TestJsonDoesNotInferLegacyPrefixFromRomanizedJa);
+        failed += Run("legacy Japanese aliases remain stable after reload", JapaneseAliasCompatibilityTests.TestJsonLegacyAliasesRemainStableAfterReload);
+        failed += Run("JSON detects legacy fcitx namespace per script", JapaneseAliasCompatibilityTests.TestJsonDetectsLegacyNamespacePerScript);
+        failed += Run("modern fcitx preserves kana and symbol roots", JapaneseAliasCompatibilityTests.TestFcitxPreservesStandardKanaAndSymbolRoots);
+        failed += Run("legacy fcitx preserves unrelated symbol roots", JapaneseAliasCompatibilityTests.TestLegacyFcitxPreservesUnrelatedSymbolRoots);
+        failed += Run("fcitx converter detects legacy namespace per script", JapaneseAliasCompatibilityTests.TestFcitxDetectsLegacyNamespacePerScript);
         failed += Run("ensure json converts rime liur yaml", TestEnsureJsonConvertsRimeLiurYaml);
         failed += Run("ensure json converts terry boshiamy text", TestEnsureJsonConvertsTerryBoshiamyText);
         failed += Run("ensure json converts wuxiami text", TestEnsureJsonConvertsWuxiamiText);
@@ -322,7 +329,7 @@ internal static class Program
     {
         string expected = "UCLLIU 肥米輸入法 C# 版\n\n"
             + "作者：羽山秋人 (https://3wa.tw)、Benson9954029\n"
-            + "版本：0.19\n\n"
+            + "版本：0.20\n\n"
             + "熱鍵提示：\n\n"
             + "「,,,VERSION」目前版本\n"
             + "「'ucl」同音字查詢\n"
@@ -339,7 +346,7 @@ internal static class Program
             + "「,,,Z」框字的文字變成字根\n"
             + "「,,,BOX」開啟自定詞庫\n";
 
-        AssertEqual("0.19", UclLiuAppInfo.Version);
+        AssertEqual("0.20", UclLiuAppInfo.Version);
         AssertEqual("UCLLIU 肥米輸入法 C# 版", UclLiuAppInfo.AboutTitle);
         AssertEqual("Fastest Chinese Input Method", UclLiuAppInfo.FileDescription);
         AssertEqual("UCLLIU Input Method", UclLiuAppInfo.ProductName);

@@ -46,7 +46,7 @@ namespace uclliu
                 throw new InvalidDataException("liu.json 缺少 chardefs。");
             }
 
-            return ApplyFcitxJapaneseAliases(NormalizeChardefKeys(ParseStringListDictionary(chardefs)));
+            return ApplyFcitxJapaneseAliases(NormalizeChardefKeys(ParseStringListDictionary(chardefs)), false);
         }
 
         public static Dictionary<string, List<string>> ParseStringListDictionaryJson(string json)
@@ -146,7 +146,8 @@ namespace uclliu
             return result;
         }
 
-        private static Dictionary<string, List<string>> ApplyFcitxJapaneseAliases(Dictionary<string, List<string>> chardefs)
+        internal static Dictionary<string, List<string>> ApplyFcitxJapaneseAliases(
+            Dictionary<string, List<string>> chardefs, bool replaceUnicodeAliases)
         {
             Dictionary<string, List<string>> result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
             foreach (KeyValuePair<string, List<string>> pair in chardefs)
@@ -154,16 +155,49 @@ namespace uclliu
                 result[pair.Key] = new List<string>(pair.Value);
             }
 
+            bool hasLegacyHiragana = HasFcitxJapaneseAnchor(chardefs, "ja,", "あ");
+            bool hasLegacyKatakana = HasFcitxJapaneseAnchor(chardefs, "ja.", "ア");
             foreach (KeyValuePair<string, List<string>> pair in chardefs)
             {
                 string alias;
-                if (TryGetFcitxJapaneseAlias(pair.Key, out alias))
+                if (!TryGetFcitxJapaneseAlias(pair.Key, out alias)
+                    || (pair.Key[pair.Key.Length - 1] == ',' ? !hasLegacyHiragana : !hasLegacyKatakana))
                 {
-                    // fcitx 表的 j 開頭日文碼才是正確 Unicode 值；覆蓋舊的 a, / a. 相容碼。
-                    result[alias] = new List<string>(pair.Value);
+                    continue;
                 }
+
+                List<string> currentValues;
+                if (!replaceUnicodeAliases && chardefs.TryGetValue(alias, out currentValues)
+                    && currentValues.Count > 0 && alias[0] != 'j' && !ContainsPrivateUseCharacters(currentValues))
+                {
+                    // 轉換後的標準 Unicode alias 已可直接使用，重新載入時不可再把 ji, 的 j 去掉。
+                    continue;
+                }
+                result[alias] = new List<string>(pair.Value);
             }
             return result;
+        }
+
+        private static bool HasFcitxJapaneseAnchor(Dictionary<string, List<string>> chardefs, string key, string kana)
+        {
+            List<string> values;
+            // 一般羅馬字 ja, 是「じゃ」；只有舊 fcitx 的 ja, 才表示「あ」，兩種假名需分別辨識。
+            return chardefs.TryGetValue(key, out values) && values.Contains(kana);
+        }
+
+        private static bool ContainsPrivateUseCharacters(List<string> values)
+        {
+            foreach (string value in values)
+            {
+                for (int i = 0; i < value.Length; i++)
+                {
+                    if (CharUnicodeInfo.GetUnicodeCategory(value, i) == UnicodeCategory.PrivateUse)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private static bool TryGetFcitxJapaneseAlias(string key, out string alias)

@@ -49,6 +49,10 @@ jobs:
         shell: pwsh
         run: msbuild .\uclliu.csproj /m /p:Configuration=$env:CONFIGURATION /p:Platform=AnyCPU
 
+      - name: Verify full-width command tracking
+        shell: powershell
+        run: .\tools\Test-KeyboardCommandTracking.ps1 -ExecutablePath .\bin\Release\uclliu.exe
+
       - name: Package release assets
         shell: pwsh
         run: |

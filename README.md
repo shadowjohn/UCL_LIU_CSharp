@@ -1,8 +1,8 @@
 # UCL_LIU_CSharp
 
-C# / WinForms 版肥米輸入法，目前版本 v0.19。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
+C# / WinForms 版肥米輸入法，目前版本 v0.20。這個分支的目標是保留 2019 年 C# 版輕量、低依賴、好攜帶的優點，同時逐步追上 Python 版 UCL_LIU 後來累積的穩定性與工具鏈。
 
-目前 C# 版已進入可日用測試的現代化復刻狀態：已補上多來源字碼表自動轉換、自定詞庫、Unicode SendInput 出字、非阻塞剪貼簿 fallback、打字音效、同音/注音查詢、固定候選字、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback、管理員重啟導引與核心測試。v0.18 將送字移到獨立 STA 訊息迴圈；v0.19 補上短版 chrome 拖移與單一注音符號第 0 候選。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
+目前 C# 版已進入可日用測試的現代化復刻狀態：已補上多來源字碼表自動轉換、自定詞庫、Unicode SendInput 出字、非阻塞剪貼簿 fallback、打字音效、同音/注音查詢、固定候選字、Win11/Chrome/PTT/Notepad 相容規則、TSF Bridge 外掛 fallback、管理員重啟導引與核心測試。v0.18 將送字移到獨立 STA 訊息迴圈；v0.19 補上短版 chrome 拖移與單一注音符號第 0 候選；v0.20 補齊日文假名相容、tray 選單關閉、Ctrl＋Space、英／全出字及短版簡繁切換修正。它仍不是 Python 版 v1.67 的完整替代品；OpenCC/特殊字修正、更多長尾 App 相容規則與 TSF 實機調校仍在後續項目。
 
 ![UCL_LIU C# screenshot](screenshot/ucl_1.png)
 
@@ -11,7 +11,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.19。這個分支的目標是
 | 版本 | 實用成熟度 | 工程可維護性 | 日用信心 | 定位 |
 | --- | ---: | ---: | ---: | --- |
 | Python 版 v1.67 | 8.5 / 10 | 6.5 / 10 | 8.5 / 10 | 功能最完整的正史版，多年實戰相容性最足 |
-| C# 版 v0.19 | 8.7 / 10 | 8.8 / 10 | 8.6 / 10 | 送字與 debug 輸出脫離 keyboard hook / UI 執行緒；短版 chrome 可安全拖移，單一注音符號可直接選第 0 候選 |
+| C# 版 v0.20 | 8.7 / 10 | 8.8 / 10 | 8.6 / 10 | 保留非阻塞出字與短版拖移；補齊日文、英全、Ctrl＋Space、tray 選單及短版簡繁切換相容性 |
 
 ## 目前狀態
 
@@ -32,7 +32,7 @@ C# / WinForms 版肥米輸入法，目前版本 v0.19。這個分支的目標是
 
 ## 低依賴狀態
 
-C# 版 v0.19 目前已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。主程式只使用 .NET Framework 4.5.2 內建 reference，固定候選字也只讀本機 `candidate.txt`，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。TSF Bridge 的 C++ 原始碼也已納入 `tsf_bridge\UclTsfBridge`，可由本 repo 自行重建。
+C# 版 v0.20 目前已整理成「無外部 NuGet、無 DLL 合併」的乾淨 WinForms 專案。主程式只使用 .NET Framework 4.5.2 內建 reference，固定候選字也只讀本機 `candidate.txt`，功能邏輯盡量收在專案原始碼裡，方便直接用 Visual Studio 或 MSBuild 重建。TSF Bridge 的 C++ 原始碼也已納入 `tsf_bridge\UclTsfBridge`，可由本 repo 自行重建。
 
 TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預設出字流程；只有手動切到 `TSF出字模式` 時才會透過 named pipe 呼叫 `tsf_bridge\UclTsfBridge.dll`。
 
@@ -54,6 +54,14 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 - `System.Drawing`
 - `System.Web.Extensions`
 - `System.Windows.Forms`
+
+## v0.20 重點
+
+- 日文假名支援 `a,`（平假名）與 `a.`（片假名），舊 fcitx 相容處理不會覆寫一般字表的正常假名或刪除合法符號。
+- 左鍵開啟 tray 選單後，點其他應用程式或 tray icon 可正常關閉選單。
+- Ctrl＋Space 接管完整 Space 按壓，只切換一次，不再讓 YouTube 收到殘留的空白鍵事件。
+- 英／全恢復全形空白、字母、數字、Shift 符號與小鍵盤，並保留 `,,,` 指令及原生快捷鍵。
+- 短版切簡中時，先完成「簡」按鈕與 X 跨欄重排，不再因表格格子用盡而當機。
 
 ## v0.19 重點
 
@@ -93,13 +101,15 @@ TSF Bridge 是例外：它是可選外掛，不合併進主程式、不列入預
 
 | 檔案 | 說明 |
 | --- | --- |
-| [uclliu-v0.19.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.19/uclliu-v0.19.zip) | v0.19 推薦下載包，含 `uclliu.exe`、`pinyi.txt`、`candidate.txt`、候選資料授權聲明、`tsf_bridge`、README 與 LICENSE |
-| [uclliu.exe](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.19/uclliu.exe) | v0.19 單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材 |
+| [uclliu-v0.20.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.20/uclliu-v0.20.zip) | v0.20 推薦下載包，含 `uclliu.exe`、`pinyi.txt`、`candidate.txt`、候選資料授權聲明、`tsf_bridge`、README 與 LICENSE |
+| [uclliu.exe](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.20/uclliu.exe) | v0.20 單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材 |
 | [RELEASE/0.12/uclliu.zip](RELEASE/0.12/uclliu.zip) | v0.12 推薦下載包，含 `uclliu.exe`、`tsf_bridge` 外掛、註冊/解除註冊腳本 |
 | [RELEASE/0.12/uclliu.exe](RELEASE/0.12/uclliu.exe) | v0.12 單檔版，不含 TSF Bridge；只適合不需要 TSF 的使用者 |
 | [RELEASE/0.11/uclliu.exe](RELEASE/0.11/uclliu.exe) | v0.11 開發分支打包版 |
 | [RELEASE/0.11/uclliu.zip](RELEASE/0.11/uclliu.zip) | v0.11 壓縮版 |
 | [RELEASE/0.1/uclliu.exe](RELEASE/0.1/uclliu.exe) | 2019 初版備份 |
+
+v0.20 發行日期：2026-11-01，補齊日文假名相容、tray 選單關閉、Ctrl＋Space、英／全及短版簡繁切換修正，並保留現行 fcitx 的合法字根與一般字表候選。
 
 v0.19 發行日期：2026-09-15，補上短版 chrome 拖移，肥／英、半／全、短版切換、模式與 X 都能安全拖曳；單一注音符號固定列為第 0 候選。
 
@@ -109,7 +119,7 @@ v0.17 發行日期：2026-07-21，新增固定候選字、將 `,,,lock` / `,,,un
 
 v0.11 病毒碼掃描紀錄：[submission 2a365b04-dea0-496f-937f-9051b163a968](https://www.microsoft.com/en-us/wdsi/submission/2a365b04-dea0-496f-937f-9051b163a968)。
 
-v0.19 推薦下載包 `uclliu-v0.19.zip` 內含：
+v0.20 推薦下載包 `uclliu-v0.20.zip` 內含：
 
 | 檔案 / 目錄 | 用途 |
 | --- | --- |
@@ -146,7 +156,7 @@ v0.19 推薦下載包 `uclliu-v0.19.zip` 內含：
 
 `pinyi.txt` 放在 `uclliu.exe` 同一目錄後會啟用同音字與注音功能。`'ucl` 可用最後一個已出字的字查同音候選；`';zo6` 可用注音鍵盤碼查 `ㄈㄟˊ`，候選會包含「肥」；`';a` 後按空白可查 `ㄇ` 這類單獨注音符號候選。單一合法注音符號會固定補為第 0 候選，例如 `';l` 的 `0ㄠ`，不需依賴 `pinyi.txt` 中是否剛好有該符號。注音模式會依聲母、介音、韻母分層防呆，同層重打時會置換既有符號，介音晚補時會插到韻母前，避免 `ㄅㄆㄇ...` 一直追加。注音候選顯示後，可按數字鍵選字，按空白送出第一候選；候選有下一頁時，`Shift+Space` 會先換頁。右下角選單開啟「顯示提示注音」後，出字後會顯示 `音:ㄈㄟˊ` 類提示。
 
-v0.19 推薦下載包已內含 `pinyi.txt` 與 `candidate.txt`；若只下載單檔 `uclliu.exe`，需要自行補上 `pinyi.txt` 才會有同音字與注音查詢，補上 `candidate.txt` 才會有固定候選字。
+v0.20 推薦下載包已內含 `pinyi.txt` 與 `candidate.txt`；若只下載單檔 `uclliu.exe`，需要自行補上 `pinyi.txt` 才會有同音字與注音查詢，補上 `candidate.txt` 才會有固定候選字。
 
 ## 固定候選字
 
@@ -154,7 +164,7 @@ v0.19 推薦下載包已內含 `pinyi.txt` 與 `candidate.txt`；若只下載單
 
 送字後每頁最多顯示 5 筆固定候選，可用 `Shift+1`～`Shift+5` 選字；有下一頁時 `Shift+Space` 先翻頁，否則維持半形／全形切換。Esc、Enter、新字根、切換英／肥模式與句尾會結束目前候選上下文。
 
-v0.19 仍只使用 `candidate.txt` 的固定順序，不讀寫個人記憶，也不自動下載。候選最多 3 個 Unicode scalar，與目前上下文直接重複的候選會略過。`candidate.txt` 由 libchewing-data 的 `dict/chewing/tsi.csv` 轉換，採 LGPL-2.1-or-later；來源、SHA-256、轉換方式與再散布條件見 [第三方候選資料聲明](THIRD_PARTY_CANDIDATE_DATA.md)，授權全文見 [LGPL-2.1-or-later](LICENSES/LGPL-2.1-or-later.txt)。
+v0.20 仍只使用 `candidate.txt` 的固定順序，不讀寫個人記憶，也不自動下載。候選最多 3 個 Unicode scalar，與目前上下文直接重複的候選會略過。`candidate.txt` 由 libchewing-data 的 `dict/chewing/tsi.csv` 轉換，採 LGPL-2.1-or-later；來源、SHA-256、轉換方式與再散布條件見 [第三方候選資料聲明](THIRD_PARTY_CANDIDATE_DATA.md)，授權全文見 [LGPL-2.1-or-later](LICENSES/LGPL-2.1-or-later.txt)。
 
 ## 打字音效
 
@@ -177,7 +187,7 @@ C# 版目前右下角選單提供四種出字模式：
 
 ### TSF Bridge 管理
 
-TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下載 `uclliu-v0.19.zip` 並完整解壓縮，讓 `tsf_bridge` 目錄與 `uclliu.exe` 放在同一層。只下載單檔 `uclliu.exe` 時不會包含 TSF Bridge。
+TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下載 `uclliu-v0.20.zip` 並完整解壓縮，讓 `tsf_bridge` 目錄與 `uclliu.exe` 放在同一層。只下載單檔 `uclliu.exe` 時不會包含 TSF Bridge。
 
 右下角選單提供「TSF Bridge 管理」：
 
@@ -190,7 +200,7 @@ TSF Bridge 不會自動啟用，也不會自動註冊。要使用 TSF，請下�
 
 建議啟用流程：
 
-1. 下載並解壓縮 [uclliu-v0.19.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.19/uclliu-v0.19.zip)。
+1. 下載並解壓縮 [uclliu-v0.20.zip](https://github.com/shadowjohn/UCL_LIU_CSharp/releases/download/v0.20/uclliu-v0.20.zip)。
 2. 執行 `uclliu.exe`。
 3. 若右下角肥米選單出現「★以系統管理員身分重新啟動肥米」，先點選並允許 UAC。
 4. 從右下角肥米選單進入 `4.TSF Bridge 管理`。
@@ -233,7 +243,7 @@ Notepad++ 的 Scintilla 編輯器對送字時序較敏感。v0.18 將實際送�
 - 編輯器儲存後立即重載字根
 - 同一時間只開一個自定詞庫視窗，已開啟時會聚焦
 
-字根規則目前與 Python 版後期一致：允許 `a-z,.]['`，最長 5 碼，會統一轉小寫。日文假名使用字根末碼區分：`a,` 輸入平假名（`あ`／`ぁ`），`a.` 輸入片假名（`ア`／`ァ`）；同樣規則適用於 `ka,`／`ka.` 等音節。fcitx 表格中的 `ja,`／`ja.` 安全日文碼會自動提供成這些相容字根。
+字根規則目前與 Python 版後期一致：允許 `a-z,.]['`，最長 5 碼，會統一轉小寫。日文假名使用字根末碼區分：`a,` 輸入平假名（`あ`／`ぁ`），`a.` 輸入片假名（`ア`／`ァ`）；同樣規則適用於 `ka,`／`ka.` 等音節。只有確認採用 `ja, = あ`／`ja. = ア` 的舊 fcitx 字表才會建立去掉前綴的相容字根；一般羅馬字 `ji,`、`i,` 與現行 fcitx 的正確候選保持原樣。
 
 ## 設定檔
 
@@ -273,7 +283,7 @@ C# 版已追上的重點：
 - `liu-uni.tab -> liu.cin -> liu.json`
 - `liu.cin -> liu.json`
 - Python 版常見外部字碼表來源轉換：`wuxiami.txt`、`liur_trad.dict.yaml` / `liur_Trad.dict.yaml`、`terry_boshiamy.txt`、`fcitx_boshiamy.txt`、`uniliu.txt`
-- `fcitx_boshiamy.txt` 匯入會沿用 Python 版日文修正：以 `j` 開頭的日文字碼建立 `a,` 平假名與 `a.` 片假名等相容字根，避開舊表的異體／私用字元
+- `fcitx_boshiamy.txt` 匯入會辨識舊格式日文前綴，建立 `a,` 平假名與 `a.` 片假名等相容字根；不會刪除現行字表的合法標點、希臘字母或假名
 - `liu.json` 字根 key 載入時統一轉小寫，可吃到大寫 root 的特殊碼表
 - `custom.json` 自定詞庫
 - `,,,BOX`
@@ -345,7 +355,7 @@ build_tsf.bat
 發行打包：
 
 ```powershell
-& .\tools\package-release.ps1 -Version v0.19 -Configuration Release -OutputDirectory .\artifacts
+& .\tools\package-release.ps1 -Version v0.20 -Configuration Release -OutputDirectory .\artifacts
 ```
 
 官方打包預設不包含 `wavs`。若是私用或已確認音效可再散布，可加上 `-IncludeWavs` 封入本機 `wavs` 目錄。
@@ -353,11 +363,11 @@ build_tsf.bat
 GitHub Actions 會在 `master` push / PR 時自動跑核心測試與 Release build，並上傳 artifact。推送 `v*` tag 時會自動建立或更新 GitHub Release：
 
 ```powershell
-git tag v0.19
-git push origin v0.19
+git tag v0.20
+git push origin v0.20
 ```
 
-自動 Release 會上傳兩個檔案：`uclliu-v0.19.zip` 是推薦下載包，含 TSF Bridge、同音/注音資料、固定候選資料與 LGPL 授權聲明；`uclliu.exe` 是單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材。
+自動 Release 會上傳兩個檔案：`uclliu-v0.20.zip` 是推薦下載包，含 TSF Bridge、同音/注音資料、固定候選資料與 LGPL 授權聲明；`uclliu.exe` 是單檔版，不含 TSF Bridge、同音/注音資料、固定候選資料與音效素材。
 
 ## 專案檔案
 

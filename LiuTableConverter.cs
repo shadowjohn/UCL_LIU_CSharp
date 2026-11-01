@@ -282,7 +282,7 @@ namespace uclliu
                 tableText,
                 new string[] { "[數據]", "[数据]", "[Data]", "[DATA]" });
             string body = ExtractChardefBody(cinText);
-            StringBuilder rows = new StringBuilder();
+            Dictionary<string, List<string>> chardefs = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
             using (StringReader reader = new StringReader(body))
             {
@@ -296,21 +296,21 @@ namespace uclliu
                         continue;
                     }
 
-                    if (IsFcitxLegacyJapaneseRoot(key))
+                    if (!chardefs.ContainsKey(key))
                     {
-                        continue;
+                        chardefs[key] = new List<string>();
                     }
-
-                    AppendCinRow(rows, key, words);
-
-                    string alias;
-                    if (TryGetFcitxJapaneseAlias(key, out alias))
-                    {
-                        AppendCinRow(rows, alias, words);
-                    }
+                    chardefs[key].AddRange(words);
                 }
             }
 
+            // 先保留完整字表，再以確定的舊 fcitx 日文 namespace 替換對應 alias，避免刪掉標點／希臘字母。
+            Dictionary<string, List<string>> aliased = LiuJsonTable.ApplyFcitxJapaneseAliases(chardefs, true);
+            StringBuilder rows = new StringBuilder();
+            foreach (KeyValuePair<string, List<string>> pair in new SortedDictionary<string, List<string>>(aliased, StringComparer.Ordinal))
+            {
+                AppendCinRow(rows, pair.Key, pair.Value.ToArray());
+            }
             return CinHead + rows.ToString() + CinTail;
         }
 
@@ -779,41 +779,6 @@ namespace uclliu
                     return false;
                 }
             }
-            return true;
-        }
-
-        private static bool IsFcitxLegacyJapaneseRoot(string key)
-        {
-            if (String.IsNullOrEmpty(key) || key[0] == 'j')
-            {
-                return false;
-            }
-            return key.IndexOf(',') >= 0 || key.IndexOf('.') >= 0;
-        }
-
-        private static bool TryGetFcitxJapaneseAlias(string key, out string alias)
-        {
-            alias = null;
-            if (String.IsNullOrEmpty(key) || key.Length < 2 || key[0] != 'j')
-            {
-                return false;
-            }
-
-            char suffix = key[key.Length - 1];
-            if (suffix != ',' && suffix != '.')
-            {
-                return false;
-            }
-
-            for (int i = 1; i < key.Length - 1; i++)
-            {
-                if (key[i] < 'a' || key[i] > 'z')
-                {
-                    return false;
-                }
-            }
-
-            alias = key.Substring(1);
             return true;
         }
 

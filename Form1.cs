@@ -225,11 +225,6 @@ namespace uclliu
                 return OK;
             }
             ucl.handle_typing_sound(keydown, keyup, ea);
-            if (consumeFullWidthRelease)
-            {
-                ucl.last_key = "";
-                return NO;
-            }
             //處理額外的功能，如 ,,,version
             //Console.WriteLine(ea);
             if (keyup && ((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109 || ea == 189 || ea == 187 || ea == 222 || ea == 186))
@@ -272,6 +267,12 @@ namespace uclliu
             else if (keyup && !((ea >= 65 && ea <= 91) || ea == 188 || ea == 107 || ea == 109 || ea == 222 || ea == 186))
             {
                 ucl.last_key = "";
+            }
+
+            if (consumeFullWidthRelease)
+            {
+                // 先追蹤實體字根指令，再攔下已轉換字元的原始 keyup。
+                return NO;
             }
 
             if (ctrlSpaceDecision.ShouldConsume)
